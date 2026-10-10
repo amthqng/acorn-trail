@@ -896,8 +896,8 @@ function resetAdaptive(kind){
   saveAdaptive();
 }
 function adaptiveShift(kind){return SETTINGS.adaptive&&adaptive[kind].grade===subjectGrade(kind)?adaptive[kind].offset:0;}
-function readingTier(theme){return clamp(theme.rtier+readingOffset()+adaptiveShift('read'),0,READING_TIERS.length-1);}
-function mathLevel(theme){return clamp(theme.mlevel+mathOffset()+adaptiveShift('math'),1,4);}
+function readingTier(theme){return clamp(clamp(theme.rtier+readingOffset(),0,READING_TIERS.length-1)+adaptiveShift('read'),0,READING_TIERS.length-1);}
+function mathLevel(theme){return clamp(clamp(theme.mlevel+mathOffset(),1,4)+adaptiveShift('math'),1,4);}
 function recordAdaptive(q){
   const r=adaptive[q.kind],meta=q.adaptation;
   // Ignore an old question after a mode, grade, operation or record reset.

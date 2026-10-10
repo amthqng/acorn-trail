@@ -391,6 +391,7 @@ test('adaptive generation respects grade ceilings, reading banks and selected op
   for(let region=0;region<7;region++){
    const levels=JSON.parse(b.eval(`JSON.stringify([mathLevel(THEMES[${region}]),clamp(THEMES[${region}].mlevel+mathOffset(),1,4),readingTier(THEMES[${region}]),clamp(THEMES[${region}].rtier+readingOffset(),0,6)])`));
    assert.ok(levels[0]>=1&&levels[0]<=levels[1]);assert.ok(levels[2]>=0&&levels[2]<=levels[3]);
+   if(offset===-1){assert.equal(levels[0],Math.max(1,levels[1]-1));assert.equal(levels[2],Math.max(0,levels[3]-1));}
    const issues=JSON.parse(b.eval(`JSON.stringify(Array.from({length:40},()=>[genMath(THEMES[${region}]),pickReading(THEMES[${region}])]).flat().filter(q=>!validQuestion(q)))`));assert.deepEqual(issues,[]);
   }
  }
