@@ -138,6 +138,7 @@ test('desktop illustrated screens fit the browser',async()=>{
   const context=await browser.newContext({viewport:{width:1280,height:800},offline:true});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(fileUrl);
+  await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important}'});
   await page.evaluate(()=>{SETTINGS.motion=false;SETTINGS.sound=false;SETTINGS.readAloud=false;setScene(currentScene)});
   async function capture(name){
    const fits=await page.evaluate(()=>{const e=document.querySelector('.screen.active');return e.scrollWidth<=e.clientWidth+1});
@@ -145,7 +146,7 @@ test('desktop illustrated screens fit the browser',async()=>{
    fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:path.join('artifacts',`desktop-${name}.png`)});
   }
   await capture('start');
-  await page.getByRole('button',{name:'Make your team'}).tap();await page.getByRole('button',{name:'Edit Biscuit'}).tap();await capture('team-editor');
+  await page.getByRole('button',{name:'Make your team'}).click();await page.getByRole('button',{name:'Edit Biscuit'}).click();await capture('team-editor');
   for(let region=0;region<7;region++){
    await page.evaluate(r=>{themeIndex=r;stopIndex=0;go('screen-map')},region);
    await capture(`region-${region+1}`);
