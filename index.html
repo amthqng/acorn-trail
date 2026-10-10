@@ -1296,7 +1296,7 @@ function checkpoint(){ if(current&&!answered) saveProgress(); }
 window.addEventListener('pagehide',checkpoint);
 
 function saveProgress(){ if(themeIndex>0||stopIndex>0||acorns>0||current) store.set(PKEY,{v:PVER,acorns,themeIndex,stopIndex,streak,question:current&&!answered?current:null,pendingCompletion}); }
-function loadProgress(){ const p=store.get(PKEY); if(p&&p.v===PVER&&(p.themeIndex>0||p.stopIndex>0||p.acorns>0||p.question)) return p; return null; }
+function loadProgress(){ const p=store.get(PKEY); if(!p||p.v!==PVER||!Number.isInteger(p.themeIndex)||p.themeIndex<0||p.themeIndex>=THEMES.length||!Number.isInteger(p.stopIndex)||p.stopIndex<0||p.stopIndex>THEMES[p.themeIndex].stops.length||!Number.isFinite(p.acorns)||p.acorns<0) return null; return (p.themeIndex>0||p.stopIndex>0||p.acorns>0||p.question||p.pendingCompletion)?p:null; }
 function clearProgress(){ store.del(PKEY); }
 
 function renderStart(){
