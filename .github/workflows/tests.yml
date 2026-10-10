@@ -13,7 +13,9 @@ jobs:
         with:
           node-version: '22'
       - name: Syntax and gameplay regression tests
-        run: node --test tests/game.test.cjs
+        run: |
+          node --check sw.js
+          node --test tests/game.test.cjs
 
   browser-tests:
     runs-on: ubuntu-latest
@@ -27,7 +29,7 @@ jobs:
       - name: Install Chromium and WebKit
         run: npx playwright install --with-deps chromium webkit
       - name: Offline mobile and complete-trail browser QA
-        run: node --test tests/browser.test.cjs
+        run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
 
       - name: Save mobile QA screenshots
         if: always()

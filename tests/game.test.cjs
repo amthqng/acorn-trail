@@ -340,3 +340,17 @@ test('math story variations preserve the stated operation and quantities',()=>{
   assert.equal(new Set(prompts).size,4);for(const p of prompts){assert.match(p,/24/);assert.match(p,/8/);assert.match(p,/apples/);}
  }
 });
+
+
+test('downloaded HTML reports its offline mode without a hosted worker',()=>{
+ const b=boot();assert.equal(b.eval('offlineReady'),true);assert.match(b.eval("document.getElementById('offline-status').textContent"),/Downloaded game/);
+ assert.equal(b.eval('offlineRegistration'),null);assert.equal(b.eval('acorns'),0);
+});
+test('offline help does not change the active question or progress',()=>{
+ const b=boot();b.eval('startNextStop();openOfflineHelp();closeOfflineHelp()');assert.equal(b.eval('validQuestion(current)'),true);assert.equal(b.eval('acorns'),0);
+});
+test('hosted manifest keeps installation scoped to this game',()=>{
+ const manifest=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));
+ assert.equal(manifest.scope,'./');assert.equal(manifest.start_url,'./');assert.equal(manifest.display,'standalone');
+ for(const icon of manifest.icons)assert.ok(fs.existsSync(icon.src));
+});
