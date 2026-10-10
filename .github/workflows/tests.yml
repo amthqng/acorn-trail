@@ -28,3 +28,12 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Offline mobile and complete-trail browser QA
         run: node --test tests/browser.test.cjs
+
+      - name: Save mobile QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-qa-screenshots
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
