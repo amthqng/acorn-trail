@@ -319,7 +319,7 @@
   .modal-actions{ display:flex; gap:10px; margin-top:6px; }
   .modal-actions .btn{ flex:1; justify-content:center; }
 
-  .foot-note{ position:absolute; bottom:10px; width:100%; text-align:center; z-index:6;pointer-events:none;
+  .foot-note{ position:static; margin:16px 0 0; flex-shrink:0; width:100%; text-align:center; z-index:6;pointer-events:none;
     font-size:12px; color:var(--sage-dark); font-weight:600; opacity:0.75; padding:0 12px;}
   #app.sky-oak .foot-note, #app.sky-bridge .foot-note{ color:#EADFC8; }
 
@@ -542,6 +542,7 @@ button, [role="button"]{touch-action:manipulation}
     <div class="title-lockup"><div class="title-icon">🌰</div><h1>Acorn Trail</h1><p>a cozy journey with new friends</p></div>
     <div class="party" id="start-party"></div>
     <div class="start-wrap" id="start-actions"></div>
+  <div class="foot-note">Tap “Light the lantern”, then tap an answer — Nutmeg always has a hint 💡</div>
   </section>
 
   <!-- STORY -->
@@ -742,7 +743,6 @@ button, [role="button"]{touch-action:manipulation}
     </div>
   </div>
 
-  <div class="foot-note">Tap “Light the lantern”, then tap an answer — Nutmeg always has a hint 💡</div>
 </div>
 
 <script>

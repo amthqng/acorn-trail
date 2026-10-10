@@ -25,7 +25,9 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.goto(url);
     await context.setOffline(true);
     await page.evaluate(()=>{SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;saveSettings();setScene(currentScene)});
-    await layout();await capture('start');
+    await layout();
+    assert.equal(await page.evaluate(()=>document.querySelector('.foot-note').getBoundingClientRect().top>=document.getElementById('start-actions').getBoundingClientRect().bottom),true,'intro hint must not cover start buttons');
+    await capture('start');
     await page.locator('#screen-start button[aria-label="Grown-up settings"]').tap();await layout();
     const gate=await page.evaluate(()=>gateAnswer);
     await page.locator('#gate-choices').getByRole('button',{name:String(gate),exact:true}).tap();await layout();await capture('settings');
@@ -68,7 +70,6 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       else await page.evaluate(()=>SETTINGS.readAloud=false);
       await page.locator('#map-cta-btn').tap();
       await layout();
-      if(stop===0){await page.locator('#screen-map').evaluate(e=>e.scrollTop=0);await capture(`region-${region+1}`);}
       if(region===0&&(stop===0||stop===1)){
        await capture(stop===0?'math-audio':'reading-audio');
        const audio=page.locator('.ans-speak').first();const box=await audio.boundingBox();
