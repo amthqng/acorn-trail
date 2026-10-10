@@ -52,6 +52,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       const screen=document.querySelector('.modal.show .modal-card')||document.querySelector('.screen.active');
       return {overflow:screen.scrollWidth>screen.clientWidth+1,active:screen.id||screen.parentElement.id,width:screen.clientWidth,scrollWidth:screen.scrollWidth,outliers:[...screen.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.left < -1||r.right>innerWidth+1)}).slice(0,8).map(e=>({tag:e.tagName,id:e.id,cls:e.getAttribute('class'),rect:e.getBoundingClientRect().toJSON()}))};
      });
+     if(issue.active==='screen-challenge')assert.equal(await page.locator('.foot-note').isVisible(),false);
      assert.equal(issue.overflow,false,`horizontal overflow on ${issue.active}: ${JSON.stringify(issue)}`);
     }
     async function dismiss(){

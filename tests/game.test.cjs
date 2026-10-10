@@ -267,3 +267,8 @@ test('saved question validity requires a selectable primitive answer',()=>{
  const b=boot();
  for(const q of [{kind:'math',prompt:'2+3',answer:5,choices:['5','4']},{kind:'read',prompt:'Word',answer:{word:'cat'},choices:[{word:'cat'},'dog']}])assert.equal(b.eval('validQuestion('+JSON.stringify(q)+')'),false);
 });
+
+test('intro footer is hidden during gameplay instead of covering answers',()=>{
+ const b=boot();b.eval("go('screen-challenge')");assert.equal(b.eval("document.querySelector('.foot-note').style.display"),'none');
+ b.eval("go('screen-start')");assert.equal(b.eval("document.querySelector('.foot-note').style.display"),'block');
+});
