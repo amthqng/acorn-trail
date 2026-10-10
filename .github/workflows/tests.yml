@@ -1,7 +1,7 @@
 name: Developer regression tests
 on:
   push:
-    branches: [main]
+    branches: [main, qa/offline-gameplay]
   pull_request:
   workflow_dispatch:
 jobs:
@@ -14,3 +14,17 @@ jobs:
           node-version: '22'
       - name: Syntax and gameplay regression tests
         run: node --test tests/game.test.cjs
+
+  browser-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install developer-only browser test tooling
+        run: npm install --no-save --package-lock=false playwright@1.56.1
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Offline mobile and complete-trail browser QA
+        run: node --test tests/browser.test.cjs
