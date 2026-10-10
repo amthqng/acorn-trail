@@ -27,7 +27,7 @@ Save/resume now preserves wrong attempts and restores region transitions. Reset 
 
 Mobile fixes wrap the opening team and narrow lantern grids, fit the region toolbar and challenge columns, keep long answer text inside its button, and automatically bring a newly opened character editor into view. Main icon, chip, remove and answer-audio targets are 44 pixels; name inputs use 16-pixel text to avoid iOS input zoom. Safe-area padding, keyboard focus, keyboard character editing and touch-action hints were added. The intro hint now sits below its buttons and is hidden during gameplay, preventing footer overlap.
 
-The game remains a single self-contained HTML file of approximately **373 KB**, with no new runtime dependencies and the same four-choice gameplay. Optional answer explanations add a parent-controlled pause after a correct answer. Playwright is developer-only QA tooling installed by the Actions workflow.
+The game remains a single self-contained HTML file of approximately **384 KB**, with no new runtime dependencies and the same four-choice gameplay. Optional answer explanations add a parent-controlled pause after a correct answer. Playwright is developer-only QA tooling installed by the Actions workflow.
 
 ## Practical limits
 
@@ -37,7 +37,7 @@ Chromium runs the saved HTML directly with its browser context offline, includin
 
 A downloaded HTML has no external runtime asset requirements. Reopening a hosted URL while offline is a separate capability: this repository has no service worker and does not guarantee offline navigation to the hosted page. No hosting or service-worker architecture was introduced.
 
-The stabilization fixes and head-only character artwork are merged into `main`. The learning improvements passed the QA branch checks and are ready for explicit approval to merge into `main`.
+The stabilization fixes and head-only character artwork are merged into `main`. The learning improvements passed the QA branch checks and are merged into `main`.
 
 ## Learning improvements, 10 October 2026
 
@@ -47,3 +47,13 @@ The stabilization fixes and head-only character artwork are merged into `main`. 
 - Sixteen reading entries were added: four each for rhymes, synonyms, antonyms, and short-story understanding. Addition and subtraction stories each have four prompt variations.
 - Nine additional regressions cover explanation completeness, worked math, paused rewards, assisted answers across resume, learning persistence and clearing, malformed records, and story variations. The six browser journeys exercise explanation mode on alternating stops, explanation audio, the parent switch and the learning summary after replay, while completing all 84 stops.
 - Fixed parent-selected grades remain in place. Adaptive difficulty, new interaction formats, deeper character abilities, child profiles and hosted offline launch await the user's choices.
+
+## Illustrated depth refresh, 10 October 2026
+
+The visual refresh adds shaded paper and wood-like surfaces, inset highlights, softer contact shadows, warm sky lighting and a subtle background grain. Each region has lightweight foreground SVG details: flowers and apples, river stones and ripples, a ribbed pumpkin, spotted mushrooms, or night reflections. The campsite has firelight and tent seams. The map adds tree shadows and highlights, river-bank shading, a recessed trail and raised destination markers; its collection count is separated from the Meadow label.
+
+The animal artwork stays head-only. Gameplay, question formats and saves are unchanged. White text on the new orange, green and purple button gradients uses darker tones for readability. New decoration is static, has no pointer interactions and is hidden from assistive technology. Everything remains inline, with no new runtime dependencies.
+
+Validation includes all 40 Node regressions, six complete offline touch journeys, and a desktop browser layout/screenshot check covering all seven regions and their challenge screens. Representative phone, desktop, map, team-editor and answer-review screenshots were inspected. The desktop QA harness uses mouse clicks and freezes animation for stable screenshots.
+
+Visual-refresh checks: https://github.com/amthqng/acorn-trail/actions/runs/38084762574
