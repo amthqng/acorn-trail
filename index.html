@@ -749,6 +749,7 @@ function pickHelper(){ const h=helpChars(); return h.length?pickRand(h):null; }
 function badge(char, size){ size=size||64; return `<span class="cbadge" style="font-size:${Math.round(size*0.6)}px;width:${size}px;height:${size}px">${animalGlyph(char.animal)}</span>`; }
 function paintIcons(){ document.querySelectorAll('[data-icon]').forEach(el=>{ const k=el.dataset.icon; if(ICON[k]) el.innerHTML=ICON[k]; }); paintSound(); }
 function paintSound(){ ['sound-btn','sound-btn2'].forEach(id=>{ const b=document.getElementById(id); if(b) b.innerHTML = SETTINGS.sound?ICON.soundOn:ICON.soundOff; }); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function ic(n){ return (ICON[n]||'').replace('<svg ','<svg class="btn-ico" '); }
 
 function renderStartParty(){
@@ -757,7 +758,7 @@ function renderStartParty(){
     const b=ROLE_BADGE[c.role];
     const cls = c.role==='help'?'badge-hint':(c.role==='read'?'badge-read':'badge-math');
     const badgeHtml = b ? `<div class="badge ${cls}">${b}</div>` : '';
-    return `<div class="companion">${badgeHtml}${badge(c,scale)}<span class="name">${c.name}</span><span class="lead-tag">${ROLE_TAG[c.role]}</span></div>`;
+    return `<div class="companion">${badgeHtml}${badge(c,scale)}<span class="name">${esc(c.name)}</span><span class="lead-tag">${ROLE_TAG[c.role]}</span></div>`;
   }).join('');
 }
 function renderFinaleParty(){ document.getElementById('finale-party').innerHTML = ROSTER.map(c=>badge(c,52)).join(''); }
@@ -897,7 +898,7 @@ function buildStory(){
 let STORY=[]; let storyIdx=0;
 function renderStory(){
   const s=STORY[storyIdx];
-  document.getElementById('story-speaker').innerHTML = badge(s.char,58)+`<span class="who">${s.char.name}</span>`;
+  document.getElementById('story-speaker').innerHTML = badge(s.char,58)+`<span class="who">${esc(s.char.name)}</span>`;
   document.getElementById('story-text').textContent = '“'+s.text+'”';
   document.getElementById('story-dots').innerHTML = STORY.map((_,i)=>`<span class="dot ${i===storyIdx?'on':''}"></span>`).join('');
   document.getElementById('story-back').style.visibility = storyIdx===0?'hidden':'visible';
@@ -1114,9 +1115,10 @@ function allowedTypes(level){
     if(t==='addsub' && (ops.add||ops.sub)) out.push(t);
     else if(t==='mult' && ops.mul) out.push(t);
     else if(t==='div' && ops.div) out.push(t);
-    else if((t==='word'||t==='two') && ops.word) out.push(t);
+    else if(t==='word' && ops.word) out.push(t);
+    else if(t==='two' && ops.word && ops.add && ops.sub) out.push(t);
   }
-  if(!out.length) out.push('addsub');
+  if(!out.length){ if(ops.div) out.push('div'); else if(ops.word) out.push('word'); else if(ops.mul) out.push('mult'); else if(ops.add||ops.sub) out.push('addsub'); }
   return out;
 }
 function genMath(theme){
@@ -1148,7 +1150,7 @@ function genMath(theme){
     return { kind:'math', host:'dog', prompt:`${a} ÷ ${b}`, sub:`Share ${a} into groups of ${b}`,
       answer:q, choices:numChoices(q), hint:`How many groups of ${b} fit in ${a}? Count up by ${b}s until you reach ${a}.` };
   }
-  if(t==='two'){
+  if(t==='two' && ops.add && ops.sub){
     const a=ri(20,60), b=ri(10,30), c=ri(5,20); const ans=a+b-c; const n=noun();
     return { kind:'math', host:'dog', prompt:`${leadPrimary().name} had ${a} ${n}, found ${b} more, then gave ${c} away. How many now?`,
       sub:'Two steps: add, then subtract', answer:ans, choices:numChoices(ans),
@@ -1159,12 +1161,15 @@ function genMath(theme){
     let a,b; if(level<=2){ a=ri(12,40); b=ri(6,30); } else { a=ri(30,120); b=ri(20,90); } const ans=a+b;
     return { kind:'math', host:'dog', prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,
       sub:'Add them together', answer:ans, choices:numChoices(ans), hint:`Put the groups together: ${a} + ${b}.` };
-  } else {
+  } else if(ops.sub){
     let a,b; if(level<=2){ a=ri(20,50); b=ri(5,18); } else { a=ri(60,160); b=ri(20,90); }
     if(b>=a) b=ri(1,a-1); const ans=a-b;
     return { kind:'math', host:'dog', prompt:`There were ${a} ${n}. ${b} blew away in the wind. How many are left?`,
       sub:'Take away', answer:ans, choices:numChoices(ans), hint:`Start with ${a} and take ${b} away: ${a} − ${b}.` };
   }
+  // Word problems are a standalone category; when arithmetic operations are off, use an addition story.
+  const a=ri(12,40), b=ri(6,30), ans=a+b;
+  return {kind:'math',host:'dog',prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,sub:'Add them together',answer:ans,choices:numChoices(ans),hint:`Put the groups together: ${a} + ${b}.`};
 }
 
 /* ================= game state + progress ================= */
@@ -1246,7 +1251,7 @@ function loadChallenge(q){
   paintSound();
   const host=q.hostChar||hostFor(q.kind);
   document.getElementById('ch-host').innerHTML =
-    badge(host,54)+`<div style="text-align:left;"><div class="host-name">${host.name} says:</div><div class="host-kind">${q.kind==='math'?'Number puzzle':'Word puzzle'}</div></div>`;
+    badge(host,54)+`<div style="text-align:left;"><div class="host-name">${esc(host.name)} says:</div><div class="host-kind">${q.kind==='math'?'Number puzzle':'Word puzzle'}</div></div>`;
   // hint button reflects the current helper
   const he=document.getElementById('hint-emoji'), hl=document.getElementById('hint-label');
   if(q.helper){ he.innerHTML=animalGlyph(q.helper.animal); hl.textContent='Ask '+q.helper.name; }
@@ -1258,7 +1263,7 @@ function loadChallenge(q){
   const el=document.getElementById('answers'); el.innerHTML='';
   q.choices.forEach(c=>{
     const b=document.createElement('button'); b.className='answer'; b.dataset.val=String(c);
-    b.innerHTML = `<span class="ans-txt">${c}</span>` + (SETTINGS.readAloud?`<span class="ans-speak" role="button" aria-label="Hear this choice">🔊</span>`:'');
+    b.innerHTML = `<span class="ans-txt">${esc(c)}</span>` + (SETTINGS.readAloud?`<span class="ans-speak" role="button" aria-label="Hear this choice">🔊</span>`:'');
     b.onclick=()=>checkAnswer(b,c,q.answer);
     if(SETTINGS.readAloud){ const sp=b.querySelector('.ans-speak'); sp.onclick=(e)=>{ e.stopPropagation(); speak(String(c)); }; }
     el.appendChild(b);
@@ -1479,7 +1484,7 @@ function tryGate(v,btn){
   else { btn.classList.add('bad'); setTimeout(()=>btn.classList.remove('bad'),400); }
 }
 function closeGate(){ document.getElementById('gate-modal').classList.remove('show'); }
-function closeSettings(){ document.getElementById('settings-modal').classList.remove('show'); }
+function closeSettings(){ gateUnlocked=false; document.getElementById('settings-modal').classList.remove('show'); }
 function renderSettings(){
   document.querySelectorAll('#seg-math button').forEach(b=>b.classList.toggle('on', b.dataset.v===SETTINGS.math));
   document.querySelectorAll('#seg-read button').forEach(b=>b.classList.toggle('on', b.dataset.v===SETTINGS.reading));
@@ -1532,7 +1537,7 @@ function renderCharacters(){
   document.getElementById('party-list').innerHTML = ROSTER.map((c,i)=>
     `<div class="pc"><button class="pc-x" onclick="removeChar(${i})" aria-label="Remove">✕</button>
       <div class="pc-emoji" onclick="editChar(${i})">${animalGlyph(c.animal)}</div>
-      <div class="pc-name">${c.name}</div><div class="pc-role">${ROLE_TAG[c.role]}</div></div>`).join('');
+      <div class="pc-name">${esc(c.name)}</div><div class="pc-role">${ROLE_TAG[c.role]}</div></div>`).join('');
   const full = ROSTER.length>=20;
   document.getElementById('cc-actions').innerHTML =
     `<button class="btn small ${full?'outline':'green'}" ${full?'disabled':''} onclick="startAdd()">${ic('plus')} Add friend</button>
@@ -1563,10 +1568,10 @@ function renderEditor(){
       <button class="chip ${draft.role==='both'?'on':''}" onclick="setDraft('role','both')">${roleIcon('both')} Both</button>
     </div>
     <h4>Name <span style="font-weight:600;font-size:12px;color:var(--sage-dark)">(${avail.length} to choose from)</span></h4>
-    <div class="name-chips">${nameChips.map(n=>`<button class="chip ${draft.name===n?'on':''}" onclick="setDraft('name','${n}')">${n}</button>`).join('')}</div>
+    <div class="name-chips">${nameChips.map(n=>`<button class="chip ${draft.name===n?'on':''}" onclick="setDraft('name','${n}')">${esc(n)}</button>`).join('')}</div>
     <div class="name-row" style="margin-top:8px;">
       <button class="chip" onclick="moreNames()">${ic('dice')} More names</button>
-      <input class="name-input" id="name-input" placeholder="or type your own" value="${draft.name.replace(/"/g,'')}" oninput="typeName(this.value)" maxlength="14">
+      <input class="name-input" id="name-input" placeholder="or type your own" value="${esc(draft.name)}" oninput="typeName(this.value)" maxlength="14">
     </div>
     <div class="editor-actions">
       <button class="btn small green" id="draft-commit" ${draft.name.trim()?'':'disabled'} onclick="commitDraft()">${editIndex>=0?'Save':'Add'}</button>
@@ -1582,7 +1587,7 @@ function cancelEditor(){ closeEditor(); renderCharacters(); }
 function removeChar(i){ ROSTER.splice(i,1); if(editIndex===i) closeEditor(); renderCharacters(); }
 function resetTeam(){ ROSTER=DEFAULT_ROSTER.map(c=>({...c})); closeEditor(); renderCharacters(); }
 function playTeam(){ if(!teamValid()) return; saveRoster();
-  STICKERS=buildStickers(); stickerCounts={}; pendingUnlocks=[]; basketDot=false; saveStickers();
+  STICKERS=buildStickers(); pendingUnlocks=[]; basketDot=false;
   acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress();
   go('screen-story'); }
 
