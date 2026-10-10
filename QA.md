@@ -6,7 +6,7 @@ Work branch: `qa/offline-gameplay`. Base: `4c4a973ca7c23809499ff11d306f225a40ecd
 
 The original suite had 15 passes and one failure. That failure was a test assumption: alternate regions intentionally begin with reading. The corrected regression follows each region's configured subject sequence.
 
-The gameplay stabilization suite passed **40 Node regression tests and six complete browser journeys** in GitHub Actions. The hosted offline update below expands coverage to **43 Node tests and nine browser checks**. The browser matrix is Chromium and WebKit at 390×844, 320×568 and 844×390, with real touch interactions. Each journey completes all 84 stops, for **504 browser stop completions** in the final run.
+The gameplay stabilization suite passed **40 Node regression tests and six complete browser journeys** in GitHub Actions. Hosted offline coverage brought this to **43 Node tests and nine browser checks**; adaptive practice below expands the Node suite to **52 tests**. The browser matrix is Chromium and WebKit at 390×844, 320×568 and 844×390, with real touch interactions. Each journey completes all 84 stops, for **504 browser stop completions** in the final run.
 
 Verified coverage:
 
@@ -46,7 +46,7 @@ The stabilization fixes and head-only character artwork are merged into `main`. 
 - Grown-up Settings contains a local learning summary by subject and skill, with completed puzzles, correct first choices without hints, hint use, and wrong choices on completed puzzles. The record starts with this update and does not infer earlier performance. Replay retains it; parents can clear it separately, or clear everything with Reset progress.
 - Sixteen reading entries were added: four each for rhymes, synonyms, antonyms, and short-story understanding. Addition and subtraction stories each have four prompt variations.
 - Nine additional regressions cover explanation completeness, worked math, paused rewards, assisted answers across resume, learning persistence and clearing, malformed records, and story variations. The six browser journeys exercise explanation mode on alternating stops, explanation audio, the parent switch and the learning summary after replay, while completing all 84 stops.
-- Fixed parent-selected grades remain in place. Adaptive difficulty, new interaction formats, deeper character abilities, and child profiles await the user's choices. Hosted offline launch is implemented below.
+- Fixed parent-selected grades remain in place. New interaction formats, deeper character abilities, and child profiles await the user's choices. Optional adaptive practice is implemented below. Hosted offline launch is implemented below.
 
 ## Illustrated depth refresh, 10 October 2026
 
@@ -72,3 +72,18 @@ Chromium uses Playwright's actual offline browser setting for hosted navigation.
 Maintenance: bump the worker's `shell-v1` cache name when changing the shell resources or caching strategy. HTML-only updates refresh through navigation; do not force worker activation while a child is playing. The cache prefix includes the app path so activation cannot clear another GitHub Pages app's cache.
 
 Hosted-offline checks: https://github.com/amthqng/acorn-trail/actions/runs/38086379489
+
+
+## Optional adaptive practice, 10 October 2026
+
+Grown-up Settings now includes an accessible “Adaptive practice” switch, off by default, and a separate current status for math and reading. Switching it on starts both subjects at the existing grade/region challenge. Two consecutive completed puzzles in one subject with a hint or wrong choice select gentler practice; four consecutive first-try completions without hints restore the usual challenge. Interleaved puzzles in the other subject do not interrupt those runs. No timing or reading-audio use is treated as failure, and rewards, stickers and the 84-stop trail are unchanged.
+
+The supported band lowers the existing math level or reading tier by one, clamped to the content floor; it never raises the existing grade/region ceiling. Smaller arithmetic and story quantities provide support at the lowest math level, and division uses smaller factors. Reading at its lowest tier retains the existing simplest bank. Selected math operations still apply. This is a practice-support rule, not a curriculum placement test or a claim of measured learning effectiveness.
+
+Adjustments and partial subject runs persist locally across reload and replay. New questions carry the grade and adjustment revision they were generated with. Changing a grade resets only that subject; changing math operations resets math; switching the mode or clearing the learning record resets both. An existing question remains unchanged and is excluded from adaptation if its configuration was reset. A full progress reset also restores usual adaptive practice. Old saved questions without adaptation metadata still resume, but cannot retroactively train the model.
+
+Nine new regressions cover opt-in behavior, completed-puzzle thresholds, separate subjects, interrupted runs, return to usual practice, grade bounds and generated question validity, selected operations, saved assisted answers, duplicate/pending completion recovery, stale questions after setting changes, replay, selective and full resets, and corrupted records. The six complete phone journeys retain two fixed-mode narrow-phone journeys and add four adaptive journeys in Chromium/WebKit portrait and landscape. These use real hint taps, resume assisted questions, observe both subjects entering gentler practice and independently returning to usual practice in the first two regions, verify the lower reading bank and math skill level in the Orchard, check the parent status and toggle, and finish all 84 stops. Total coverage remains nine browser checks, including desktop and both hosted offline/update checks.
+
+Validation: **52 Node tests and nine browser checks**, with **504 stop completions** across the phone matrix. Gameplay remains a single HTML of approximately **395 KB**, with no new runtime dependency or shell change. Physical iPhone testing remains outside the automated coverage.
+
+Adaptive checks: https://github.com/amthqng/acorn-trail/actions/runs/38087281916
