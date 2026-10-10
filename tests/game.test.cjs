@@ -272,3 +272,8 @@ test('intro footer is hidden during gameplay instead of covering answers',()=>{
  const b=boot();b.eval("go('screen-challenge')");assert.equal(b.eval("document.querySelector('.foot-note').style.display"),'none');
  b.eval("go('screen-start')");assert.equal(b.eval("document.querySelector('.foot-note').style.display"),'block');
 });
+
+test('answer reveal uses the customized helper name',()=>{
+ const b=boot();b.eval("SETTINGS.readAloud=false;startNextStop();current.helper.name='Clover';revealAnswer(current.answer)");
+ assert.match(b.eval("document.getElementById('feedback').textContent"),/^Clover points to the answer/);
+});

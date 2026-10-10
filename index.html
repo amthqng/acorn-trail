@@ -542,7 +542,7 @@ button, [role="button"]{touch-action:manipulation}
     <div class="title-lockup"><div class="title-icon">🌰</div><h1>Acorn Trail</h1><p>a cozy journey with new friends</p></div>
     <div class="party" id="start-party"></div>
     <div class="start-wrap" id="start-actions"></div>
-  <div class="foot-note">Tap “Light the lantern”, then tap an answer — Nutmeg always has a hint 💡</div>
+  <div class="foot-note">Tap “Light the lantern”, then tap an answer — Your helper always has a hint 💡</div>
   </section>
 
   <!-- STORY -->
@@ -1521,7 +1521,7 @@ function checkAnswer(btn,chosen,correct){
 }
 function revealAnswer(correct){
   const fb=document.getElementById('feedback');
-  fb.textContent='Nutmeg points to the answer — tap it! 💡'; fb.className='feedback reveal';
+  fb.textContent=(current&&current.helper?current.helper.name:'Your helper')+' points to the answer — tap it! 💡'; fb.className='feedback reveal';
   document.querySelectorAll('.answer').forEach(a=>{
     if(a.dataset.val===String(correct)){ a.classList.add('reveal'); a.style.pointerEvents='auto'; }
     else { a.classList.add('dim'); a.style.pointerEvents='none'; }
