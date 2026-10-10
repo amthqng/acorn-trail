@@ -91,7 +91,9 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
        assert.equal(await page.locator('#ch-prompt').textContent(),prompt);
        assert.equal(await page.evaluate(()=>wrongCount),1);
       }
-      if(adaptiveMode&&region===0&&(stop===2||stop===3))await page.locator('.hint-btn:not(#speak-btn)').tap();
+      if(adaptiveMode&&((region===0&&(stop===2||stop===3))||(region===1&&stop<4)))await page.locator('.hint-btn:not(#speak-btn)').tap();
+      if(adaptiveMode&&region===1&&stop===4)assert.equal(await page.evaluate(()=>READING_TIERS[0].includes(current.skill)),true,'gentler reading must use the preceding tier');
+      if(adaptiveMode&&region===1&&stop===5)assert.equal(await page.evaluate(()=>['addition','subtraction','multiplication'].includes(current.skill)),true,'gentler math must use level one skills');
       const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
       const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
       await answerButton.tap({position:{x:10,y:answerBox.height/2}});
@@ -105,18 +107,18 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       }
       await dismiss();
       assert.equal(await page.evaluate(()=>acorns),region*12+stop+1);
-      if(adaptiveMode&&region===0){
-       if(stop===2)assert.equal(await page.evaluate(()=>adaptive.math.offset),-1);
+      if(adaptiveMode&&region<=1){
+       const subject=await page.evaluate(s=>THEMES[themeIndex].stops[s],stop);
+       if(stop===2)assert.equal(await page.evaluate(k=>adaptive[k].offset,subject),-1);
        if(stop===3){
-        assert.equal(await page.evaluate(()=>adaptive.read.offset),-1);
+        assert.equal(await page.evaluate(k=>adaptive[k].offset,subject),-1);
         await page.locator('#screen-map button[aria-label="Settings"]').tap();
         await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();
-        await page.locator('#adaptive-status').scrollIntoViewIfNeeded();await layout();await capture('adaptive-gentler');
+        await page.locator('#adaptive-status').scrollIntoViewIfNeeded();await layout();await capture(`adaptive-gentler-region-${region+1}`);
         assert.match(await page.locator('#adaptive-status').textContent(),/Math: gentler practice. Reading: gentler practice/);
         await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
        }
-       if(stop===10)assert.equal(await page.evaluate(()=>adaptive.math.offset),0);
-       if(stop===11)assert.equal(await page.evaluate(()=>adaptive.read.offset),0);
+       if(stop===10||stop===11)assert.equal(await page.evaluate(k=>adaptive[k].offset,subject),0);
       }
      }
      if(region<6){await page.locator('#screen-transition button').tap();await dismiss()}
