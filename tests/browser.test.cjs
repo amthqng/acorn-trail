@@ -66,6 +66,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       await layout();await page.locator('#screen-sticker-unlock button').tap();
      }
     }
+    const readingSeen=new Set();
     for(let region=0;region<7;region++){
      for(let stop=0;stop<12;stop++){
       await layout();
@@ -85,15 +86,19 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
        const wrong=await page.evaluate(()=>current.choices.findIndex(c=>c!==current.answer));
        const wrongButton=page.locator('.answer').nth(wrong);const wrongBox=await wrongButton.boundingBox();
        await wrongButton.tap({position:{x:10,y:wrongBox.height/2}});
+       const savedHistory=await page.evaluate(()=>JSON.stringify(loadVariety()));
        if(engineName==='webkit')await context.setOffline(false);
        await page.reload();await context.setOffline(true);await page.clock.runFor(500);
        await page.getByRole('button',{name:'Continue trail'}).tap();
        assert.equal(await page.locator('#ch-prompt').textContent(),prompt);
        assert.equal(await page.evaluate(()=>wrongCount),1);
+       assert.equal(await page.evaluate(()=>JSON.stringify(variety)),savedHistory,'resume must not draw a replacement question');
       }
       if(adaptiveMode&&((region===0&&(stop===2||stop===3))||(region===1&&stop<4)))await page.locator('.hint-btn:not(#speak-btn)').tap();
       if(adaptiveMode&&region===1&&stop===4)assert.equal(await page.evaluate(()=>READING_TIERS[0].includes(current.skill)),true,'gentler reading must use the preceding tier');
       if(adaptiveMode&&region===1&&stop===5)assert.equal(await page.evaluate(()=>['addition','subtraction','multiplication'].includes(current.skill)),true,'gentler math must use level one skills');
+      const readingId=await page.evaluate(()=>current.kind==='read'?current.readingId:null);
+      if(readingId){assert.equal(readingSeen.has(readingId),false,'reading entries should vary across this trail');readingSeen.add(readingId);}
       const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
       const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
       await answerButton.tap({position:{x:10,y:answerBox.height/2}});
@@ -128,11 +133,13 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     assert.deepEqual(await page.evaluate(()=>[learning.math.completed,learning.read.completed]),[42,42]);
     await layout();await capture('finale');
     const counts=await page.evaluate(()=>JSON.stringify(stickerCounts));
+    const questionHistory=await page.evaluate(()=>JSON.stringify(variety));
     await page.getByRole('button',{name:'See my stickers'}).tap();await layout();
     await page.getByRole('button',{name:'Back',exact:true}).tap();
     await page.getByRole('button',{name:'Play again',exact:true}).tap();
     assert.equal(await page.evaluate(()=>acorns),0);
     assert.equal(await page.evaluate(()=>JSON.stringify(stickerCounts)),counts);
+    assert.equal(await page.evaluate(()=>JSON.stringify(variety)),questionHistory,'replay must retain question variety history');
     assert.equal(await page.evaluate(()=>current),null);
     await page.locator('#screen-map button[aria-label="Settings"]').tap();
     await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();

@@ -337,7 +337,7 @@ test('math story variations preserve the stated operation and quantities',()=>{
  const b=boot();
  for(const takeAway of [false,true]){
   const prompts=JSON.parse(b.eval('JSON.stringify(Array.from({length:100},()=>mathStory("Clover",24,8,"apples",'+takeAway+')))'));
-  assert.equal(new Set(prompts).size,4);for(const p of prompts){assert.match(p,/24/);assert.match(p,/8/);assert.match(p,/apples/);}
+  assert.equal(new Set(prompts).size,8);for(const p of prompts){assert.match(p,/24/);assert.match(p,/8/);assert.match(p,/apples/);}
  }
 });
 
@@ -430,4 +430,62 @@ test('malformed or outdated adaptive saves recover safely',()=>{
  }
  const b=boot({'acorn-trail-settings':{adaptive:true},'acorn-trail-adaptive':{v:1,math:{grade:'g2',offset:-1,clean:3,support:0,revision:8},read:{grade:'g2',offset:0,clean:0,support:1,revision:9}}});
  assert.equal(b.eval('adaptive.math.offset'),-1);assert.equal(b.eval('adaptive.math.clean'),3);assert.equal(b.eval('adaptive.read.support'),1);
+});
+
+function seeded(b,seed=123456){
+ b.ctx.Math=Object.create(Math);b.ctx.Math.random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+}
+test('reading skill cycles cover the eligible skills without clustering',()=>{
+ const b=boot();seeded(b);
+ const skills=JSON.parse(b.eval('JSON.stringify(Array.from({length:30},()=>pickReading(THEMES[0]).skill))'));
+ for(let i=0;i<skills.length;i+=3)assert.equal(new Set(skills.slice(i,i+3)).size,3);
+ for(let i=1;i<skills.length;i++)assert.notEqual(skills[i],skills[i-1]);
+});
+test('every reading entry is used before its bank repeats, including cycle boundaries',()=>{
+ const b=boot();seeded(b,928);
+ const sizes=JSON.parse(b.eval('JSON.stringify(Object.fromEntries(Object.entries(READING).map(([cat,bank])=>[cat,bank.length])))'));
+ const questions=JSON.parse(b.eval('JSON.stringify(Array.from({length:150},()=>pickReading(THEMES[0])))'));
+ const seen={},last={};
+ for(const q of questions){
+  const cat=q.skill;seen[cat]??=new Set();if(seen[cat].size===sizes[cat])seen[cat].clear();
+  assert.equal(seen[cat].has(q.readingId),false);assert.notEqual(q.readingId,last[cat]);seen[cat].add(q.readingId);last[cat]=q.readingId;
+ }
+});
+test('question history and shuffled selection survive reload and replay',()=>{
+ const b=boot();seeded(b);
+ const before=JSON.parse(b.eval('JSON.stringify(Array.from({length:12},()=>pickReading(THEMES[0]).readingId))'));
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));seeded(c,999);
+ c.eval('freshStart()');const after=JSON.parse(c.eval('JSON.stringify(Array.from({length:6},()=>pickReading(THEMES[0]).readingId))'));
+ assert.equal(new Set([...before,...after]).size,18);
+ c.eval('restart()');assert.ok(c.eval('Object.keys(variety.reading).length')>0);
+ c.eval('confirmReset()');assert.equal(c.eval('Object.keys(variety.reading).length'),0);assert.equal(c.data.has('acorn-trail-variety'),false);
+});
+test('math skills use shuffled coverage and equivalent recent equations are avoided',()=>{
+ const b=boot();seeded(b,19);
+ const q=JSON.parse(b.eval('JSON.stringify(Array.from({length:120},()=>genMath(THEMES[6])))'));
+ for(let i=0;i<q.length;i+=6)assert.equal(new Set(q.slice(i,i+6).map(x=>x.skill)).size,6);
+ const keys=q.map(x=>b.eval('mathQuestionKey('+JSON.stringify(x)+')'));
+ for(let i=0;i<keys.length;i++)assert.equal(keys.slice(Math.max(0,i-20),i).includes(keys[i]),false);
+ assert.equal(b.eval("mathQuestionKey({skill:'addition',prompt:'3 + 7',answer:10})"),b.eval("mathQuestionKey({skill:'addition',prompt:'7 + 3',answer:10})"));
+});
+test('small math pools and an unchanging random source cannot hang',()=>{
+ const b=boot();b.ctx.Math=Object.create(Math);b.ctx.Math.random=()=>0;
+ b.eval("SETTINGS.ops={add:false,sub:false,mul:true,div:false,word:false};SETTINGS.adaptive=true;adaptive.math.offset=-1");
+ const q=JSON.parse(b.eval('JSON.stringify(Array.from({length:40},()=>genMath(THEMES[0])))'));
+ for(const x of q){assert.equal(x.skill,'multiplication');assert.equal(b.eval('validQuestion('+JSON.stringify(x)+')'),true);}
+ assert.ok(b.eval('variety.recentMath.length')<=20);
+ // Reading selection must likewise avoid rejection loops on a fixed RNG.
+ assert.equal(b.eval('Array.from({length:100},()=>pickReading(THEMES[0])).every(validQuestion)'),true);
+});
+test('malformed variety history cannot add skills or invalid reading entries',()=>{
+ const b=boot({'acorn-trail-variety':{v:1,bags:{'read:rhyme|baby|fillblank':['alien','rhyme','rhyme',99]},last:{'read:previous':'alien'},reading:{rhyme:[-1,999,'2',0,0],alien:[0]},recentMath:['x'.repeat(1000),null,7]}});seeded(b);
+ assert.equal(b.eval('variety.reading.rhyme.length'),1);assert.equal(b.eval('variety.recentMath.length'),0);
+ const questions=JSON.parse(b.eval('JSON.stringify(Array.from({length:30},()=>pickReading(THEMES[0])))'));
+ for(const q of questions){assert.ok(['rhyme','baby','fillblank'].includes(q.skill));assert.equal(b.eval('validQuestion('+JSON.stringify(q)+')'),true);}
+});
+test('recent math questions remain remembered after reload and replay',()=>{
+ const b=boot();seeded(b,481);const keys=JSON.parse(b.eval('JSON.stringify(Array.from({length:12},()=>mathQuestionKey(genMath(THEMES[4]))))'));
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));seeded(c,22);c.eval('restart()');
+ const next=JSON.parse(c.eval('JSON.stringify(Array.from({length:8},()=>mathQuestionKey(genMath(THEMES[4]))))'));
+ assert.equal(new Set([...keys,...next]).size,20);
 });
