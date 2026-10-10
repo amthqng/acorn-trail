@@ -645,10 +645,12 @@ const store = (()=>{
   return {
     ok,
     get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
-    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
-    del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ storageWarning(); return false; } },
+    del(k){ try{ localStorage.removeItem(k); return true; }catch(e){ storageWarning(); return false; } }
   };
 })();
+let storageWarned=false;
+function storageWarning(){ if(storageWarned) return; storageWarned=true; setTimeout(()=>{ const el=document.createElement('div'); el.setAttribute('role','alert'); el.style.cssText='position:fixed;bottom:12px;left:12px;right:12px;z-index:99999;background:#4d261b;color:white;padding:14px;border-radius:12px;font:15px system-ui'; el.textContent='Progress cannot be saved in this browser. Check private browsing or storage settings.'; document.body.appendChild(el); },0); }
 const SKEY='acorn-trail-settings', PKEY='acorn-trail-progress', PVER=3;
 
 /* ================= settings ================= */
@@ -1175,9 +1177,14 @@ function genMath(theme){
 /* ================= game state + progress ================= */
 let acorns=0, themeIndex=0, stopIndex=0, current=null, answered=false, wrongCount=0, streak=0;
 const REVEAL_AT=2;
+let pendingCompletion=false;
+function savedQuestion(){ const p=store.get(PKEY); return p&&p.v===PVER&&p.themeIndex===themeIndex&&p.stopIndex===stopIndex&&p.question&&validQuestion(p.question)?p:null; }
+function validQuestion(q){ return !!q&&['math','read'].includes(q.kind)&&typeof q.prompt==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&q.choices.length===new Set(q.choices.map(String)).size&&q.choices.some(x=>String(x)===String(q.answer)); }
+function checkpoint(){ if(current&&!answered) saveProgress(); }
+window.addEventListener('pagehide',checkpoint);
 
-function saveProgress(){ if(themeIndex>0||stopIndex>0||acorns>0) store.set(PKEY,{v:PVER,acorns,themeIndex,stopIndex}); }
-function loadProgress(){ const p=store.get(PKEY); if(p&&p.v===PVER&&(p.themeIndex>0||p.stopIndex>0)) return p; return null; }
+function saveProgress(){ if(themeIndex>0||stopIndex>0||acorns>0||current) store.set(PKEY,{v:PVER,acorns,themeIndex,stopIndex,streak,question:current&&!answered?current:null,pendingCompletion}); }
+function loadProgress(){ const p=store.get(PKEY); if(p&&p.v===PVER&&(p.themeIndex>0||p.stopIndex>0||p.acorns>0||p.question)) return p; return null; }
 function clearProgress(){ store.del(PKEY); }
 
 function renderStart(){
@@ -1199,8 +1206,11 @@ function renderStart(){
   updateBasketDot();
 }
 function continueTrail(){ const s=loadProgress(); if(!s){ freshStart(); return; }
-  acorns=s.acorns; themeIndex=s.themeIndex; stopIndex=s.stopIndex; go('screen-map'); }
-function freshStart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false; clearProgress(); go('screen-story'); }
+  acorns=s.acorns; themeIndex=s.themeIndex; stopIndex=s.stopIndex; streak=s.streak||0; pendingCompletion=!!s.pendingCompletion;
+  if(pendingCompletion){ current=null; pendingCompletion=false; proceed(); return; }
+  if(s.question&&validQuestion(s.question)){ current=s.question; loadChallenge(current); go('screen-challenge'); return; }
+  current=null; go('screen-map'); }
+function freshStart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; pendingCompletion=false; finished=false; clearProgress(); go('screen-story'); }
 
 let currentScreenId='screen-start';
 function go(id){
@@ -1241,9 +1251,10 @@ function startNextStop(){
   if(stopIndex>=th.stops.length){ themeComplete(); return; }
   const kind=th.stops[stopIndex];
   current = kind==='math' ? genMath(th) : pickReading(th);
+  if(!validQuestion(current)){ console.error('Invalid question generated',current); current=kind==='math'?genMath(th):pickReading(th); }
   current.hostChar = hostFor(kind);
   current.helper = pickHelper();
-  loadChallenge(current); go('screen-challenge');
+  loadChallenge(current); saveProgress(); go('screen-challenge');
 }
 function loadChallenge(q){
   answered=false; wrongCount=0;
@@ -1263,9 +1274,9 @@ function loadChallenge(q){
   const el=document.getElementById('answers'); el.innerHTML='';
   q.choices.forEach(c=>{
     const b=document.createElement('button'); b.className='answer'; b.dataset.val=String(c);
-    b.innerHTML = `<span class="ans-txt">${esc(c)}</span>` + (SETTINGS.readAloud?`<span class="ans-speak" role="button" aria-label="Hear this choice">🔊</span>`:'');
+    b.innerHTML = `<span class="ans-txt">${esc(c)}</span>` + (SETTINGS.readAloud?`<span class="ans-speak" role="button" tabindex="0" aria-label="Hear this choice">🔊</span>`:'');
     b.onclick=()=>checkAnswer(b,c,q.answer);
-    if(SETTINGS.readAloud){ const sp=b.querySelector('.ans-speak'); sp.onclick=(e)=>{ e.stopPropagation(); speak(String(c)); }; }
+    if(SETTINGS.readAloud){ const sp=b.querySelector('.ans-speak'); sp.onclick=(e)=>{ e.stopPropagation(); speak(String(c)); }; sp.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); speak(String(c)); } }; }
     el.appendChild(b);
   });
   // read-aloud: show speaker only when enabled; auto-read reading questions
@@ -1277,7 +1288,7 @@ const GOOD_MATH=["Wonderful! 🌰","You did it!","Lantern lit! ✨","Cozy work!"
 const GOOD_READ=["Lovely reading! ✨","You did it!","Lantern lit! 🌰","Nicely read!","Yes! Great word!"];
 const TRY=["Not quite — try again!","Give it another go 💛","Almost! Look once more.","Try another one!"];
 function proceed(){
-  stopIndex++; saveProgress(); const th=THEMES[themeIndex];
+  pendingCompletion=false; current=null; stopIndex++; saveProgress(); const th=THEMES[themeIndex];
   if(stopIndex>=th.stops.length) themeComplete(); else go('screen-map');
 }
 function award(btn){
@@ -1293,7 +1304,7 @@ function award(btn){
     const pool=current.kind==='math'?GOOD_MATH:GOOD_READ;
     fb.textContent=pool[Math.floor(Math.random()*pool.length)]; fb.className='feedback good';
   }
-  acorns++; document.getElementById('acorn-num2').textContent=acorns; sparkle(); chime(true);
+  acorns++; pendingCompletion=true; current=null; saveProgress(); document.getElementById('acorn-num2').textContent=acorns; sparkle(); chime(true);
   refreshStickers();
   document.querySelectorAll('.answer').forEach(a=>a.style.pointerEvents='none');
   setTimeout(()=>flushUnlocks(proceed), 1500);
@@ -1301,7 +1312,7 @@ function award(btn){
 function checkAnswer(btn,chosen,correct){
   if(answered) return;
   if(chosen===correct){ award(btn); return; }
-  btn.classList.add('wrong'); wrongCount++;
+  btn.classList.add('wrong'); wrongCount++; saveProgress();
   const fb=document.getElementById('feedback');
   fb.textContent=TRY[Math.floor(Math.random()*TRY.length)]; fb.className='feedback tryagain';
   btn.style.pointerEvents='none'; chime(false); setTimeout(()=>{ btn.classList.remove('wrong'); btn.classList.add('used'); },400);
@@ -1351,7 +1362,7 @@ function themeComplete(){
 }
 function advanceTheme(){ themeIndex++; stopIndex=0; saveProgress(); refreshStickers(); flushUnlocks(()=>go('screen-map')); }
 function finale(){ finished=true; clearProgress(); refreshStickers(); grantBonusStickers(3); flushUnlocks(()=>{ document.getElementById('finale-acorns').textContent=acorns; renderFinaleParty(); go('screen-finale'); }); }
-function restart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-map'); }
+function restart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; pendingCompletion=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-map'); }
 function confirmRestartTrail(){
   if(confirm('Start the whole trail over from the beginning? Your stickers will be kept.')){
     document.getElementById('acorn-num').textContent='0'; restart();
@@ -1365,7 +1376,7 @@ function speakable(text){ return String(text)
   .replace(/\n/g,'. '); }
 function speak(text){
   try{
-    if(!window.speechSynthesis) return;
+    if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){ if(!window.__speechWarned){ window.__speechWarned=true; console.warn('Read-aloud is not supported in this browser.'); } return; }
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(speakable(text));
     u.rate=0.9; u.pitch=1.05; u.lang='en-US';
