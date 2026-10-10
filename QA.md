@@ -6,7 +6,7 @@ Work branch: `qa/offline-gameplay`. Base: `4c4a973ca7c23809499ff11d306f225a40ecd
 
 The original suite had 15 passes and one failure. That failure was a test assumption: alternate regions intentionally begin with reading. The corrected regression follows each region's configured subject sequence.
 
-The final suite passes all **40 Node regression tests and six complete browser journeys** in GitHub Actions. The browser matrix is Chromium and WebKit at 390×844, 320×568 and 844×390, with real touch interactions. Each journey completes all 84 stops, for **504 browser stop completions** in the final run.
+The gameplay stabilization suite passed **40 Node regression tests and six complete browser journeys** in GitHub Actions. The hosted offline update below expands coverage to **43 Node tests and nine browser checks**. The browser matrix is Chromium and WebKit at 390×844, 320×568 and 844×390, with real touch interactions. Each journey completes all 84 stops, for **504 browser stop completions** in the final run.
 
 Verified coverage:
 
@@ -35,7 +35,7 @@ No failures remain in the automated suite. Physical iPhone hardware, native Safa
 
 Chromium runs the saved HTML directly with its browser context offline, including reloads. WebKit's offline emulation rejects navigation before document loading, so its tests supply the identical HTML through an in-memory local route, then switch offline for gameplay; the locally supplied document is reinjected for reload checks. No game asset or backend is fetched externally.
 
-A downloaded HTML has no external runtime asset requirements. Reopening a hosted URL while offline is a separate capability: this repository has no service worker and does not guarantee offline navigation to the hosted page. No hosting or service-worker architecture was introduced.
+A downloaded HTML has no external runtime asset requirements. Hosted offline reopening now uses the small service worker described below.
 
 The stabilization fixes and head-only character artwork are merged into `main`. The learning improvements passed the QA branch checks and are merged into `main`.
 
@@ -46,7 +46,7 @@ The stabilization fixes and head-only character artwork are merged into `main`. 
 - Grown-up Settings contains a local learning summary by subject and skill, with completed puzzles, correct first choices without hints, hint use, and wrong choices on completed puzzles. The record starts with this update and does not infer earlier performance. Replay retains it; parents can clear it separately, or clear everything with Reset progress.
 - Sixteen reading entries were added: four each for rhymes, synonyms, antonyms, and short-story understanding. Addition and subtraction stories each have four prompt variations.
 - Nine additional regressions cover explanation completeness, worked math, paused rewards, assisted answers across resume, learning persistence and clearing, malformed records, and story variations. The six browser journeys exercise explanation mode on alternating stops, explanation audio, the parent switch and the learning summary after replay, while completing all 84 stops.
-- Fixed parent-selected grades remain in place. Adaptive difficulty, new interaction formats, deeper character abilities, child profiles and hosted offline launch await the user's choices.
+- Fixed parent-selected grades remain in place. Adaptive difficulty, new interaction formats, deeper character abilities, and child profiles await the user's choices. Hosted offline launch is implemented below.
 
 ## Illustrated depth refresh, 10 October 2026
 
@@ -57,3 +57,18 @@ The animal artwork stays head-only. Gameplay, question formats and saves are unc
 Validation includes all 40 Node regressions, six complete offline touch journeys, and a desktop browser layout/screenshot check covering all seven regions and their challenge screens. Representative phone, desktop, map, team-editor and answer-review screenshots were inspected. The desktop QA harness uses mouse clicks and freezes animation for stable screenshots.
 
 Visual-refresh checks: https://github.com/amthqng/acorn-trail/actions/runs/38084762574
+
+
+## Visible offline access and Home Screen installation, 10 October 2026
+
+The opening screen now shows “Ready for offline play” only after the hosted worker confirms that the HTML, manifest and three install icons are cached. The visible “Install / offline help” button opens iPhone/iPad Home Screen instructions; browsers with a supported installation prompt use it. The panel fits narrow portrait and landscape screens, scrolls when needed and supports keyboard focus, Escape and touch. Downloaded HTML retains its embedded assets and displays “Downloaded game · plays offline”.
+
+Gameplay remains in one approximately **391 KB HTML file**. Hosting adds a roughly 2.6 KB worker and 0.5 KB manifest, using the existing icon files and no runtime dependencies. The worker is scoped to this repository's path. Navigations try the network, with a four-second timeout and cached fallback; successful HTML updates refresh the saved copy. Worker updates wait for the visible Update game button, which checkpoints progress before reloading. Cache repair can restore missing files online, failed installation cannot claim readiness, and activation leaves other apps' caches intact. Browser/installed-app saves stay local to the environment being used; the installation help explains reopening online after website data is cleared.
+
+Validation: **43 Node regressions and nine browser checks**. The six phone journeys still complete all 84 stops each (504 completions); desktop layout checks cover all seven regions. Two additional hosted checks exercise real service workers at a repository subpath, initial readiness, offline reopening in a new tab, saved-question and wrong-attempt resume, cached icons/manifest, server failure fallback, new HTML retained offline, deliberate worker activation during saved gameplay, cache repair, unrelated cache preservation, failed initial download and successful retry. Installation help is checked with touch at 390×844, 320×568 and 844×390, with screenshots after animations settle.
+
+Chromium uses Playwright's actual offline browser setting for hosted navigation. Playwright WebKit reports an internal navigation error with that setting before service-worker interception; its hosted check instead destroys server connections without sending any response bytes. The new tab must therefore obtain its document from the worker cache, and the test verifies that the unavailable server was contacted. This is distinct from the older in-memory document route used by the gameplay-only WebKit journeys. Physical iPhone Home Screen installation and Safari hardware remain unverified.
+
+Maintenance: bump the worker's `shell-v1` cache name when changing the shell resources or caching strategy. HTML-only updates refresh through navigation; do not force worker activation while a child is playing. The cache prefix includes the app path so activation cannot clear another GitHub Pages app's cache.
+
+Hosted-offline checks: https://github.com/amthqng/acorn-trail/actions/runs/38086379489
