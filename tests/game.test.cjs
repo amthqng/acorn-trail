@@ -105,13 +105,13 @@ test('each region renders an offline camping scene',()=>{
   assert.match(art,/<path/);
  }
 });
-test('camping characters render for every animal and preserve roster flexibility',()=>{
+test('animal heads render for every animal and preserve roster flexibility',()=>{
  const b=boot();
  const animals=JSON.parse(b.eval('JSON.stringify(ANIMALS)'));
  for(const animal of animals){
   const svg=b.eval('camperGlyph('+JSON.stringify(animal)+')');
   assert.match(svg,/<svg/);
-  assert.match(svg,/viewBox="0 0 120 132"/);
+  assert.match(svg,/viewBox="0 0 100 100"/);
  }
  assert.equal(b.eval('teamValid()'),true);
 });

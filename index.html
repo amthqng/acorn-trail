@@ -833,20 +833,9 @@ const ANIMAL_SVG = {
   hedgehog:`<svg viewBox="0 0 100 100"><g fill="#6E5A44"><path d="M20 48 L14 30 L30 40 Z"/><path d="M34 40 L30 20 L44 34 Z"/><path d="M50 36 L50 16 L60 34 Z"/><path d="M66 40 L72 22 L74 40 Z"/><path d="M80 48 L86 32 L70 42 Z"/></g><circle cx="50" cy="58" r="26" fill="#6E5A44"/><path d="M50 84 C40 84 32 74 34 64 Q50 58 66 64 C68 74 60 84 50 84 Z" fill="#D8BE98"/><circle cx="43" cy="60" r="3.4" fill="#3E2B1F"/><circle cx="57" cy="60" r="3.4" fill="#3E2B1F"/><circle cx="50" cy="70" r="3.2" fill="#3E2B1F"/></svg>`
 };
 const ANIMALS = Object.keys(ANIMAL_SVG);
-/* Shared camping outfit, applied to every animal without changing its identity. */
+/* Use each animal's original head artwork throughout the game. */
 function camperGlyph(a){
-  const face=ANIMAL_SVG[a];
-  if(!face)return animalGlyph(a);
-  const inner=face.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
-  return '<svg viewBox="0 0 120 132" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Camping animal">'+
-    '<path d="M25 85Q8 87 13 110L29 114L36 91Z" fill="#bb8350" stroke="#775437" stroke-width="2"/>'+
-    '<rect x="20" y="90" width="14" height="20" rx="4" fill="#d5a26d"/>'+
-    '<ellipse cx="60" cy="108" rx="31" ry="22" fill="#568f73" stroke="#3e6c58" stroke-width="2"/>'+
-    '<path d="M44 112L43 125M76 112L77 125" stroke="#70533b" stroke-width="7" stroke-linecap="round"/>'+
-    '<svg x="12" y="1" width="96" height="96" viewBox="0 0 100 100">'+inner+'</svg>'+
-    '<path d="M36 86Q60 96 84 86L79 98Q60 105 41 98Z" fill="#e7a54b"/>'+
-    '<path d="M60 96L67 112L72 99" fill="#e7a54b"/>'+
-    '</svg>';
+  return animalGlyph(a).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animal character" ');
 }
 function animalGlyph(a){ return ANIMAL_SVG[a] || a; }
 const CUTE_NAMES = ['Biscuit','Aster','Tansy','Nutmeg','Clover','Pip','Maple','Hazel','Poppy','Willow','Ginger','Juniper','Sage','Acorn','Pumpkin','Mochi','Waffles','Cocoa','Honey','Marshmallow'];
