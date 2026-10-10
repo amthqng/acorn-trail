@@ -237,8 +237,8 @@ test('real answer callbacks award once at every stop and unlock all rewards',()=
 });
 
 test('malformed sticker counts recover and cannot corrupt reward arithmetic',()=>{
- const b=boot({'acorn-trail-stickers':{friend0:'two',friend1:-1,friend2:2,unknown:5}});
- assert.equal(b.eval('stickerCount("friend0")'),0);assert.equal(b.eval('stickerCount("friend2")'),2);
+ const b=boot({'acorn-trail-stickers':{friend0:'two',friend1:-1,friend2:2,friend19:3,unknown:5}});
+ assert.equal(b.eval('stickerCount("friend0")'),0);assert.equal(b.eval('stickerCount("friend2")'),2);assert.equal(b.eval('stickerCount("friend19")'),3);
  b.eval('acorns=84;refreshStickers()');assert.equal(b.eval('stickerCount("friend0")'),1);
 });
 test('saved question restores safely with malformed optional character metadata',()=>{

@@ -1585,7 +1585,7 @@ let finished=false;
 let stickerCounts = (()=>{ const raw=store.get(STKEY);
   if(Array.isArray(raw)){ const o={}; raw.forEach(id=>o[id]=1); return o; }   /* migrate old array format */
   if(!raw||typeof raw!=='object') return {};
-  return Object.fromEntries(Object.entries(raw).filter(([id,n])=>STICKERS.some(s=>s.id===id)&&Number.isSafeInteger(n)&&n>0)); })();
+  return Object.fromEntries(Object.entries(raw).filter(([id,n])=>(STICKERS.some(s=>s.id===id)||/^friend(?:[0-9]|1[0-9])$/.test(id))&&Number.isSafeInteger(n)&&n>0)); })();
 let pendingUnlocks=[];
 function saveStickers(){ store.set(STKEY, stickerCounts); }
 function hasSticker(id){ return (stickerCounts[id]||0)>0; }

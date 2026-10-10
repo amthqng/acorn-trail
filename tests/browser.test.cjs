@@ -40,7 +40,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       await layout();
       await page.locator('#map-cta-btn').tap();
       await layout();
-      if(region===0&&stop===0){
+      if(region===0&&(stop===0||stop===1)){
        const prompt=await page.locator('#ch-prompt').textContent();
        const wrong=await page.evaluate(()=>current.choices.findIndex(c=>c!==current.answer));
        await page.locator('.answer').nth(wrong).tap();
@@ -58,7 +58,15 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     }
     assert.equal(await page.evaluate(()=>currentScreenId),'screen-finale');
     assert.equal(await page.evaluate(()=>STICKERS.every(s=>hasSticker(s.id))),true);
-    await layout();assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
+    await layout();
+    const counts=await page.evaluate(()=>JSON.stringify(stickerCounts));
+    await page.getByRole('button',{name:'See my stickers'}).tap();await layout();
+    await page.getByRole('button',{name:'Back',exact:true}).tap();
+    await page.getByRole('button',{name:'Play again',exact:true}).tap();
+    assert.equal(await page.evaluate(()=>acorns),0);
+    assert.equal(await page.evaluate(()=>JSON.stringify(stickerCounts)),counts);
+    assert.equal(await page.evaluate(()=>current),null);
+    assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
     await browser.close();
    }finally{if(browser.isConnected())await browser.close()}
   });
