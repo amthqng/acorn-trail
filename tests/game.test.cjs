@@ -142,7 +142,7 @@ test('all 84 stops advance across seven regions to the finale',()=>{
    assert.equal(b.eval('stopIndex'),stop);
    b.eval('startNextStop()');
    assert.equal(b.eval('validQuestion(current)'),true);
-   assert.equal(b.eval('current.kind'),stop%2===0?'math':'read');
+   assert.equal(b.eval('current.kind'),b.eval('THEMES[themeIndex].stops[stopIndex]'));
    b.eval('acorns++;proceed()');
   }
   if(region<6){
