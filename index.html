@@ -1097,6 +1097,8 @@ const THEMES = [
 /* ================= reading bank (expanded + harder) ================= */
 const READING = {
   rhyme:[
+    {w:'boat',a:'coat',o:['boot','bat','cup']},{w:'seed',a:'need',o:['sand','sad','sit']},
+    {w:'fox',a:'box',o:['fix','fan','sun']},{w:'bear',a:'chair',o:['bird','boat','book']},
     {w:'leaf',a:'thief',o:['loaf','life','laugh']},{w:'cat',a:'hat',o:['sun','dog','cup']},
     {w:'tree',a:'bee',o:['top','leaf','barn']},{w:'moon',a:'spoon',o:['man','moss','mud']},
     {w:'cake',a:'lake',o:['cook','milk','coat']},{w:'star',a:'car',o:['step','sit','sky']},
@@ -1114,6 +1116,8 @@ const READING = {
     {q:'What do we call a baby deer?',a:'fawn',o:['cub','colt','kit']}
   ],
   synonym:[
+    {w:'kind',a:'caring',o:['mean','cold','noisy']},{w:'finish',a:'end',o:['begin','build','find']},
+    {w:'safe',a:'protected',o:['dangerous','empty','sleepy']},{w:'silent',a:'quiet',o:['loud','tall','sweet']},
     {w:'happy',a:'glad',o:['sad','tall','cold']},{w:'big',a:'large',o:['tiny','fast','soft']},
     {w:'fast',a:'quick',o:['slow','loud','warm']},{w:'little',a:'small',o:['huge','bright','heavy']},
     {w:'cold',a:'chilly',o:['warm','sunny','loud']},{w:'begin',a:'start',o:['stop','end','close']},
@@ -1128,6 +1132,8 @@ const READING = {
     {w:'tooth',a:'teeth',o:['tooths','teeths','toothes']},{w:'goose',a:'geese',o:['gooses','goosen','geeses']}
   ],
   antonym:[
+    {w:'near',a:'far',o:['close','next','beside']},{w:'early',a:'late',o:['soon','first','quick']},
+    {w:'light in weight',a:'heavy',o:['bright','small','soft']},{w:'awake',a:'asleep',o:['alert','busy','ready']},
     {w:'hot',a:'cold',o:['warm','soup','red']},{w:'up',a:'down',o:['high','over','top']},
     {w:'day',a:'night',o:['noon','sun','morning']},{w:'big',a:'small',o:['tall','wide','huge']},
     {w:'happy',a:'sad',o:['glad','merry','silly']},{w:'open',a:'closed',o:['door','wide','empty']},
@@ -1136,21 +1142,21 @@ const READING = {
   ],
   compound:[
     {p:'rain',a:'bow',o:['ball','sun','tree'],word:'rainbow'},{p:'sun',a:'flower',o:['moon','apple','river'],word:'sunflower'},
-    {p:'camp',a:'fire',o:['water','leaf','star'],word:'campfire'},{p:'butter',a:'fly',o:['bird','cup','bee'],word:'butterfly'},
-    {p:'snow',a:'flake',o:['rain','sun','melt'],word:'snowflake'},{p:'tree',a:'house',o:['sock','cup','spoon'],word:'treehouse'},
-    {p:'moon',a:'light',o:['dark','star','sky'],word:'moonlight'},{p:'foot',a:'print',o:['step','sock','path'],word:'footprint'},
+    {p:'camp',a:'fire',o:['water','leaf','star'],word:'campfire'},{p:'butter',a:'fly',o:['sock','rock','chair'],word:'butterfly'},
+    {p:'snow',a:'flake',o:['sock','cup','apple'],word:'snowflake'},{p:'tree',a:'house',o:['sock','cup','spoon'],word:'treehouse'},
+    {p:'moon',a:'light',o:['dark','star','sky'],word:'moonlight'},{p:'foot',a:'print',o:['cake','cup','apple'],word:'footprint'},
     {p:'rain',a:'coat',o:['cake','chair','spoon'],word:'raincoat'},{p:'star',a:'fish',o:['sock','apple','cup'],word:'starfish'}
   ],
   homophone:[
-    {s:'The wind blew ___ the trees.',a:'through',o:['threw','thru','true']},
-    {s:'She ___ the ball to me.',a:'threw',o:['through','throw','thru']},
+    {s:'The wind blew ___ the trees.',a:'through',o:['threw','three','true']},
+    {s:'She ___ the ball to me.',a:'threw',o:['through','throw','three']},
     {s:'We have ___ apples left.',a:'two',o:['to','too','tow']},
     {s:'I want to come ___!',a:'too',o:['to','two','tow']},
     {s:'Can you ___ the music?',a:'hear',o:['here','hair','heir']},
     {s:'Please sit right ___.',a:'here',o:['hear','hair','heir']},
     {s:'The dog wagged its ___.',a:'tail',o:['tale','trail','pail']},
     {s:'They lost ___ way home.',a:'their',o:['there','then','theyre']},
-    {s:'The knight rode all ___.',a:'night',o:['knight','nite','kite']}
+    {s:'The knight rode all ___.',a:'night',o:['knight','neat','kite']}
   ],
   contraction:[
     {w:'do not',a:"don't",o:["dont'","donot","do'nt"]},
@@ -1198,6 +1204,10 @@ const READING = {
     {s:'Please be ___ so the baby can nap.',a:'quiet',o:['purple','square','seven']}
   ],
   comp:[
+    {p:'Clover packed a blanket and a lantern for camp. When the evening turned cold, she wrapped the blanket around her shoulders.',q:'Why did Clover use the blanket?',a:'to keep warm',o:['to catch fish','to carry water','to light the path'],e:'The evening turned cold, so she wrapped the blanket around her shoulders.'},
+    {p:'Pip heard a soft splash beside the river. He looked down and saw a frog jump from a stone into the water.',q:'What made the splash?',a:'a frog',o:['a falling apple','a flying bird','a blowing leaf'],e:'Pip saw a frog jump from a stone into the water.'},
+    {p:'Aster checked the trail map at the fork. The left path led to the orchard, so she turned left to pick apples.',q:'Which path did Aster take?',a:'the left path',o:['the right path','the river path','the path home'],e:'The left path led to the orchard, and she turned left.'},
+    {p:'Biscuit filled three cups with water. He gave one to Tansy and one to Nutmeg, then kept the last cup for himself.',q:'Who kept the last cup?',a:'Biscuit',o:['Tansy','Nutmeg','Aster'],e:'Biscuit kept the last cup for himself.'},
     {p:'Milo the mouse found a shiny acorn under the oak tree. He carried it home to save for winter, then set off to find one more.',
       q:'Why did Milo save the acorn?',a:'to eat in winter',o:['to give it away','to play a game','to lose it']},
     {p:'The rain fell all morning. When it finally stopped, a bright rainbow stretched across the sky, and the friends cheered.',
@@ -1359,19 +1369,32 @@ function genMath(theme){
   const n=noun(); const travel=leadPrimary().name; const learner=(mathChars()[0]||ROSTER[0]).name;
   if(ops.add && (!ops.sub || Math.random()<0.5)){
     let a,b; if(level<=2){ a=ri(12,40); b=ri(6,30); } else { a=ri(30,120); b=ri(20,90); } const ans=a+b;
-    return { kind:'math', host:'dog', skill:'word', explanation:`Finding more means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`, prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,
+    return { kind:'math', host:'dog', skill:'word', explanation:`Putting groups together means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`, prompt:mathStory(learner,a,b,n,false),
       sub:'Add them together', answer:ans, choices:numChoices(ans), hint:`Put the groups together: ${a} + ${b}.` };
   } else if(ops.sub){
     let a,b; if(level<=2){ a=ri(20,50); b=ri(5,18); } else { a=ri(60,160); b=ri(20,90); }
     if(b>=a) b=ri(1,a-1); const ans=a-b;
-    return { kind:'math', host:'dog', skill:'word', explanation:`Blowing away means take away. ${mathExplanation('−',a,b,ans)} There are ${ans} ${n} left.`, prompt:`There were ${a} ${n}. ${b} blew away in the wind. How many are left?`,
+    return { kind:'math', host:'dog', skill:'word', explanation:`Removing some means take away. ${mathExplanation('−',a,b,ans)} There are ${ans} ${n} left.`, prompt:mathStory(learner,a,b,n,true),
       sub:'Take away', answer:ans, choices:numChoices(ans), hint:`Start with ${a} and take ${b} away: ${a} − ${b}.` };
   }
   // Word problems are a standalone category; when arithmetic operations are off, use an addition story.
   const a=ri(12,40), b=ri(6,30), ans=a+b;
-  return {kind:'math',host:'dog',skill:'word',explanation:`Finding more means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`,prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,sub:'Add them together',answer:ans,choices:numChoices(ans),hint:`Put the groups together: ${a} + ${b}.`};
+  return {kind:'math',host:'dog',skill:'word',explanation:`Putting groups together means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`,prompt:mathStory(learner,a,b,n,false),sub:'Add them together',answer:ans,choices:numChoices(ans),hint:`Put the groups together: ${a} + ${b}.`};
 }
 
+function mathStory(name,a,b,n,takeAway){
+  return pickRand(takeAway?[
+    `There were ${a} ${n}. ${b} blew away in the wind. How many are left?`,
+    `${name} packed ${a} ${n} for camp and gave ${b} to a friend. How many did ${name} keep?`,
+    `A basket held ${a} ${n}. The friends took out ${b}. How many are still in the basket?`,
+    `${name} counted ${a} ${n} on the trail, then moved ${b} into a bag. How many stayed on the trail?`
+  ]:[
+    `${name} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,
+    `One basket has ${a} ${n}, and another has ${b}. How many ${n} are in both baskets?`,
+    `${name} packed ${a} ${n} for camp. A friend brought ${b} more. How many do they have together?`,
+    `The friends counted ${a} ${n} near the tent and ${b} near the tree. How many ${n} did they count altogether?`
+  ]);
+}
 function mathExplanation(op,a,b,ans){
   if(op==='×') return `${b} groups of ${a} make ${ans}. ${a} × ${b} = ${ans}.`;
   if(op==='÷') return `${ans} groups of ${b} make ${a}: ${ans} × ${b} = ${a}. So ${a} ÷ ${b} = ${ans}.`;

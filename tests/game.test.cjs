@@ -258,7 +258,7 @@ test('single HTML asset references are self contained',()=>{
 });
 
 test('compound reading distractors do not form other common valid answers',()=>{
- const b=boot();const known=new Set(['treehouse','treetop','raincoat','raindrop','raincloud','rainboot','starfish','starlight','stardust','starshine']);
+ const b=boot();const known=new Set(['treehouse','treetop','raincoat','raindrop','raincloud','rainboot','starfish','starlight','stardust','starshine','buttercup','snowmelt','footstep','footpath']);
  const bank=JSON.parse(b.eval('JSON.stringify(READING.compound)'));
  for(const d of bank){assert.equal(d.p+d.a,d.word);for(const o of d.o)assert.equal(known.has(d.p+o),false,`${d.p}+${o} is another valid answer`);}
 });
@@ -330,4 +330,13 @@ test('older saved questions can explain answers and reset cancels paused review'
  const b=boot();assert.match(b.eval("questionExplanation({kind:'math',prompt:'12 + 5',answer:17})"),/12 \+ 5 = 17/);
  b.eval("SETTINGS.explanations=true;SETTINGS.sound=false;startNextStop();checkAnswer(document.getElementById('test-answer'),current.answer,current.answer);restart();continueAfterReview()");
  assert.equal(b.eval('stopIndex'),0);assert.equal(b.eval('acorns'),0);assert.equal(b.eval('learning.math.completed'),1);
+});
+
+
+test('math story variations preserve the stated operation and quantities',()=>{
+ const b=boot();
+ for(const takeAway of [false,true]){
+  const prompts=JSON.parse(b.eval('JSON.stringify(Array.from({length:100},()=>mathStory("Clover",24,8,"apples",'+takeAway+')))'));
+  assert.equal(new Set(prompts).size,4);for(const p of prompts){assert.match(p,/24/);assert.match(p,/8/);assert.match(p,/apples/);}
+ }
 });
