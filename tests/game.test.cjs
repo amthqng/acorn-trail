@@ -119,4 +119,5 @@ test('fresh starts clear pending completion and active questions',()=>{
  b.eval("current={kind:'math'};pendingCompletion=true;freshStart()");
  assert.equal(b.eval('current'),null);
  assert.equal(b.eval('pendingCompletion'),false);
+ assert.equal(b.eval('answered'),false);
 });
