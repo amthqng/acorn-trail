@@ -1322,7 +1322,7 @@ function continueTrail(){ const s=loadProgress(); if(!s){ freshStart(); return; 
   if(pendingCompletion){ current=null; pendingCompletion=false; proceed(); return; }
   if(s.question&&validQuestion(s.question)){ current=s.question; loadChallenge(current); go('screen-challenge'); return; }
   current=null; go('screen-map'); }
-function freshStart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; pendingCompletion=false; finished=false; clearProgress(); go('screen-story'); }
+function freshStart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; answered=false; pendingCompletion=false; finished=false; clearProgress(); go('screen-story'); }
 
 let currentScreenId='screen-start';
 function go(id){
