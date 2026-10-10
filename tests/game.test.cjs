@@ -235,3 +235,24 @@ test('real answer callbacks award once at every stop and unlock all rewards',()=
  assert.equal(b.eval('Object.values(stickerCounts).reduce((a,b)=>a+b,0)'),b.eval('STICKERS.length+3'));
  assert.equal(b.eval('loadProgress()'),null);
 });
+
+test('malformed sticker counts recover and cannot corrupt reward arithmetic',()=>{
+ const b=boot({'acorn-trail-stickers':{friend0:'two',friend1:-1,friend2:2,unknown:5}});
+ assert.equal(b.eval('stickerCount("friend0")'),0);assert.equal(b.eval('stickerCount("friend2")'),2);
+ b.eval('acorns=84;refreshStickers()');assert.equal(b.eval('stickerCount("friend0")'),1);
+});
+test('saved question restores safely with malformed optional character metadata',()=>{
+ const b=boot();b.eval("startNextStop();current.hostChar={};current.helper={};saveProgress();continueTrail()");
+ assert.equal(b.eval('currentScreenId'),'screen-challenge');assert.equal(b.eval('validQuestion(current)'),true);
+});
+test('generated numeric math answers satisfy the displayed arithmetic',()=>{
+ const b=boot();
+ assert.equal(b.eval(`(()=>{for(let level=1;level<=4;level++)for(let i=0;i<1000;i++){
+  const q=genMath({mlevel:level});const m=q.prompt.match(/^(\\d+) ([+−×÷]) (\\d+)$/);
+  if(m){const a=Number(m[1]),c=Number(m[3]);const ans={'+':a+c,'−':a-c,'×':a*c,'÷':a/c}[m[2]];if(q.answer!==ans)return false;}
+ }return true})()`),true);
+});
+test('single HTML asset references are self contained',()=>{
+ const urls=[...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)].map(m=>m[1]);
+ assert.ok(urls.length>0);assert.ok(urls.every(u=>u.startsWith('data:')||u.startsWith('#')));
+});

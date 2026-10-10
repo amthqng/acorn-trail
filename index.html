@@ -1332,9 +1332,9 @@ function renderStart(){
   updateBasketDot();
 }
 function continueTrail(){ const s=loadProgress(); if(!s){ freshStart(); return; }
-  cancelReward(); finished=false; acorns=s.acorns; themeIndex=s.themeIndex; stopIndex=s.stopIndex; streak=s.streak||0; pendingCompletion=!!s.pendingCompletion;
+  cancelReward(); finished=false; acorns=s.acorns; themeIndex=s.themeIndex; stopIndex=s.stopIndex; streak=Number.isSafeInteger(s.streak)&&s.streak>=0?s.streak:0; pendingCompletion=!!s.pendingCompletion;
   if(pendingCompletion){ current=null; pendingCompletion=false; proceed(); return; }
-  if(s.question&&validQuestion(s.question)){ current=s.question; loadChallenge(current); wrongCount=Number.isInteger(s.wrongCount)&&s.wrongCount>0?s.wrongCount:0; if(SETTINGS.reveal&&wrongCount>=REVEAL_AT) revealAnswer(current.answer); go('screen-challenge'); return; }
+  if(s.question&&validQuestion(s.question)&&s.question.kind===THEMES[themeIndex].stops[stopIndex]){ current={...s.question}; if(!current.hostChar||!ANIMALS.includes(current.hostChar.animal)||typeof current.hostChar.name!=='string') current.hostChar=hostFor(current.kind); if(current.helper&&(!ANIMALS.includes(current.helper.animal)||typeof current.helper.name!=='string')) current.helper=pickHelper(); loadChallenge(current); wrongCount=Number.isInteger(s.wrongCount)&&s.wrongCount>0?s.wrongCount:0; if(SETTINGS.reveal&&wrongCount>=REVEAL_AT) revealAnswer(current.answer); go('screen-challenge'); return; }
   current=null; if(stopIndex>=THEMES[themeIndex].stops.length) themeComplete(); else go('screen-map'); }
 function freshStart(){ cancelReward(); acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; answered=false; pendingCompletion=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-story'); }
 
@@ -1584,7 +1584,8 @@ let finished=false;
 /* stickerCounts: { id: timesCollected } — supports duplicates from replay bonuses */
 let stickerCounts = (()=>{ const raw=store.get(STKEY);
   if(Array.isArray(raw)){ const o={}; raw.forEach(id=>o[id]=1); return o; }   /* migrate old array format */
-  return raw && typeof raw==='object' ? raw : {}; })();
+  if(!raw||typeof raw!=='object') return {};
+  return Object.fromEntries(Object.entries(raw).filter(([id,n])=>STICKERS.some(s=>s.id===id)&&Number.isSafeInteger(n)&&n>0)); })();
 let pendingUnlocks=[];
 function saveStickers(){ store.set(STKEY, stickerCounts); }
 function hasSticker(id){ return (stickerCounts[id]||0)>0; }
