@@ -1439,7 +1439,7 @@ function pickReading(theme){
   usedReading[cat]=new Set(variety.reading[cat]||[]);
   if(usedReading[cat].size>=bank.length) usedReading[cat].clear();
   const available=bank.map((_,i)=>i).filter(i=>!usedReading[cat].has(i));
-  const idx=drawVariety('entry:'+cat,available);
+  const idx=drawVariety('entry:'+cat,available,variety.reading[cat]?.at(-1));
   usedReading[cat].add(idx);
   variety.reading[cat]=[...usedReading[cat]];
   const q=buildReading(cat,bank[idx]);q.readingId=cat+':'+idx;saveVariety();return q;

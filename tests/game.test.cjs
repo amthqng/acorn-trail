@@ -490,3 +490,10 @@ test('recent math questions remain remembered after reload and replay',()=>{
  const next=JSON.parse(c.eval('JSON.stringify(Array.from({length:8},()=>mathQuestionKey(genMath(THEMES[4]))))'));
  assert.equal(new Set([...keys,...next]).size,20);
 });
+
+test('reading cycle boundaries avoid the last entry even after selection-cache eviction',()=>{
+ const b=boot();seeded(b,77);
+ b.eval("const cat='rhyme';variety.reading[cat]=READING[cat].map((_,i)=>i);variety.reading[cat].splice(1,1);variety.reading[cat].push(1);delete variety.last['entry:'+cat];delete variety.bags['entry:'+cat];variety.bags['read:rhyme|baby|fillblank']=['rhyme'];");
+ b.ctx.Math=Object.create(Math);b.ctx.Math.random=()=>0;
+ const id=b.eval('pickReading(THEMES[0]).readingId');assert.notEqual(id,'rhyme:1');
+});
