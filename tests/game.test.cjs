@@ -164,3 +164,13 @@ test('resuming a completed answer advances exactly one stop',()=>{
  assert.equal(c.eval('acorns'),4);
  assert.equal(c.eval('pendingCompletion'),false);
 });
+
+test('corrupted save data cannot access an invalid region or stop',()=>{
+ const b=boot();
+ const invalid=[{v:b.eval('PVER'),themeIndex:99,stopIndex:0,acorns:1},{v:b.eval('PVER'),themeIndex:0,stopIndex:99,acorns:1},{v:b.eval('PVER'),themeIndex:-1,stopIndex:0,acorns:1},{v:b.eval('PVER'),themeIndex:0,stopIndex:0,acorns:-3}];
+ for(const data of invalid){
+  b.eval('store.set(PKEY,'+JSON.stringify(data)+')');
+  assert.equal(b.eval('loadProgress()'),null);
+  b.eval("go('screen-start')");
+ }
+});
