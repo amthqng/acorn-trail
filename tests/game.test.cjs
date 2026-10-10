@@ -68,3 +68,55 @@ test('no remote runtime dependencies',()=>{
  assert.doesNotMatch(html,/<script[^>]+src=/i);
  assert.doesNotMatch(html,/<link[^>]+rel=["']stylesheet/i);
 });
+
+test('seven-region camping map tracks current destination and progress',()=>{
+ const b=boot();
+ assert.equal(b.eval('THEMES.length'),7);
+ assert.equal(b.eval('CAMP_MAP_PLACES.length'),7);
+ b.eval('themeIndex=4;stopIndex=3;acorns=9;renderMap()');
+ const svg=b.eval("document.getElementById('camp-map-world').innerHTML");
+ assert.match(svg,/Amber Woods/);
+ assert.match(svg,/camp-node current/);
+ assert.match(svg,/camp-node done/);
+ assert.match(svg,/camp-node locked/);
+ assert.match(svg,/9 collected/);
+ assert.equal(b.eval("document.getElementById('camp-map-caption').textContent"),'Campsite 5 of 7 · The Amber Woods');
+});
+test('every theme has twelve alternating math and reading stops',()=>{
+ const b=boot();
+ const all=JSON.parse(b.eval('JSON.stringify(THEMES.map(t=>t.stops))'));
+ assert.equal(all.length,7);
+ for(const stops of all){
+  assert.equal(stops.length,12);
+  for(let i=0;i<stops.length;i++){
+   assert.ok(['math','read'].includes(stops[i]));
+   if(i)assert.notEqual(stops[i],stops[i-1]);
+  }
+ }
+});
+test('each region renders an offline camping scene',()=>{
+ const b=boot();
+ for(const scene of ['meadow','orchard','river','pumpkin','woods','bridge','oak']){
+  b.eval('setScene('+JSON.stringify(scene)+')');
+  const art=b.eval("document.getElementById('scenery').innerHTML");
+  assert.match(art,/camp-scene-decor/);
+  assert.match(art,/<svg/);
+  assert.match(art,/<path/);
+ }
+});
+test('camping characters render for every animal and preserve roster flexibility',()=>{
+ const b=boot();
+ const animals=JSON.parse(b.eval('JSON.stringify(ANIMALS)'));
+ for(const animal of animals){
+  const svg=b.eval('camperGlyph('+JSON.stringify(animal)+')');
+  assert.match(svg,/<svg/);
+  assert.match(svg,/viewBox="0 0 120 132"/);
+ }
+ assert.equal(b.eval('teamValid()'),true);
+});
+test('fresh starts clear pending completion and active questions',()=>{
+ const b=boot();
+ b.eval("current={kind:'math'};pendingCompletion=true;freshStart()");
+ assert.equal(b.eval('current'),null);
+ assert.equal(b.eval('pendingCompletion'),false);
+});
