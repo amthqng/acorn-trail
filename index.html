@@ -1252,7 +1252,9 @@ const READING = {
     {w:'tree',a:'bee',o:['top','leaf','barn']},{w:'moon',a:'spoon',o:['man','moss','mud']},
     {w:'cake',a:'lake',o:['cook','milk','coat']},{w:'star',a:'car',o:['step','sit','sky']},
     {w:'night',a:'light',o:['now','nest','note']},{w:'frog',a:'log',o:['fish','free','fig']},
-    {w:'bell',a:'shell',o:['ball','bird','bump']},{w:'rain',a:'train',o:['run','road','ring']}
+    {w:'bell',a:'shell',o:['ball','bird','bump']},{w:'rain',a:'train',o:['run','road','ring']},
+    {w:'mouse',a:'house',o:['moss','horse','nest']},{w:'goat',a:'boat',o:['gate','boot','grass']},
+    {w:'sock',a:'rock',o:['soap','stick','sun']},{w:'cup',a:'pup',o:['cap','cop','cat']}
   ],
   baby:[
     {q:'What do we call a baby dog?',a:'puppy',o:['kitten','pony','cub']},
@@ -1262,7 +1264,11 @@ const READING = {
     {q:'What do we call a baby horse?',a:'foal',o:['calf','joey','puppy']},
     {q:'What do we call a baby bear?',a:'cub',o:['pup','chick','kid']},
     {q:'What do we call a baby chicken?',a:'chick',o:['duckling','lamb','foal']},
-    {q:'What do we call a baby deer?',a:'fawn',o:['cub','colt','kit']}
+    {q:'What do we call a baby deer?',a:'fawn',o:['cub','colt','kit']},
+    {q:'What do we call a baby duck?',a:'duckling',o:['calf','lamb','piglet']},
+    {q:'What do we call a baby goat?',a:'kid',o:['colt','chick','puppy']},
+    {q:'What do we call a baby pig?',a:'piglet',o:['foal','fawn','kitten']},
+    {q:'What do we call a baby lion?',a:'cub',o:['duckling','calf','chick']}
   ],
   synonym:[
     {w:'kind',a:'caring',o:['mean','cold','noisy']},{w:'finish',a:'end',o:['begin','build','find']},
@@ -1336,7 +1342,11 @@ const READING = {
     {s:'We spoke in a QUIET whisper.',w:'QUIET',a:'not loud',o:['huge','shiny','fast']},
     {s:'The apple was RIPE and ready to eat.',w:'RIPE',a:'ready to eat',o:['rotten','green','frozen']},
     {s:'The trail was STEEP and hard to climb.',w:'STEEP',a:'sharply uphill',o:['flat','muddy','short']},
-    {s:'The pup gave a GENTLE nudge to help.',w:'GENTLE',a:'soft and kind',o:['rough','loud','angry']}
+    {s:'The pup gave a GENTLE nudge to help.',w:'GENTLE',a:'soft and kind',o:['rough','loud','angry']},
+    {s:'Tansy was PATIENT and waited calmly for her turn.',w:'PATIENT',a:'able to wait calmly',o:['in a hurry','very noisy','ready to sleep']},
+    {s:'The tent was TIDY, with everything in its place.',w:'TIDY',a:'neat',o:['messy','dark','crowded']},
+    {s:'After the light rain, the grass was DAMP.',w:'DAMP',a:'a little wet',o:['very dry','frozen solid','full of dust']},
+    {s:'Biscuit felt PROUD after finishing his first trail.',w:'PROUD',a:'pleased with what he did',o:['afraid to try','ready to cry','too sleepy to walk']}
   ],
   fillblank:[
     {s:'It started to rain, so we opened our ___.',a:'umbrella',o:['sandwich','pillow','crayon']},
@@ -1350,7 +1360,11 @@ const READING = {
     {s:'He was thirsty and asked for a glass of ___.',a:'water',o:['grass','paper','music']},
     {s:'We climbed the hill to see the ___ set.',a:'sun',o:['floor','chair','spoon']},
     {s:'The kitten was cold, so we wrapped it in a ___.',a:'blanket',o:['puddle','whistle','pebble']},
-    {s:'Please be ___ so the baby can nap.',a:'quiet',o:['purple','square','seven']}
+    {s:'Please be ___ so the baby can nap.',a:'quiet',o:['purple','square','seven']},
+    {s:'She used a ___ to stir the warm soup.',a:'spoon',o:['sock','stone','leaf'],e:'A spoon is a tool we use to stir soup.'},
+    {s:'We checked the ___ to find the path to camp.',a:'map',o:['cup','blanket','apple'],e:'A map shows where paths lead.'},
+    {s:'His hands were cold, so he put on his ___.',a:'gloves',o:['boots','hat','scarf'],e:'Gloves cover our hands and help keep them warm.'},
+    {s:'Tiny ___ twinkled in the dark night sky.',a:'stars',o:['chairs','baskets','boots'],e:'Stars look like twinkling lights in the night sky.'}
   ],
   comp:[
     {p:'Clover packed a blanket and a lantern for camp. When the evening turned cold, she wrapped the blanket around her shoulders.',q:'Why did Clover use the blanket?',a:'to keep warm',o:['to catch fish','to carry water','to light the path'],e:'The evening turned cold, so she wrapped the blanket around her shoulders.'},
@@ -1372,7 +1386,11 @@ const READING = {
     {p:'Ginger and Pip raced to the top of the hill. Pip was faster, but he stopped to wait so they could reach the Great Oak together.',
       q:'Why did Pip stop and wait?',a:'to finish together',o:['he was lost','he fell down','he was tired']},
     {p:'The owl slept all day in the tall amber tree. When the stars came out, she opened her big eyes and flew off to hunt.',
-      q:'When does the owl wake up?',a:'when the stars come out',o:['at breakfast','at noon','in the rain']}
+      q:'When does the owl wake up?',a:'when the stars come out',o:['at breakfast','at noon','in the rain']},
+    {p:'Poppy tied a red ribbon to her bag. When she saw many bags beside the tent, the ribbon helped her find her own.',q:'Why did Poppy tie a ribbon to her bag?',a:'to find her own bag',o:['to carry water','to feed the birds','to warm the tent'],e:'The red ribbon helped Poppy recognize her own bag.'},
+    {p:'Tansy saw paw prints in the mud. She followed them along the path and found her friends beside their tent.',q:'What showed Tansy where her friends had walked?',a:'paw prints',o:['a rainbow','a lantern','an apple'],e:'Tansy followed the paw prints in the mud to her friends.'},
+    {p:'Nutmeg hung her wet scarf on a sunny branch. After lunch, she came back and found that the scarf was dry.',q:'Where did Nutmeg hang her scarf?',a:'on a sunny branch',o:['under the river','inside a basket','beside the fire'],e:'Nutmeg hung her wet scarf on a sunny branch.'},
+    {p:'A fallen branch blocked the bridge. Maple took the side path around it and reached camp safely.',q:'Why did Maple take the side path?',a:'the bridge was blocked',o:['camp was closed','it was time to sleep','her bag was missing'],e:'A fallen branch blocked the bridge, so Maple used the side path.'}
   ]
 };
 /* difficulty tiers 0..6 (0 easiest) */
@@ -1386,18 +1404,45 @@ const READING_TIERS = [
   ['comp','meaning']
 ];
 const usedReading={};
+const VKEY='acorn-trail-variety';
+function loadVariety(){
+  const raw=store.get(VKEY),out={bags:{},last:{},reading:{},recentMath:[]};
+  if(raw?.v!==1)return out;
+  const value=x=>(typeof x==='string'&&x.length<=32)||(Number.isInteger(x)&&x>=0&&x<100);
+  for(const key of Object.keys(raw.bags||{}).slice(-48))if(/^(read|math|entry|story|noun):[a-z0-9|_-]{1,150}$/.test(key)&&Array.isArray(raw.bags[key]))out.bags[key]=[...new Set(raw.bags[key].filter(value))].slice(0,32);
+  for(const key of Object.keys(raw.last||{}).slice(-48))if(/^(read|math|entry|story|noun):[a-z0-9|_-]{1,150}$/.test(key)&&value(raw.last[key]))out.last[key]=raw.last[key];
+  for(const cat of Object.keys(READING))out.reading[cat]=Array.isArray(raw.reading?.[cat])?[...new Set(raw.reading[cat].filter(i=>Number.isInteger(i)&&i>=0&&i<READING[cat].length))]:[];
+  if(Array.isArray(raw.recentMath))out.recentMath=raw.recentMath.filter(x=>typeof x==='string'&&x.length<=180).slice(-20);
+  return out;
+}
+let variety=loadVariety();
+function saveVariety(){store.set(VKEY,{v:1,...variety});}
+function resetVariety(){store.del(VKEY);variety=loadVariety();for(const k in usedReading)delete usedReading[k];}
+function drawVariety(key,values,avoid=variety.last[key]){
+  const allowed=[...new Set(values)];
+  let bag=(variety.bags[key]||[]).filter(x=>allowed.includes(x));
+  if(!bag.length)bag=shuffle(allowed);
+  let idx=bag.findIndex(x=>x!==avoid);if(idx<0)idx=0;
+  const chosen=bag.splice(idx,1)[0];variety.bags[key]=bag;variety.last[key]=chosen;
+  for(const object of [variety.bags,variety.last])while(Object.keys(object).length>48)delete object[Object.keys(object)[0]];
+  return chosen;
+}
+function wording(key,variants){return variants[drawVariety('story:'+key,variants.map((_,i)=>i))];}
 function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
 function readingOffset(){ return SETTINGS.reading==='g1'?-1:SETTINGS.reading==='g3'?1:0; }
 function pickReading(theme){
   const tier=readingTier(theme);
   const cats=READING_TIERS[tier];
-  const cat=cats[Math.floor(Math.random()*cats.length)]; const bank=READING[cat];
-  usedReading[cat]=usedReading[cat]||new Set();
+  const cat=drawVariety('read:'+cats.join('|'),cats,variety.last['read:previous']);variety.last['read:previous']=cat;
+  const bank=READING[cat];
+  usedReading[cat]=new Set(variety.reading[cat]||[]);
   if(usedReading[cat].size>=bank.length) usedReading[cat].clear();
-  let idx; do{ idx=Math.floor(Math.random()*bank.length); } while(usedReading[cat].has(idx));
+  const available=bank.map((_,i)=>i).filter(i=>!usedReading[cat].has(i));
+  const idx=drawVariety('entry:'+cat,available);
   usedReading[cat].add(idx);
-  return buildReading(cat, bank[idx]);
+  variety.reading[cat]=[...usedReading[cat]];
+  const q=buildReading(cat,bank[idx]);q.readingId=cat+':'+idx;saveVariety();return q;
 }
 function buildReading(cat,d){
   let prompt,sub,answer,choices,hint;
@@ -1437,7 +1482,7 @@ function readingExplanation(cat,d){
     return `${d.s.replace('___',d.a)} “${d.a}” means ${meaning}. Words can sound alike but have different meanings.`;
   }
   if(cat==='fillblank'){
-    const why={umbrella:'An umbrella keeps the rain off.',flowers:'Bees visit flowers for nectar.',sleep:'Sleep helps us rest when we are tired.',mud:'Boots protect our feet in mud.',blow:'Blowing gently helps hot soup cool.',nest:'A nest is a baby bird’s home.',lantern:'A lantern gives light in the dark.',fall:'Leaves change color in fall.',water:'Water is a drink that helps when we are thirsty.',sun:'We can watch the sun set behind a hill.',blanket:'A blanket helps keep a cold kitten warm.',quiet:'Being quiet helps a baby stay asleep.'}[d.a];
+    const why=d.e||{umbrella:'An umbrella keeps the rain off.',flowers:'Bees visit flowers for nectar.',sleep:'Sleep helps us rest when we are tired.',mud:'Boots protect our feet in mud.',blow:'Blowing gently helps hot soup cool.',nest:'A nest is a baby bird’s home.',lantern:'A lantern gives light in the dark.',fall:'Leaves change color in fall.',water:'Water is a drink that helps when we are thirsty.',sun:'We can watch the sun set behind a hill.',blanket:'A blanket helps keep a cold kitten warm.',quiet:'Being quiet helps a baby stay asleep.'}[d.a];
     return `${d.s.replace('___',d.a)} ${why}`;
   }
   if(cat==='meaning') return `In “${d.s}”, “${d.w.toLowerCase()}” means ${d.a}. Use the other words in the sentence to help find its meaning.`;
@@ -1481,16 +1526,33 @@ function allowedTypes(level){
   return out;
 }
 function genMath(theme){
+  const types=allowedTypes(mathLevel(theme)).flatMap(t=>t==='addsub'?[...(SETTINGS.ops.add?['add']:[]),...(SETTINGS.ops.sub?['sub']:[])]:[t]);
+  const type=drawVariety('math:'+types.join('|'),types,variety.last['math:previous']);variety.last['math:previous']=type;
+  let selected,oldest=Infinity;
+  // Bounded retries avoid recent equivalents without hanging on a small pool.
+  for(let attempt=0;attempt<16;attempt++){
+    const candidate=makeMath(theme,type),key=mathQuestionKey(candidate),age=variety.recentMath.indexOf(key);
+    if(age<0){selected=candidate;break;}
+    if(age<oldest){oldest=age;selected=candidate;}
+  }
+  const key=mathQuestionKey(selected);
+  variety.recentMath=variety.recentMath.filter(x=>x!==key);variety.recentMath.push(key);variety.recentMath=variety.recentMath.slice(-20);
+  saveVariety();return selected;
+}
+function mathQuestionKey(q){
+  const m=q.prompt.match(/^(\d+) ([+−×÷]) (\d+)$/);
+  let numbers=q.prompt.match(/\d+/g)||[];
+  if(m){numbers=[Number(m[1]),Number(m[3])];if(m[2]==='+'||m[2]==='×')numbers.sort((a,b)=>a-b);}
+  return q.skill+':'+numbers.join(',')+':'+q.answer;
+}
+function makeMath(theme,t){
   const level=mathLevel(theme);
   const gentle=adaptiveShift('math')<0;
-  const types=allowedTypes(level);
-  const t=types[Math.floor(Math.random()*types.length)];
   const ops=SETTINGS.ops;
-  if(t==='addsub'){
+  if(t==='add'||t==='sub'){
     let a,b,op,ans;
     if(level===1){ a=ri(gentle?2:6,gentle?12:30); b=ri(gentle?1:2,gentle?8:15); } else if(level===2){ a=ri(20,70); b=ri(10,45); } else { a=ri(50,190); b=ri(25,130); }
-    let canPlus=ops.add, canMinus=ops.sub; if(!canPlus&&!canMinus){ canPlus=true; }
-    if(canPlus && (!canMinus || Math.random()<0.5)){ op='+'; ans=a+b; }
+    if(t==='add'){ op='+'; ans=a+b; }
     else { if(b>=a) b=ri(1,a-1); op='−'; ans=a-b; }
     return { kind:'math', host:'dog', skill:op==='+'?'addition':'subtraction', explanation:mathExplanation(op,a,b,ans), prompt:`${a} ${op} ${b}`, sub: op==='+'?'Add the two numbers':'Take the second from the first',
       answer:ans, choices:numChoices(ans),
@@ -1512,7 +1574,12 @@ function genMath(theme){
   }
   if(t==='two' && ops.add && ops.sub){
     const a=ri(20,60), b=ri(10,30), c=ri(5,20); const ans=a+b-c; const n=noun();
-    return { kind:'math', host:'dog', skill:'two', explanation:`First, ${a} + ${b} = ${a+b}. Then, ${a+b} − ${c} = ${ans}. There are ${ans} ${n} left.`, prompt:`${leadPrimary().name} had ${a} ${n}, found ${b} more, then gave ${c} away. How many now?`,
+    return { kind:'math', host:'dog', skill:'two', explanation:`First, ${a} + ${b} = ${a+b}. Then, ${a+b} − ${c} = ${ans}. There are ${ans} ${n} left.`, prompt:wording('two',[
+      `${leadPrimary().name} had ${a} ${n}, found ${b} more, then gave ${c} away. How many now?`,
+      `A basket held ${a} ${n}. The friends added ${b}, then took out ${c}. How many are left?`,
+      `At camp there were ${a} ${n}. A cart brought ${b} more. The friends used ${c}. How many remain?`,
+      `${leadPrimary().name} packed ${a} ${n}, picked up ${b} more on the trail, and shared ${c}. How many did ${leadPrimary().name} keep?`
+    ]),
       sub:'Two steps: add, then subtract', answer:ans, choices:numChoices(ans),
       hint:`First add: ${a} + ${b}. Then take away ${c} from that total.` };
   }
@@ -1533,16 +1600,24 @@ function genMath(theme){
 }
 
 function mathStory(name,a,b,n,takeAway){
-  return pickRand(takeAway?[
+  return wording(takeAway?'subtract':'add',takeAway?[
     `There were ${a} ${n}. ${b} blew away in the wind. How many are left?`,
     `${name} packed ${a} ${n} for camp and gave ${b} to a friend. How many did ${name} keep?`,
     `A basket held ${a} ${n}. The friends took out ${b}. How many are still in the basket?`,
-    `${name} counted ${a} ${n} on the trail, then moved ${b} into a bag. How many stayed on the trail?`
+    `${name} counted ${a} ${n} on the trail, then moved ${b} into a bag. How many stayed on the trail?`,
+    `${name} collected ${a} ${n}. After sharing ${b}, how many did ${name} have left?`,
+    `There are ${a} ${n} beside the tent. The friends carry ${b} away. How many remain?`,
+    `A cart brought ${a} ${n} to camp. The friends used ${b}. How many are still in the cart?`,
+    `${name} had ${a} ${n} in a basket and left ${b} at camp. How many are in the basket now?`
   ]:[
     `${name} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,
     `One basket has ${a} ${n}, and another has ${b}. How many ${n} are in both baskets?`,
     `${name} packed ${a} ${n} for camp. A friend brought ${b} more. How many do they have together?`,
-    `The friends counted ${a} ${n} near the tent and ${b} near the tree. How many ${n} did they count altogether?`
+    `The friends counted ${a} ${n} near the tent and ${b} near the tree. How many ${n} did they count altogether?`,
+    `${name} has ${a} ${n}. A friend gives ${name} ${b} more. How many does ${name} have now?`,
+    `The friends put ${a} ${n} into a bag, then add ${b} more. How many are in the bag?`,
+    `There are ${a} ${n} on one side of the path and ${b} on the other. How many are there in all?`,
+    `A cart holds ${a} ${n}. The friends load ${b} more. How many ${n} does the cart hold now?`
   ]);
 }
 function mathExplanation(op,a,b,ans){
@@ -2013,7 +2088,7 @@ function toggleSetting(key){
 function confirmReset(){
   if(confirm('Reset all trail progress, stickers and learning records, and start from the beginning?')){
     store.del(LKEY); learning=loadLearning();
-    resetAdaptive();
+    resetAdaptive();resetVariety();
     cancelReward(); clearProgress(); acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false;
     stickerCounts={}; pendingUnlocks=[]; basketDot=false; saveStickers();
     for(const k in usedReading) delete usedReading[k];
