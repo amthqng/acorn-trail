@@ -462,7 +462,14 @@
 .theme-head h2{color:var(--camp-ink)}
 .theme-progress,.challenge,.story-card{border-radius:22px}
 .btn{border-radius:16px}
-button:focus-visible,[tabindex]:focus-visible{outline:3px solid #244f82;outline-offset:3px}
+button:focus-visible,[tabindex]#screen-map{justify-content:flex-start}
+@media(max-width:380px){
+  .lantern-row{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:340px}
+  #screen-map .topbar{flex-wrap:wrap;gap:8px}
+  #screen-map .theme-dots{order:3;flex-basis:100%;justify-content:center}
+  #screen-map .theme-head{margin-top:64px}
+}
+:focus-visible{outline:3px solid #244f82;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.companion{transition:none}.companion:hover{transform:none}}
 
 /* Kid-friendly flat camping challenge and reward cards. */
@@ -499,6 +506,13 @@ button, [role="button"]{touch-action:manipulation}
 .screen{padding-top:calc(20px + env(safe-area-inset-top));padding-bottom:calc(30px + env(safe-area-inset-bottom));padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
 .start-tools,.topbar{top:calc(14px + env(safe-area-inset-top))}
 .modal{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom))}
+#screen-map{justify-content:flex-start}
+@media(max-width:380px){
+  .lantern-row{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:340px}
+  #screen-map .topbar{flex-wrap:wrap;gap:8px}
+  #screen-map .theme-dots{order:3;flex-basis:100%;justify-content:center}
+  #screen-map .theme-head{margin-top:64px}
+}
 :focus-visible{outline:3px solid var(--rust-dark);outline-offset:3px}
 </style>
 </head>
@@ -1102,9 +1116,9 @@ const READING = {
   compound:[
     {p:'rain',a:'bow',o:['ball','sun','tree'],word:'rainbow'},{p:'sun',a:'flower',o:['moon','apple','river'],word:'sunflower'},
     {p:'camp',a:'fire',o:['water','leaf','star'],word:'campfire'},{p:'butter',a:'fly',o:['bird','cup','bee'],word:'butterfly'},
-    {p:'snow',a:'flake',o:['rain','sun','melt'],word:'snowflake'},{p:'tree',a:'house',o:['top','leaf','root'],word:'treehouse'},
+    {p:'snow',a:'flake',o:['rain','sun','melt'],word:'snowflake'},{p:'tree',a:'house',o:['sock','cup','spoon'],word:'treehouse'},
     {p:'moon',a:'light',o:['dark','star','sky'],word:'moonlight'},{p:'foot',a:'print',o:['step','sock','path'],word:'footprint'},
-    {p:'rain',a:'coat',o:['drop','cloud','boot'],word:'raincoat'},{p:'star',a:'fish',o:['light','dust','shine'],word:'starfish'}
+    {p:'rain',a:'coat',o:['cake','chair','spoon'],word:'raincoat'},{p:'star',a:'fish',o:['sock','apple','cup'],word:'starfish'}
   ],
   homophone:[
     {s:'The wind blew ___ the trees.',a:'through',o:['threw','thru','true']},

@@ -3,8 +3,10 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {pathToFileURL}=require('node:url');
 const path=require('node:path');
+const fs=require('node:fs');
 const {chromium,webkit}=require('playwright');
-const url=pathToFileURL(path.resolve('index.html')).href;
+const fileUrl=pathToFileURL(path.resolve('index.html')).href;
+const html=fs.readFileSync('index.html','utf8');
 for(const [engineName,engine] of Object.entries({chromium,webkit})){
  for(const viewport of [{width:390,height:844},{width:320,height:568},{width:844,height:390}]){
   test(`${engineName} offline touch gameplay ${viewport.width}x${viewport.height}`,async()=>{
@@ -13,8 +15,12 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     const context=await browser.newContext({viewport,isMobile:true,hasTouch:true,offline:true});
     const page=await context.newPage();const errors=[];const remote=[];
     page.on('pageerror',e=>errors.push(e.message));
-    page.on('request',r=>{if(/^https?:/.test(r.url()))remote.push(r.url())});
+    page.on('request',r=>{if(/^https?:/.test(r.url())&&r.url()!=='http://acorn-trail.test/index.html')remote.push(r.url())});
     await page.clock.install();
+    // WebKit's offline network emulation rejects file navigation. Serve the
+    // identical single-file bytes through an in-memory route, with no server.
+    const url=engineName==='webkit'?'http://acorn-trail.test/index.html':fileUrl;
+    if(engineName==='webkit')await context.route(url,route=>route.fulfill({status:200,contentType:'text/html',body:html}));
     await page.goto(url);
     await page.evaluate(()=>{SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;saveSettings()});
     await page.getByRole('button',{name:'Make your team'}).tap();
@@ -26,9 +32,9 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     async function layout(){
      const issue=await page.evaluate(()=>{
       const screen=document.querySelector('.screen.active');
-      return {overflow:screen.scrollWidth>screen.clientWidth+1,active:screen.id};
+      return {overflow:screen.scrollWidth>screen.clientWidth+1,active:screen.id,outliers:[...screen.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.left < -1||r.right>innerWidth+1)}).slice(0,8).map(e=>({tag:e.tagName,id:e.id,cls:e.getAttribute('class'),rect:e.getBoundingClientRect().toJSON()}))};
      });
-     assert.equal(issue.overflow,false,`horizontal overflow on ${issue.active}`);
+     assert.equal(issue.overflow,false,`horizontal overflow on ${issue.active}: ${JSON.stringify(issue.outliers)}`);
     }
     async function dismiss(){
      for(let i=0;i<30&&await page.evaluate(()=>currentScreenId==='screen-sticker-unlock');i++){
