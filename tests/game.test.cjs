@@ -262,3 +262,8 @@ test('compound reading distractors do not form other common valid answers',()=>{
  const bank=JSON.parse(b.eval('JSON.stringify(READING.compound)'));
  for(const d of bank){assert.equal(d.p+d.a,d.word);for(const o of d.o)assert.equal(known.has(d.p+o),false,`${d.p}+${o} is another valid answer`);}
 });
+
+test('saved question validity requires a selectable primitive answer',()=>{
+ const b=boot();
+ for(const q of [{kind:'math',prompt:'2+3',answer:5,choices:['5','4']},{kind:'read',prompt:'Word',answer:{word:'cat'},choices:[{word:'cat'},'dog']}])assert.equal(b.eval('validQuestion('+JSON.stringify(q)+')'),false);
+});

@@ -500,6 +500,11 @@ button:focus-visible,[tabindex]#screen-map{justify-content:flex-start}
 button, [role="button"]{touch-action:manipulation}
 .icon-btn{width:44px;height:44px}
 .chip{min-height:44px}
+.ans-speak{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center}
+.answer.has-speech{padding-top:54px}
+#screen-challenge .challenge{width:100%;min-width:0;margin-inline:0}
+.answers{grid-template-columns:repeat(2,minmax(0,1fr))}
+.answer{min-width:0;overflow-wrap:anywhere}
 .name-input{font-size:16px}
 .pc .pc-x{width:44px;height:44px;top:-8px;right:-8px}
 .pc .pc-emoji{cursor:pointer}
@@ -1319,7 +1324,7 @@ const REVEAL_AT=2;
 let pendingCompletion=false, rewardTimer=null, trailEpoch=0;
 function cancelReward(){ trailEpoch++; clearTimeout(rewardTimer); rewardTimer=null; pendingUnlocks=[]; unlockNext=null; wrongCount=0; current=null; answered=false; pendingCompletion=false; }
 function savedQuestion(){ const p=store.get(PKEY); return p&&p.v===PVER&&p.themeIndex===themeIndex&&p.stopIndex===stopIndex&&p.question&&validQuestion(p.question)?p:null; }
-function validQuestion(q){ return !!q&&['math','read'].includes(q.kind)&&typeof q.prompt==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&q.choices.length===new Set(q.choices.map(String)).size&&q.choices.some(x=>String(x)===String(q.answer)); }
+function validQuestion(q){ return !!q&&['math','read'].includes(q.kind)&&typeof q.prompt==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&q.choices.length===new Set(q.choices.map(String)).size&&q.choices.every(x=>typeof x==='string'||(typeof x==='number'&&Number.isFinite(x)))&&q.choices.includes(q.answer); }
 function checkpoint(){ if(current&&!answered) saveProgress(); }
 window.addEventListener('pagehide',checkpoint);
 
@@ -1458,7 +1463,7 @@ function loadChallenge(q){
   const hb=document.getElementById('hint-bubble'); hb.textContent=q.hint; hb.classList.remove('show');
   const el=document.getElementById('answers'); el.innerHTML='';
   q.choices.forEach(c=>{
-    const b=document.createElement('button'); b.className='answer'; b.dataset.val=String(c);
+    const b=document.createElement('button'); b.className='answer'+(SETTINGS.readAloud?' has-speech':''); b.dataset.val=String(c);
     b.innerHTML = `<span class="ans-txt">${esc(c)}</span>` + (SETTINGS.readAloud?`<span class="ans-speak" role="button" tabindex="0" aria-label="Hear this choice">🔊</span>`:'');
     b.onclick=()=>checkAnswer(b,c,q.answer);
     if(SETTINGS.readAloud){ const sp=b.querySelector('.ans-speak'); sp.onclick=(e)=>{ e.stopPropagation(); speak(String(c)); }; sp.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); speak(String(c)); } }; }

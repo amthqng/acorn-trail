@@ -12,7 +12,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
   test(`${engineName} offline touch gameplay ${viewport.width}x${viewport.height}`,async()=>{
    const browser=await engine.launch();
    try{
-    const context=await browser.newContext({viewport,isMobile:true,hasTouch:true,offline:true});
+    const context=await browser.newContext({viewport,isMobile:true,hasTouch:true,offline:engineName==='chromium'});
     const page=await context.newPage();const errors=[];const remote=[];
     page.on('pageerror',e=>errors.push(e.message));
     page.on('request',r=>{if(/^https?:/.test(r.url())&&r.url()!=='http://acorn-trail.test/index.html')remote.push(r.url())});
@@ -22,6 +22,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     const url=engineName==='webkit'?'http://acorn-trail.test/index.html':fileUrl;
     if(engineName==='webkit')await context.route(url,route=>route.fulfill({status:200,contentType:'text/html',body:html}));
     await page.goto(url);
+    await context.setOffline(true);
     await page.evaluate(()=>{SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;saveSettings()});
     await page.getByRole('button',{name:'Make your team'}).tap();
     await page.getByRole('button',{name:'Edit Biscuit'}).tap();
@@ -32,9 +33,9 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     async function layout(){
      const issue=await page.evaluate(()=>{
       const screen=document.querySelector('.screen.active');
-      return {overflow:screen.scrollWidth>screen.clientWidth+1,active:screen.id,outliers:[...screen.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.left < -1||r.right>innerWidth+1)}).slice(0,8).map(e=>({tag:e.tagName,id:e.id,cls:e.getAttribute('class'),rect:e.getBoundingClientRect().toJSON()}))};
+      return {overflow:screen.scrollWidth>screen.clientWidth+1,active:screen.id,width:screen.clientWidth,scrollWidth:screen.scrollWidth,outliers:[...screen.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.left < -1||r.right>innerWidth+1)}).slice(0,8).map(e=>({tag:e.tagName,id:e.id,cls:e.getAttribute('class'),rect:e.getBoundingClientRect().toJSON()}))};
      });
-     assert.equal(issue.overflow,false,`horizontal overflow on ${issue.active}: ${JSON.stringify(issue.outliers)}`);
+     assert.equal(issue.overflow,false,`horizontal overflow on ${issue.active}: ${JSON.stringify(issue)}`);
     }
     async function dismiss(){
      for(let i=0;i<30&&await page.evaluate(()=>currentScreenId==='screen-sticker-unlock');i++){
@@ -44,19 +45,28 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     for(let region=0;region<7;region++){
      for(let stop=0;stop<12;stop++){
       await layout();
+      if(region===0&&stop<=1)await page.evaluate(()=>SETTINGS.readAloud=true);
+      else await page.evaluate(()=>SETTINGS.readAloud=false);
       await page.locator('#map-cta-btn').tap();
       await layout();
       if(region===0&&(stop===0||stop===1)){
+       const audio=page.locator('.ans-speak').first();const box=await audio.boundingBox();
+       assert.ok(box.width>=44&&box.height>=44);
+       await audio.tap();assert.equal(await page.evaluate(()=>answered),false);
+       await page.locator('.hint-btn:not(#speak-btn)').tap();assert.equal(await page.evaluate(()=>answered),false);
        const prompt=await page.locator('#ch-prompt').textContent();
        const wrong=await page.evaluate(()=>current.choices.findIndex(c=>c!==current.answer));
-       await page.locator('.answer').nth(wrong).tap();
-       await page.reload();await page.clock.runFor(500);
+       const wrongButton=page.locator('.answer').nth(wrong);const wrongBox=await wrongButton.boundingBox();
+       await wrongButton.tap({position:{x:10,y:wrongBox.height/2}});
+       if(engineName==='webkit')await context.setOffline(false);
+       await page.reload();await context.setOffline(true);await page.clock.runFor(500);
        await page.getByRole('button',{name:'Continue trail'}).tap();
        assert.equal(await page.locator('#ch-prompt').textContent(),prompt);
        assert.equal(await page.evaluate(()=>wrongCount),1);
       }
       const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
-      await page.locator('.answer').nth(correct).tap();
+      const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
+      await answerButton.tap({position:{x:10,y:answerBox.height/2}});
       await page.clock.runFor(1600);await dismiss();
       assert.equal(await page.evaluate(()=>acorns),region*12+stop+1);
      }
