@@ -427,6 +427,27 @@
   .name-input{ font-family:'Quicksand'; font-weight:600; font-size:15px; padding:8px 12px; border-radius:12px;
     border:3px solid var(--sand-dark); width:170px; }
   .editor-actions{ display:flex; gap:10px; margin-top:12px; }
+
+/* Acorn Trail camping adventure map — compact, offline SVG/CSS UI */
+.camp-map{position:relative;width:min(94%,610px);margin:10px auto 16px;padding:12px 12px 10px;background:#fff2cf;border:3px solid #8d6038;border-radius:24px;box-shadow:0 7px 0 #674d31,0 13px 26px #3d4b3040;color:#533c2c;z-index:1}
+.camp-map-heading{text-align:center;display:flex;flex-direction:column;gap:2px;font-weight:900;font-size:clamp(16px,3.6vw,23px)}
+.camp-map-heading small{font-size:12px;font-weight:600;color:#766049}
+.camp-map-world{margin-top:7px;border-radius:17px;overflow:hidden;background:#bce5b2;border:2px solid #9cc68b}
+.camp-map-world svg{display:block;width:100%;height:auto}
+.camp-map-caption{text-align:center;font-size:13px;font-weight:700;padding:8px 2px 1px}
+.camp-map .trail-path{fill:none;stroke:#fff4cf;stroke-width:17;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 0}
+.camp-map .trail-dashes{fill:none;stroke:#bc9162;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:4 9}
+.camp-map .camp-node circle{stroke:#7a5937;stroke-width:3}
+.camp-map .camp-node text{font:700 12px system-ui,sans-serif;fill:#503822;text-anchor:middle;paint-order:stroke;stroke:#fff5d6;stroke-width:4;stroke-linejoin:round}
+.camp-map .camp-node .place-icon{font:25px system-ui,sans-serif;stroke:none}
+.camp-map .camp-node.current circle{stroke:#fff8d7;stroke-width:5}
+.camp-map .camp-node.locked{opacity:.7}
+.camp-map .camp-node.done circle{fill:#f9d88e}
+.camp-map .camp-node.current circle{fill:#f9b74e}
+.camp-map .camp-node.locked circle{fill:#e6d9a6}
+.camp-map .map-marker{font:700 12px system-ui,sans-serif;fill:#5e4228}
+@media(max-width:420px){.camp-map{width:96%;padding:8px}.camp-map-heading small{font-size:11px}.camp-map-caption{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.camp-map *{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -472,6 +493,11 @@
       <div class="eyebrow" id="theme-eyebrow">Theme 1</div>
       <h2 id="theme-name">The Sunny Meadow</h2>
       <div class="subtitle" id="theme-sub"></div>
+    </div>
+    <div class="camp-map" aria-label="Adventure map showing seven woodland destinations">
+      <div class="camp-map-heading"><span>🏕️ Our adventure</span><small>Follow the lantern trail to the Great Oak</small></div>
+      <div class="camp-map-world" id="camp-map-world"></div>
+      <div class="camp-map-caption" id="camp-map-caption" aria-live="polite"></div>
     </div>
     <div class="theme-progress" id="theme-progress"></div>
     <div class="lantern-row" id="lantern-row"></div>
@@ -1223,8 +1249,50 @@ function go(id){
   if(id==='screen-map'){ renderMap(); }
   if(id==='screen-finale'){ setScene('oak'); }
 }
+
+/* Each region is drawn from local vector shapes; no remote assets or map APIs. */
+const CAMP_MAP_PLACES=[
+  {x:66,y:306,icon:'🏕️',short:'Meadow'},
+  {x:190,y:245,icon:'🍎',short:'Orchard'},
+  {x:80,y:182,icon:'🌊',short:'Riverside'},
+  {x:230,y:147,icon:'🎃',short:'Pumpkins'},
+  {x:346,y:210,icon:'🌲',short:'Forest'},
+  {x:433,y:119,icon:'⭐',short:'Trail'},
+  {x:362,y:49,icon:'🌳',short:'Great Oak'}
+];
+function renderAdventureMap(){
+  const host=document.getElementById('camp-map-world');
+  if(!host)return;
+  const pts=CAMP_MAP_PLACES;
+  const path=pts.map((p,i)=>(i?'L':'M')+p.x+' '+p.y).join(' ');
+  const tree=(x,y)=>'<g transform="translate('+x+' '+y+')"><path d="M-5 14L0 -18L5 14Z" fill="#548e62"/><path d="M-17 6L0 -26L17 6Z" fill="#377956"/><rect x="-3" y="8" width="6" height="12" fill="#91643c"/></g>';
+  const trees=[[25,55],[85,40],[142,67],[276,55],[456,44],[295,293],[412,289],[466,228],[20,266],[258,330],[144,323],[325,110],[46,116],[402,172]];
+  const nodes=pts.map((p,i)=>{
+    const state=i<themeIndex?'done':i===themeIndex?'current':'locked';
+    const status=i<themeIndex?'completed':i===themeIndex?'current destination':'upcoming';
+    return '<g class="camp-node '+state+'" aria-label="'+(i+1)+'. '+THEMES[i].name+', '+status+'" transform="translate('+p.x+' '+p.y+')">'+
+      '<circle r="'+(i===themeIndex?26:22)+'"/>'+
+      '<text class="place-icon" y="8">'+p.icon+'</text>'+
+      '<text y="43">'+p.short+'</text>'+
+      (i<themeIndex?'<text y="-28">✓</text>':'')+'</g>';
+  }).join('');
+  host.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 375" role="img" aria-label="Seven woodland destinations on a winding trail; current destination is '+THEMES[themeIndex].name+'">'+
+    '<rect width="500" height="375" fill="#b9e2ad"/>'+
+    '<path d="M0 100 Q130 50 220 115 T500 105 L500 0H0Z" fill="#d8edb9"/>'+
+    '<path d="M0 290Q120 250 215 310T500 260V375H0Z" fill="#9dd3a1"/>'+
+    '<path d="M-20 215Q120 170 190 200T520 230" fill="none" stroke="#86cbd9" stroke-width="28"/>'+
+    '<path d="M-20 215Q120 170 190 200T520 230" fill="none" stroke="#bde7eb" stroke-width="12"/>'+
+    trees.map(t=>tree(t[0],t[1])).join('')+
+    '<path class="trail-path" d="'+path+'"/><path class="trail-dashes" d="'+path+'"/>'+
+    nodes+
+    '<g transform="translate(13 355)"><text class="map-marker">🌰 '+acorns+' collected</text></g></svg>';
+  const label=document.getElementById('camp-map-caption');
+  if(label)label.textContent='Campsite '+(themeIndex+1)+' of '+THEMES.length+' · '+THEMES[themeIndex].name;
+}
+
 function renderMap(){
   const th=THEMES[themeIndex]; setScene(th.scene);
+  renderAdventureMap();
   document.getElementById('acorn-num').textContent=acorns;
   document.getElementById('theme-eyebrow').textContent=th.eyebrow;
   document.getElementById('theme-name').textContent=th.name;
