@@ -132,3 +132,35 @@ test('both restart paths clear stale answers and used reading history',()=>{
  assert.equal(b.eval("Object.keys(usedReading).length"),0);
  assert.equal(b.eval('stopIndex'),0);
 });
+
+test('all 84 stops advance across seven regions to the finale',()=>{
+ const b=boot();
+ b.eval("SETTINGS.sound=false;pendingUnlocks=[];acorns=0;themeIndex=0;stopIndex=0");
+ for(let region=0;region<7;region++){
+  assert.equal(b.eval('themeIndex'),region);
+  for(let stop=0;stop<12;stop++){
+   assert.equal(b.eval('stopIndex'),stop);
+   b.eval('startNextStop()');
+   assert.equal(b.eval('validQuestion(current)'),true);
+   assert.equal(b.eval('current.kind'),stop%2===0?'math':'read');
+   b.eval('acorns++;proceed()');
+  }
+  if(region<6){
+   assert.equal(b.eval('currentScreenId'),'screen-transition');
+   b.eval('advanceTheme()');
+  }
+ }
+ assert.equal(b.eval('finished'),true);
+ assert.equal(b.eval('acorns'),84);
+ assert.equal(b.eval('loadProgress()'),null);
+});
+test('resuming a completed answer advances exactly one stop',()=>{
+ const b=boot();
+ b.eval("SETTINGS.sound=false;acorns=4;themeIndex=1;stopIndex=5;pendingCompletion=true;current=null;saveProgress()");
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ c.eval('continueTrail()');
+ assert.equal(c.eval('themeIndex'),1);
+ assert.equal(c.eval('stopIndex'),6);
+ assert.equal(c.eval('acorns'),4);
+ assert.equal(c.eval('pendingCompletion'),false);
+});
