@@ -1,36 +1,40 @@
 # Acorn Trail QA pass, 10 October 2026
 
-Base: `4c4a973ca7c23809499ff11d306f225a40ecdd66`. Work branch: `qa/offline-gameplay`.
+Work branch: `qa/offline-gameplay`. Base: `4c4a973ca7c23809499ff11d306f225a40ecdd66`.
 
-## Verified locally
+## Verified results
 
-The original regression suite had 15 passes and one failure. The failure was a test assumption: alternate regions intentionally begin with reading. The corrected test follows each region's configured subject sequence.
+The original suite had 15 passes and one failure. That failure was a test assumption: alternate regions intentionally begin with reading. The corrected regression follows each region's configured subject sequence.
 
-The expanded Node suite passes all 27 tests. Coverage includes:
+The final suite passes all **31 Node regression tests and six complete browser journeys** in GitHub Actions. The browser matrix is Chromium and WebKit at 390×844, 320×568 and 844×390, with real touch interactions. Each journey completes all 84 stops, for **504 browser stop completions** in the final run.
 
-- Team addition, editing, deletion, role requirements, persistence, the 20-friend limit, all animal renderers, and recovery from malformed stored rosters.
-- Every reading-bank entry has distinct answer choices and an included correct answer.
-- Math question validity across four difficulty levels and each enabled operation category; 4,000 additional generated numeric questions are checked against their displayed arithmetic.
-- All 84 stops across seven regions, using real answer, reward, sticker continuation and finale callbacks in a simulated DOM. Every correct answer awards exactly one acorn, all stickers unlock, and the finale grants three bonus copies.
-- Active question and streak persistence, wrong-attempt restoration, pending answer completion, boundary transition resume, invalid region/stop rejection, and optional saved character metadata recovery.
-- Restart, fresh start, full reset and team-play reset reject stale reward callbacks. Stickers survive trail replay and team creation.
-- All HTML asset references are inline data URLs or fragments. No remote script or stylesheet is required. Embedded JavaScript initializes with no network API.
-- Browser test source syntax and Git whitespace checks pass.
+Verified coverage:
 
-## Implementation changes
+- Team addition, editing, deletion, role requirements, persistence, the 20-friend limit, all animal renderers, and recovery from malformed stored rosters. Browser journeys also cover the parent gate, grade selection, protection against disabling every operation, the editor, and the story.
+- Every reading-bank entry has distinct choices and an included correct answer. Three ambiguous compound-word distractor sets were corrected. Math is checked across four difficulty levels and individual operation categories, with another 4,000 generated numeric questions checked against their displayed arithmetic.
+- All seven regions, all 84 alternating stops, correct-answer rewards, sticker continuation screens, and the finale. The Node journey verifies exactly one acorn per answer, every sticker unlock, and three finale bonus copies. Browser journeys verify rewards, collection, and replay.
+- Math and reading question persistence across reload, wrong-attempt recovery, streak behavior, pending completed answers, boundary transition resume, and invalid save rejection.
+- Restart, fresh start, full reset, and team-play reset cancel stale reward work. Existing stickers survive replay and team changes, including stored friends outside the current smaller roster.
+- Start, editor, settings, story, map, challenge, sticker, basket and finale layouts are checked for horizontal overflow. Answer-audio and hint taps do not submit answers. Touch controls and scroll reachability are exercised by browser taps, including narrow portrait and landscape sizes.
+- Inline HTML assets, script initialization without networking, and no unexpected remote requests during browser gameplay. Browser JavaScript error checks are clean.
+- Browser test syntax and Git whitespace checks pass. Representative phone and landscape screenshots were reviewed; screenshots from all six journeys are attached to the successful Actions run.
 
-Wrong-attempt counts now persist, preventing a resumed incorrect answer from becoming a clean streak. Boundary saves resume at the region transition. Reset paths cancel scheduled reward work and clear stale unlock callbacks and question state. Corrupt roster and sticker data recover safely. Removing a teammate before the one being edited keeps the edit attached to the intended character. Team requirement icons render correctly.
+Passing Actions run: https://github.com/amthqng/acorn-trail/actions/runs/38073978641
 
-Mobile improvements include 44-pixel icon, name-chip and remove-button targets, 16-pixel name input text to avoid iOS input zoom, safe-area padding, visible keyboard focus, keyboard-accessible character editing, and touch-action hints.
+## Changes made
 
-The game remains a single self-contained HTML file, approximately 358 KB, with no new runtime dependencies or gameplay redesign.
+Save/resume now preserves wrong attempts and restores region transitions. Reset paths cancel pending reward timers and stale unlock callbacks, and clear question state. Invalid roster, question metadata and sticker counts recover safely; saved questions must contain an answer that can actually be selected. Removing a teammate before the one being edited preserves the intended edit. Team requirement icons render correctly, and answer reveals use the customized helper name.
 
-## Remaining verification
+Mobile fixes wrap the opening team and narrow lantern grids, fit the region toolbar and challenge columns, keep long answer text inside its button, and automatically bring a newly opened character editor into view. Main icon, chip, remove and answer-audio targets are 44 pixels; name inputs use 16-pixel text to avoid iOS input zoom. Safe-area padding, keyboard focus, keyboard character editing and touch-action hints were added. The intro hint now sits below its buttons and is hidden during gameplay, preventing footer overlap.
 
-Browser execution is blocked in this environment: Chromium and WebKit are absent, and the browser download returned an invalid archive. Consequently visual layout, scroll reachability, touch hit testing and actual browser file-origin save behavior are **not verified**. Physical iPhone Safari behavior is also not verified.
+The game remains a single self-contained HTML file of approximately **360 KB**, with no new runtime dependencies and no gameplay redesign. Playwright is developer-only QA tooling installed by the Actions workflow.
 
-`tests/browser.test.cjs` contains six browser journeys: Chromium and WebKit at 390×844, 320×568 and 844×390. They use an offline browser context and real touch interactions, cover team editing, math and reading save/resume, all 84 answers, sticker collection, replay, horizontal overflow, JavaScript errors and unexpected remote requests. These tests are configured in GitHub Actions with developer-only Playwright tooling; they have not yet run.
+## Practical limits
 
-Opening the downloaded HTML requires no external assets. Reopening a hosted URL while offline is a separate capability: this repository has no service worker, so it cannot guarantee offline navigation to the hosted page. Read-aloud availability depends on the browser and installed OS voices.
+No failures remain in the automated suite. Physical iPhone hardware, native Safari safe-area rendering, and the sound of OS speech voices were not tested. Read-aloud availability depends on installed browser/OS voices; audio-control behavior was tested.
 
-Publishing the branch was rejected by automatic approval review because it considered a push to the public GitHub repository insufficiently authorized. All changes are committed locally; nothing has been merged or published. Approval to push the QA branch is needed before cloud browser checks can run. This pass remains incomplete until those checks pass and any resulting issues are fixed.
+Chromium runs the saved HTML directly with its browser context offline, including reloads. WebKit's offline emulation rejects navigation before document loading, so its tests supply the identical HTML through an in-memory local route, then switch offline for gameplay; the locally supplied document is reinjected for reload checks. No game asset or backend is fetched externally.
+
+A downloaded HTML has no external runtime asset requirements. Reopening a hosted URL while offline is a separate capability: this repository has no service worker and does not guarantee offline navigation to the hosted page. No hosting or service-worker architecture was introduced.
+
+All work is committed and published on the QA branch for review. It has not been merged into `main`.
