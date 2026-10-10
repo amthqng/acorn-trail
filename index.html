@@ -463,6 +463,11 @@
 .theme-progress,.challenge,.story-card{border-radius:22px}
 .btn{border-radius:16px}
 button:focus-visible,[tabindex]#screen-map{justify-content:flex-start}
+#screen-start{justify-content:safe center;padding-top:calc(72px + env(safe-area-inset-top))}
+#start-party{width:100%;max-width:640px;flex-wrap:wrap;flex-shrink:0}
+#start-party .companion{max-width:110px;overflow-wrap:anywhere}
+#editor-holder{width:100%;max-width:560px;min-width:0}
+@media(max-width:480px){#start-party{max-width:300px;gap:16px}}
 @media(max-width:380px){
   .lantern-row{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:340px}
   #screen-map .topbar{flex-wrap:wrap;gap:8px}
@@ -512,6 +517,11 @@ button, [role="button"]{touch-action:manipulation}
 .start-tools,.topbar{top:calc(14px + env(safe-area-inset-top))}
 .modal{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom))}
 #screen-map{justify-content:flex-start}
+#screen-start{justify-content:safe center;padding-top:calc(72px + env(safe-area-inset-top))}
+#start-party{width:100%;max-width:640px;flex-wrap:wrap;flex-shrink:0}
+#start-party .companion{max-width:110px;overflow-wrap:anywhere}
+#editor-holder{width:100%;max-width:560px;min-width:0}
+@media(max-width:480px){#start-party{max-width:300px;gap:16px}}
 @media(max-width:380px){
   .lantern-row{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:340px}
   #screen-map .topbar{flex-wrap:wrap;gap:8px}
@@ -1748,8 +1758,9 @@ function renderCharacters(){
      <button class="btn small" ${teamValid()?'':'disabled'} onclick="playTeam()">Play ${ic('play')}</button>`;
   renderEditor();
 }
-function startAdd(){ if(ROSTER.length>=20) return; draft={animal:pickRand(ANIMALS), role:'math', name:''}; editIndex=-1; namePage=0; renderEditor(); }
-function editChar(i){ draft={...ROSTER[i]}; editIndex=i; namePage=0; renderEditor(); }
+function startAdd(){ if(ROSTER.length>=20) return; draft={animal:pickRand(ANIMALS), role:'math', name:''}; editIndex=-1; namePage=0; renderEditor(); focusEditor(); }
+function focusEditor(){ setTimeout(()=>document.getElementById('editor-holder').scrollIntoView?.({block:'start',behavior:SETTINGS.motion?'smooth':'auto'}),0); }
+function editChar(i){ draft={...ROSTER[i]}; editIndex=i; namePage=0; renderEditor(); focusEditor(); }
 function closeEditor(){ draft=null; editIndex=-1; }
 function renderEditor(){
   const h=document.getElementById('editor-holder');

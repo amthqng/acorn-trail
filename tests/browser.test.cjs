@@ -24,7 +24,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     if(engineName==='webkit')await context.route(url,route=>route.fulfill({status:200,contentType:'text/html',body:html}));
     await page.goto(url);
     await context.setOffline(true);
-    await page.evaluate(()=>{SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;saveSettings()});
+    await page.evaluate(()=>{SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;saveSettings();setScene(currentScene)});
     await layout();await capture('start');
     await page.locator('#screen-start button[aria-label="Grown-up settings"]').tap();await layout();
     const gate=await page.evaluate(()=>gateAnswer);
@@ -38,7 +38,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     for(const op of ['sub','mul','div','word'])await page.locator(`#ops-row button[data-k="${op}"]`).tap();
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     await page.getByRole('button',{name:'Make your team'}).tap();await layout();
-    await page.getByRole('button',{name:'Edit Biscuit'}).tap();await layout();await capture('team-editor');
+    await page.getByRole('button',{name:'Edit Biscuit'}).tap();await page.clock.runFor(100);await layout();await capture('team-editor');
     await page.locator('#name-input').fill('Maple');
     await page.locator('#draft-commit').tap();
     await page.locator('#cc-actions').getByRole('button',{name:'Play',exact:false}).tap();
