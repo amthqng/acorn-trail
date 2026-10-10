@@ -6,7 +6,7 @@ Work branch: `qa/offline-gameplay`. Base: `4c4a973ca7c23809499ff11d306f225a40ecd
 
 The original suite had 15 passes and one failure. That failure was a test assumption: alternate regions intentionally begin with reading. The corrected regression follows each region's configured subject sequence.
 
-The gameplay stabilization suite passed **40 Node regression tests and six complete browser journeys** in GitHub Actions. Hosted offline coverage brought this to **43 Node tests and nine browser checks**; adaptive practice below expands the Node suite to **52 tests**. The browser matrix is Chromium and WebKit at 390×844, 320×568 and 844×390, with real touch interactions. Each journey completes all 84 stops, for **504 browser stop completions** in the final run.
+The gameplay stabilization suite passed **40 Node regression tests and six complete browser journeys** in GitHub Actions. Hosted offline coverage brought this to **43 Node tests and nine browser checks**; adaptive practice brought the Node suite to **52 tests**, and question variety below expands it to **60 tests**. The browser matrix is Chromium and WebKit at 390×844, 320×568 and 844×390, with real touch interactions. Each journey completes all 84 stops, for **504 browser stop completions** in the final run.
 
 Verified coverage:
 
@@ -87,3 +87,20 @@ Nine new regressions cover opt-in behavior, completed-puzzle thresholds, separat
 Validation: **52 Node tests and nine browser checks**, with **504 stop completions** across the phone matrix. Gameplay remains a single HTML of approximately **395 KB**, with no new runtime dependency or shell change. Physical iPhone testing remains outside the automated coverage.
 
 Adaptive checks: https://github.com/amthqng/acorn-trail/actions/runs/38087281916
+
+
+## Persistent question variety, 10 October 2026
+
+Eligible math skills and reading categories now come from shuffled selections, using each eligible skill before refilling. This reduces chance clusters while retaining the same grade, adaptive level, selected math operations, alternating subjects and 84-stop structure. Addition and subtraction are separate selections. Answer positions continue to shuffle independently.
+
+Reading selections remember shown entries per category through reload, new trails, team changes and replay. A category uses every entry before recycling, and the cycle boundary avoids its previous entry. The active saved question is restored unchanged, without consuming another selection. Math remembers the latest 20 distinct mathematical question keys, treating swapped addition or multiplication operands as equivalent. Up to 16 candidate attempts avoid recent equivalents; for a tiny or exhausted pool, the oldest candidate encountered can be reused so selection always finishes. No backend, remote seed or new dependency is involved. Full Reset progress clears variety history; clearing the learning record retains it.
+
+Twenty reading entries were appended, preserving existing bank indices: four each for rhymes, baby-animal names, word meanings, sentence completion and short-story comprehension. Every added entry has a checked explanation. Addition and subtraction stories now each have eight wording variants, and two-step math has four. These use the same generated quantities and correct arithmetic as before.
+
+The content-bound checks also exposed and fixed an adaptive ceiling case: when Grade 3 was already beyond the highest available tier before clamping, the previous support offset could be cancelled out by that clamp. Support now lowers the already-clamped usual level, with tests requiring the full one-level reduction whenever a lower level exists.
+
+Eight additional seeded regressions cover shuffled skill coverage, reading-bank exhaustion and cycle boundaries, persistence across reload/replay, math equivalence and recent-repeat avoidance, small pools and an unchanging RNG, malformed history recovery, recent math persistence, and reading cycle boundaries after selection-cache trimming. Existing regressions verify all new reading choices/explanations, arithmetic, grades and adaptive bounds. The six complete phone journeys also check reading uniqueness across a trail, exact question/history preservation on resume, and retained history after replay. Desktop layout and both hosted worker/offline/update checks remain in the suite.
+
+Validation: **60 Node tests and nine browser checks**, including **504 phone stop completions**. Gameplay remains in one approximately **402 KB HTML file**, with no runtime dependency or service-worker change. Physical iPhone coverage remains unverified.
+
+Question-variety checks: https://github.com/amthqng/acorn-trail/actions/runs/38089319834
