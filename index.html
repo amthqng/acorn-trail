@@ -489,6 +489,17 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid #244f82;outline-
 #app.sky-river .camp-scene-decor,#app.sky-bridge .camp-scene-decor,#app.sky-oak .camp-scene-decor{opacity:.86}
 @media(max-width:600px){#scenery .camp-scene-decor{transform:translateX(12%) scale(.94);transform-origin:bottom right}}
 @media(prefers-reduced-motion:reduce){#scenery .camp-scene-decor{animation:none}}
+/* Comfortable touch targets and no iOS input zoom. */
+button, [role="button"]{touch-action:manipulation}
+.icon-btn{width:44px;height:44px}
+.chip{min-height:44px}
+.name-input{font-size:16px}
+.pc .pc-x{width:44px;height:44px;top:-8px;right:-8px}
+.pc .pc-emoji{cursor:pointer}
+.screen{padding-top:calc(20px + env(safe-area-inset-top));padding-bottom:calc(30px + env(safe-area-inset-bottom));padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+.start-tools,.topbar{top:calc(14px + env(safe-area-inset-top))}
+.modal{padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom))}
+:focus-visible{outline:3px solid var(--rust-dark);outline-offset:3px}
 </style>
 </head>
 <body>
@@ -725,6 +736,7 @@ const DEFAULTS = { math:'g2', reading:'g2',
   ops:{add:true,sub:true,mul:true,div:true,word:true}, sound:true, rain:true, reveal:true, readAloud:true, motion:true };
 let SETTINGS = Object.assign({}, DEFAULTS, store.get(SKEY)||{});
 SETTINGS.ops = Object.assign({}, DEFAULTS.ops, (store.get(SKEY)||{}).ops||{});
+if(!Object.values(SETTINGS.ops).some(Boolean)) SETTINGS.ops={...DEFAULTS.ops};
 /* migrate old difficulty labels -> grade levels */
 { const mm={gentle:'g1',standard:'g2',advanced:'g3'}, rm={easier:'g1',standard:'g2',harder:'g3'};
   if(mm[SETTINGS.math]) SETTINGS.math=mm[SETTINGS.math];
@@ -816,7 +828,8 @@ const DEFAULT_ROSTER = [
   {animal:'pig',   name:'Nutmeg',  role:'help'}
 ];
 const RKEY='acorn-trail-roster';
-let ROSTER = (store.get(RKEY)||DEFAULT_ROSTER).map(c=>({...c}));
+function validRoster(r){ return Array.isArray(r)&&r.length>=3&&r.length<=20&&r.every(c=>c&&ANIMALS.includes(c.animal)&&['math','read','both','lead','help'].includes(c.role)&&typeof c.name==='string'&&c.name.trim().length>0&&c.name.length<=14)&&r.some(c=>c.role==='lead')&&r.some(c=>c.role==='help')&&r.some(c=>c.role==='math'||c.role==='both')&&r.some(c=>c.role==='read'||c.role==='both'); }
+let ROSTER = (validRoster(store.get(RKEY))?store.get(RKEY):DEFAULT_ROSTER).map(c=>({...c}));
 function saveRoster(){ store.set(RKEY, ROSTER); }
 
 const ROLE_TAG  = { math:'counts it out', read:'reads it out', both:'reads & counts', lead:'leads the way', help:'gives a hint' };
@@ -1289,13 +1302,14 @@ function genMath(theme){
 /* ================= game state + progress ================= */
 let acorns=0, themeIndex=0, stopIndex=0, current=null, answered=false, wrongCount=0, streak=0;
 const REVEAL_AT=2;
-let pendingCompletion=false;
+let pendingCompletion=false, rewardTimer=null, trailEpoch=0;
+function cancelReward(){ trailEpoch++; clearTimeout(rewardTimer); rewardTimer=null; pendingUnlocks=[]; unlockNext=null; wrongCount=0; current=null; answered=false; pendingCompletion=false; }
 function savedQuestion(){ const p=store.get(PKEY); return p&&p.v===PVER&&p.themeIndex===themeIndex&&p.stopIndex===stopIndex&&p.question&&validQuestion(p.question)?p:null; }
 function validQuestion(q){ return !!q&&['math','read'].includes(q.kind)&&typeof q.prompt==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&q.choices.length===new Set(q.choices.map(String)).size&&q.choices.some(x=>String(x)===String(q.answer)); }
 function checkpoint(){ if(current&&!answered) saveProgress(); }
 window.addEventListener('pagehide',checkpoint);
 
-function saveProgress(){ if(themeIndex>0||stopIndex>0||acorns>0||current) store.set(PKEY,{v:PVER,acorns,themeIndex,stopIndex,streak,question:current&&!answered?current:null,pendingCompletion}); }
+function saveProgress(){ if(themeIndex>0||stopIndex>0||acorns>0||current) store.set(PKEY,{v:PVER,acorns,themeIndex,stopIndex,streak,wrongCount,question:current&&!answered?current:null,pendingCompletion}); }
 function loadProgress(){ const p=store.get(PKEY); if(!p||p.v!==PVER||!Number.isInteger(p.themeIndex)||p.themeIndex<0||p.themeIndex>=THEMES.length||!Number.isInteger(p.stopIndex)||p.stopIndex<0||p.stopIndex>THEMES[p.themeIndex].stops.length||!Number.isFinite(p.acorns)||p.acorns<0) return null; return (p.themeIndex>0||p.stopIndex>0||p.acorns>0||p.question||p.pendingCompletion)?p:null; }
 function clearProgress(){ store.del(PKEY); }
 
@@ -1318,11 +1332,11 @@ function renderStart(){
   updateBasketDot();
 }
 function continueTrail(){ const s=loadProgress(); if(!s){ freshStart(); return; }
-  acorns=s.acorns; themeIndex=s.themeIndex; stopIndex=s.stopIndex; streak=s.streak||0; pendingCompletion=!!s.pendingCompletion;
+  cancelReward(); finished=false; acorns=s.acorns; themeIndex=s.themeIndex; stopIndex=s.stopIndex; streak=s.streak||0; pendingCompletion=!!s.pendingCompletion;
   if(pendingCompletion){ current=null; pendingCompletion=false; proceed(); return; }
-  if(s.question&&validQuestion(s.question)){ current=s.question; loadChallenge(current); go('screen-challenge'); return; }
-  current=null; go('screen-map'); }
-function freshStart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; answered=false; pendingCompletion=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-story'); }
+  if(s.question&&validQuestion(s.question)){ current=s.question; loadChallenge(current); wrongCount=Number.isInteger(s.wrongCount)&&s.wrongCount>0?s.wrongCount:0; if(SETTINGS.reveal&&wrongCount>=REVEAL_AT) revealAnswer(current.answer); go('screen-challenge'); return; }
+  current=null; if(stopIndex>=THEMES[themeIndex].stops.length) themeComplete(); else go('screen-map'); }
+function freshStart(){ cancelReward(); acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; answered=false; pendingCompletion=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-story'); }
 
 let currentScreenId='screen-start';
 function go(id){
@@ -1464,7 +1478,7 @@ function award(btn){
   acorns++; pendingCompletion=true; current=null; saveProgress(); document.getElementById('acorn-num2').textContent=acorns; sparkle(); chime(true);
   refreshStickers();
   document.querySelectorAll('.answer').forEach(a=>a.style.pointerEvents='none');
-  setTimeout(()=>flushUnlocks(proceed), 1500);
+  const epoch=trailEpoch; rewardTimer=setTimeout(()=>{ if(epoch===trailEpoch){ rewardTimer=null; flushUnlocks(proceed); } },1500);
 }
 function checkAnswer(btn,chosen,correct){
   if(answered) return;
@@ -1485,7 +1499,7 @@ function revealAnswer(correct){
   if(SETTINGS.readAloud) speak(document.getElementById('hint-bubble').textContent);
   document.getElementById('hint-bubble').classList.add('show');
 }
-function showHint(){ document.getElementById('hint-bubble').classList.add('show');
+function showHint(){ if(!current) return; document.getElementById('hint-bubble').classList.add('show');
   if(SETTINGS.readAloud) speak(current.hint); }
 function sparkle(){
   const burst=document.getElementById('burst'); const icons=['🌰','✨','🍂','⭐'];
@@ -1520,7 +1534,7 @@ function themeComplete(){
 }
 function advanceTheme(){ themeIndex++; stopIndex=0; saveProgress(); refreshStickers(); flushUnlocks(()=>go('screen-map')); }
 function finale(){ finished=true; clearProgress(); refreshStickers(); grantBonusStickers(3); flushUnlocks(()=>{ document.getElementById('finale-acorns').textContent=acorns; renderFinaleParty(); go('screen-finale'); }); }
-function restart(){ acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; answered=false; pendingCompletion=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-map'); }
+function restart(){ cancelReward(); acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; answered=false; pendingCompletion=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-map'); }
 function confirmRestartTrail(){
   if(confirm('Start the whole trail over from the beginning? Your stickers will be kept.')){
     document.getElementById('acorn-num').textContent='0'; restart();
@@ -1680,7 +1694,7 @@ function toggleSetting(key){
 }
 function confirmReset(){
   if(confirm('Reset all progress and stickers, and start from the beginning?')){
-    clearProgress(); acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false;
+    cancelReward(); clearProgress(); acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false;
     stickerCounts={}; pendingUnlocks=[]; basketDot=false; saveStickers();
     for(const k in usedReading) delete usedReading[k];
     closeSettings(); go('screen-start');
@@ -1702,10 +1716,10 @@ function reqText(){
 }
 function openCharacters(){ closeEditor(); renderCharacters(); go('screen-characters'); }
 function renderCharacters(){
-  const req=document.getElementById('cc-req'); req.textContent=reqText(); req.classList.toggle('ok', teamValid());
+  const req=document.getElementById('cc-req'); req.innerHTML=reqText(); req.classList.toggle('ok', teamValid());
   document.getElementById('party-list').innerHTML = ROSTER.map((c,i)=>
     `<div class="pc"><button class="pc-x" onclick="removeChar(${i})" aria-label="Remove">✕</button>
-      <div class="pc-emoji" onclick="editChar(${i})">${camperGlyph(c.animal)}</div>
+      <div class="pc-emoji" onclick="editChar(${i})" role="button" tabindex="0" aria-label="Edit ${esc(c.name)}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editChar(${i})}">${camperGlyph(c.animal)}</div>
       <div class="pc-name">${esc(c.name)}</div><div class="pc-role">${ROLE_TAG[c.role]}</div></div>`).join('');
   const full = ROSTER.length>=20;
   document.getElementById('cc-actions').innerHTML =
@@ -1753,9 +1767,9 @@ function typeName(v){ draft.name=v; const b=document.getElementById('draft-commi
 function commitDraft(){ if(!draft.name.trim()) return; const c={animal:draft.animal, role:draft.role, name:draft.name.trim()};
   if(editIndex>=0) ROSTER[editIndex]=c; else ROSTER.push(c); closeEditor(); renderCharacters(); }
 function cancelEditor(){ closeEditor(); renderCharacters(); }
-function removeChar(i){ ROSTER.splice(i,1); if(editIndex===i) closeEditor(); renderCharacters(); }
+function removeChar(i){ ROSTER.splice(i,1); if(editIndex===i) closeEditor(); else if(editIndex>i) editIndex--; renderCharacters(); }
 function resetTeam(){ ROSTER=DEFAULT_ROSTER.map(c=>({...c})); closeEditor(); renderCharacters(); }
-function playTeam(){ if(!teamValid()) return; saveRoster();
+function playTeam(){ if(!teamValid()) return; cancelReward(); saveRoster();
   STICKERS=buildStickers(); pendingUnlocks=[]; basketDot=false;
   acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; pendingCompletion=false; answered=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress();
   go('screen-story'); }

@@ -10,6 +10,7 @@ const script=new vm.Script(match[1],{filename:'index.html'});
 function boot(initial={}){
  const data=new Map(Object.entries(initial).map(([k,v])=>[k,JSON.stringify(v)]));
  const elements=new Map();
+ const timers=[];
  const element=(id='')=>{
    if(!elements.has(id))elements.set(id,{
      id,style:{},className:'',textContent:'',innerHTML:'',dataset:{},children:[],
@@ -26,9 +27,9 @@ function boot(initial={}){
  };
  const localStorage={setItem(k,v){data.set(k,String(v))},getItem(k){return data.has(k)?data.get(k):null},removeItem(k){data.delete(k)}};
  const window={addEventListener(){},speechSynthesis:null};
- const ctx=vm.createContext({window,document,localStorage,console,setTimeout:()=>0,clearTimeout(){},confirm:()=>true,Math,JSON});
+ const ctx=vm.createContext({window,document,localStorage,console,setTimeout:fn=>{timers.push(fn);return timers.length},clearTimeout(){},confirm:()=>true,Math,JSON});
  script.runInContext(ctx,{timeout:10000});
- return {ctx,data,eval(code){return vm.runInContext(code,ctx,{timeout:10000})}};
+ return {ctx,data,timers,eval(code){return vm.runInContext(code,ctx,{timeout:10000})}};
 }
 test('embedded script parses and initializes offline',()=>{const b=boot();assert.equal(b.eval('typeof startNextStop'),'function')});
 test('reading banks have distinct choices and correct answers',()=>{
@@ -173,4 +174,64 @@ test('corrupted save data cannot access an invalid region or stop',()=>{
   assert.equal(b.eval('loadProgress()'),null);
   b.eval("go('screen-start')");
  }
+});
+
+
+test('wrong attempts survive resume and break a clean streak',()=>{
+ const b=boot(); b.eval("SETTINGS.sound=false;streak=2;startNextStop();checkAnswer(document.createElement('button'),'wrong',current.answer)");
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ c.eval("SETTINGS.sound=false;continueTrail()"); assert.equal(c.eval('wrongCount'),1);
+ c.eval("checkAnswer(document.createElement('button'),current.answer,current.answer)");
+ assert.equal(c.eval('streak'),0); assert.equal(c.eval('acorns'),1);
+});
+test('region boundary resume shows transition instead of an empty map',()=>{
+ const b=boot(); b.eval('themeIndex=2;stopIndex=12;acorns=36;saveProgress();continueTrail()');
+ assert.equal(b.eval('currentScreenId'),'screen-transition');
+});
+test('stale reward callbacks cannot advance a restarted trail',()=>{
+ for(const reset of ['restart()','freshStart()','confirmReset()','playTeam()']){
+  const b=boot(); b.eval("SETTINGS.sound=false;startNextStop();checkAnswer(document.createElement('button'),current.answer,current.answer)");
+  b.eval(reset); const screen=b.eval('currentScreenId');
+  for(const fn of b.timers)fn();
+  assert.equal(b.eval('stopIndex'),0);assert.equal(b.eval('acorns'),0);assert.equal(b.eval('currentScreenId'),screen);
+  assert.equal(b.eval('current'),null);
+ }
+});
+test('invalid persisted rosters and disabled operations recover safely',()=>{
+ for(const r of [{},[],[null],[{name:'x',animal:'bad',role:'math'}]]){
+  const b=boot({'acorn-trail-roster':r});assert.equal(b.eval('teamValid()'),true);
+ }
+ const b=boot({'acorn-trail-settings':{ops:{add:false,sub:false,mul:false,div:false,word:false}}});
+ assert.equal(b.eval('validQuestion(genMath(THEMES[0]))'),true);
+});
+test('removing a preceding teammate preserves the edited character',()=>{
+ const b=boot();b.eval("editChar(2);removeChar(0);typeName('Maple');commitDraft()");
+ assert.equal(b.eval('ROSTER[1].name'),'Maple');assert.equal(b.eval('ROSTER[2].name'),'Nutmeg');
+});
+test('team customization saves all roles and supports the twenty friend limit',()=>{
+ const b=boot();b.eval("ROSTER=[]");
+ for(const role of ['lead','help','both'])b.eval("startAdd();setDraft('role',"+JSON.stringify(role)+");typeName("+JSON.stringify(role)+");commitDraft()");
+ assert.equal(b.eval('teamValid()'),true);
+ for(let i=3;i<20;i++)b.eval("startAdd();typeName('Friend"+i+"');commitDraft()");
+ b.eval('startAdd()');assert.equal(b.eval('draft'),null);
+ b.eval('playTeam()');assert.equal(JSON.parse(b.data.get('acorn-trail-roster')).length,20);
+});
+
+test('real answer callbacks award once at every stop and unlock all rewards',()=>{
+ const b=boot(); b.eval('SETTINGS.sound=false;SETTINGS.readAloud=false');
+ for(let region=0;region<7;region++){
+  for(let stop=0;stop<12;stop++){
+   b.eval('startNextStop();checkAnswer(document.createElement("button"),current.answer,current.answer)');
+   b.eval('checkAnswer(document.createElement("button"),0,0)');
+   while(b.timers.length)b.timers.shift()();
+   for(let i=0;i<30&&b.eval('currentScreenId')==='screen-sticker-unlock';i++)b.eval('unlockContinue()');
+   assert.equal(b.eval('acorns'),region*12+stop+1);
+  }
+  if(region<6)b.eval('advanceTheme()');
+  for(let i=0;i<30&&b.eval('currentScreenId')==='screen-sticker-unlock';i++)b.eval('unlockContinue()');
+ }
+ assert.equal(b.eval('currentScreenId'),'screen-finale');
+ assert.equal(b.eval('STICKERS.every(s=>hasSticker(s.id))'),true);
+ assert.equal(b.eval('Object.values(stickerCounts).reduce((a,b)=>a+b,0)'),b.eval('STICKERS.length+3'));
+ assert.equal(b.eval('loadProgress()'),null);
 });
