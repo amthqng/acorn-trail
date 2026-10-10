@@ -121,3 +121,14 @@ test('fresh starts clear pending completion and active questions',()=>{
  assert.equal(b.eval('pendingCompletion'),false);
  assert.equal(b.eval('answered'),false);
 });
+
+test('both restart paths clear stale answers and used reading history',()=>{
+ const b=boot();
+ b.eval("answered=true;usedReading['test']=true;freshStart()");
+ assert.equal(b.eval('answered'),false);
+ assert.equal(b.eval("Object.keys(usedReading).length"),0);
+ b.eval("answered=true;usedReading['test']=true;restart()");
+ assert.equal(b.eval('answered'),false);
+ assert.equal(b.eval("Object.keys(usedReading).length"),0);
+ assert.equal(b.eval('stopIndex'),0);
+});
