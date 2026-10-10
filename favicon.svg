@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Acorn Trail">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FCE7B8"/>
+      <stop offset="1" stop-color="#F4D3A6"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EDBB64"/>
+      <stop offset="1" stop-color="#C1802F"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8C6C40"/>
+      <stop offset="1" stop-color="#5E4526"/>
+    </linearGradient>
+  </defs>
+
+  <!-- tile -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- acorn -->
+  <rect x="242" y="116" width="28" height="48" rx="13" fill="#5E4526"/>
+  <path d="M168 236 C150 322 205 432 256 432 C307 432 362 322 344 236 Z"
+        fill="url(#body)" stroke="#9A6E32" stroke-width="5"/>
+  <ellipse cx="210" cy="300" rx="28" ry="52" fill="#F6D591" opacity="0.55"/>
+  <path d="M150 240 C150 182 200 150 256 150 C312 150 362 182 362 240 C362 256 336 266 256 266 C176 266 150 256 150 240 Z"
+        fill="url(#cap)" stroke="#4E3A20" stroke-width="5"/>
+  <g fill="#6E522E">
+    <circle cx="196" cy="214" r="9"/><circle cx="232" cy="232" r="9"/>
+    <circle cx="272" cy="232" r="9"/><circle cx="308" cy="214" r="9"/>
+    <circle cx="254" cy="202" r="9"/><circle cx="176" cy="236" r="8"/>
+    <circle cx="336" cy="236" r="8"/>
+  </g>
+</svg>
