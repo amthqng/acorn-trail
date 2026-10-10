@@ -32,7 +32,18 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
    assert.equal(await page.locator('#offline-status').textContent(),'Ready for offline play');
    await page.locator('#install-game').tap();assert.equal(await page.locator('#offline-modal').isVisible(),true);
    assert.match(await page.locator('#offline-modal').textContent(),/Add to Home Screen/);
-   fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:path.join('artifacts',`${name}-offline-install-help.png`)});
+   fs.mkdirSync('artifacts',{recursive:true});
+   for(const viewport of [{width:390,height:844},{width:320,height:568},{width:844,height:390}]){
+    await page.setViewportSize(viewport);
+    await page.locator('#offline-modal').evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(a=>a.finished.catch(()=>{}))));
+    const card=await page.locator('#offline-modal .modal-card').boundingBox();
+    assert.ok(card.x>=0&&card.y>=0&&card.x+card.width<=viewport.width&&card.y+card.height<=viewport.height,'installation panel must fit the viewport');
+    await page.locator('#offline-modal summary').tap();assert.equal(await page.locator('#offline-modal details').evaluate(el=>el.open),true);
+    await page.locator('#offline-modal summary').tap();
+    await page.locator('#offline-retry').tap();await page.waitForFunction(()=>offlineReady);
+    await page.screenshot({path:path.join('artifacts',`${name}-offline-install-help-${viewport.width}x${viewport.height}.png`)});
+   }
+   await page.setViewportSize({width:390,height:844});
    await page.locator('#offline-modal').getByRole('button',{name:'Done',exact:true}).tap();
    await page.evaluate(()=>{SETTINGS.sound=false;SETTINGS.readAloud=false;saveSettings();freshStart();go('screen-map');startNextStop();wrongCount=1;saveProgress()});
    const prompt=await page.locator('#ch-prompt').textContent();
