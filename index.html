@@ -807,6 +807,11 @@ button, [role="button"]{touch-action:manipulation}
         <div class="toggle-row"><span class="tl">Pause to explain answers</span><button class="sw" id="sw-explanations" aria-label="Pause to explain answers" onclick="toggleSetting('explanations')"></button></div>
         <div class="set-note">Show why after each correct answer, then tap Continue. Off keeps the trail moving automatically.</div>
       </div>
+      <div class="set-group">
+        <div class="toggle-row"><span class="tl">Adaptive practice</span><button class="sw" id="sw-adaptive" aria-label="Adaptive practice" aria-pressed="false" onclick="toggleSetting('adaptive')"></button></div>
+        <div class="set-note">Math and reading adjust separately. Two puzzles in a row with hints or wrong choices bring gentler practice; four in a row answered on the first try without hints return to the usual challenge. It never goes above the selected grade's usual trail difficulty. Changing a grade resets that subject's adjustment.</div>
+        <p class="set-note" id="adaptive-status" role="status" aria-live="polite"></p>
+      </div>
       <section class="learning-summary" aria-label="Learning progress"><h3>Learning progress</h3><div id="learning-summary"></div><button class="btn outline small" onclick="clearLearningProgress()">Clear learning record</button></section>
       <div class="modal-actions">
         <button class="btn outline small" onclick="confirmReset()">Reset progress</button>
@@ -857,7 +862,7 @@ const SKEY='acorn-trail-settings', PKEY='acorn-trail-progress', PVER=3;
 
 /* ================= settings ================= */
 const DEFAULTS = { math:'g2', reading:'g2',
-  ops:{add:true,sub:true,mul:true,div:true,word:true}, sound:true, rain:true, reveal:true, readAloud:true, motion:true, explanations:false };
+  ops:{add:true,sub:true,mul:true,div:true,word:true}, sound:true, rain:true, reveal:true, readAloud:true, motion:true, explanations:false, adaptive:false };
 let SETTINGS = Object.assign({}, DEFAULTS, store.get(SKEY)||{});
 SETTINGS.ops = Object.assign({}, DEFAULTS.ops, (store.get(SKEY)||{}).ops||{});
 if(!Object.values(SETTINGS.ops).some(Boolean)) SETTINGS.ops={...DEFAULTS.ops};
@@ -868,6 +873,50 @@ if(!Object.values(SETTINGS.ops).some(Boolean)) SETTINGS.ops={...DEFAULTS.ops};
   if(!['g1','g2','g3'].includes(SETTINGS.math)) SETTINGS.math='g2';
   if(!['g1','g2','g3'].includes(SETTINGS.reading)) SETTINGS.reading='g2'; }
 function saveSettings(){ store.set(SKEY, SETTINGS); }
+SETTINGS.adaptive=SETTINGS.adaptive===true;
+
+/* Optional practice support never exceeds the usual grade/region challenge. */
+const AKEY='acorn-trail-adaptive';
+function subjectGrade(kind){return SETTINGS[kind==='read'?'reading':'math'];}
+function adaptiveRow(kind,revision=0){return {grade:subjectGrade(kind),offset:0,clean:0,support:0,revision};}
+function loadAdaptive(){
+  const raw=store.get(AKEY),out={};
+  for(const kind of ['math','read']){
+    const r=raw?.v===1?raw[kind]:null;
+    const revision=Number.isSafeInteger(r?.revision)&&r.revision>=0&&r.revision<Number.MAX_SAFE_INTEGER?r.revision:0;
+    const valid=r&&r.grade===subjectGrade(kind)&&[0,-1].includes(r.offset)&&Number.isInteger(r.clean)&&r.clean>=0&&r.clean<4&&Number.isInteger(r.support)&&r.support>=0&&r.support<2&&!(r.clean&&r.support);
+    out[kind]=valid?{grade:r.grade,offset:r.offset,clean:r.clean,support:r.support,revision}:adaptiveRow(kind,revision+1);
+  }
+  return out;
+}
+let adaptive=loadAdaptive();
+function saveAdaptive(){store.set(AKEY,{v:1,...adaptive});}
+function resetAdaptive(kind){
+  for(const k of kind?[kind]:['math','read'])adaptive[k]=adaptiveRow(k,adaptive[k].revision+1);
+  saveAdaptive();
+}
+function adaptiveShift(kind){return SETTINGS.adaptive&&adaptive[kind].grade===subjectGrade(kind)?adaptive[kind].offset:0;}
+function readingTier(theme){return clamp(theme.rtier+readingOffset()+adaptiveShift('read'),0,READING_TIERS.length-1);}
+function mathLevel(theme){return clamp(theme.mlevel+mathOffset()+adaptiveShift('math'),1,4);}
+function recordAdaptive(q){
+  const r=adaptive[q.kind],meta=q.adaptation;
+  // Ignore an old question after a mode, grade, operation or record reset.
+  if(!SETTINGS.adaptive||!r||!meta||meta.revision!==r.revision||meta.grade!==subjectGrade(q.kind)||meta.offset!==r.offset)return;
+  if(wrongCount===0&&!q.hintUsed){r.support=0;if(++r.clean===4){r.offset=0;r.clean=0;}}
+  else {r.clean=0;if(++r.support===2){r.offset=-1;r.support=0;}}
+  saveAdaptive();
+}
+function renderAdaptive(){
+  const button=document.getElementById('sw-adaptive');
+  button.classList.toggle('on',SETTINGS.adaptive);button.setAttribute('aria-pressed',String(SETTINGS.adaptive));
+  document.getElementById('adaptive-status').textContent=SETTINGS.adaptive?
+    `Math: ${adaptiveShift('math')<0?'gentler practice':'usual challenge'}. Reading: ${adaptiveShift('read')<0?'gentler practice':'usual challenge'}. Changes apply to the next puzzle; replay keeps these adjustments.`:
+    'Off: the trail uses fixed difficulty. Turning this on starts both subjects at their usual challenge.';
+}
+function setSubjectGrade(kind,grade){
+  if(subjectGrade(kind)!==grade){SETTINGS[kind==='read'?'reading':'math']=grade;resetAdaptive(kind);saveSettings();}
+  renderSettings();
+}
 
 /* ================= character art ================= */
 const ART = {
@@ -1341,7 +1390,7 @@ function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){ const j=Math.floor
 function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
 function readingOffset(){ return SETTINGS.reading==='g1'?-1:SETTINGS.reading==='g3'?1:0; }
 function pickReading(theme){
-  const tier=clamp(theme.rtier+readingOffset(),0,READING_TIERS.length-1);
+  const tier=readingTier(theme);
   const cats=READING_TIERS[tier];
   const cat=cats[Math.floor(Math.random()*cats.length)]; const bank=READING[cat];
   usedReading[cat]=usedReading[cat]||new Set();
@@ -1432,13 +1481,14 @@ function allowedTypes(level){
   return out;
 }
 function genMath(theme){
-  const level=clamp(theme.mlevel+mathOffset(),1,4);
+  const level=mathLevel(theme);
+  const gentle=adaptiveShift('math')<0;
   const types=allowedTypes(level);
   const t=types[Math.floor(Math.random()*types.length)];
   const ops=SETTINGS.ops;
   if(t==='addsub'){
     let a,b,op,ans;
-    if(level===1){ a=ri(6,30); b=ri(2,15); } else if(level===2){ a=ri(20,70); b=ri(10,45); } else { a=ri(50,190); b=ri(25,130); }
+    if(level===1){ a=ri(gentle?2:6,gentle?12:30); b=ri(gentle?1:2,gentle?8:15); } else if(level===2){ a=ri(20,70); b=ri(10,45); } else { a=ri(50,190); b=ri(25,130); }
     let canPlus=ops.add, canMinus=ops.sub; if(!canPlus&&!canMinus){ canPlus=true; }
     if(canPlus && (!canMinus || Math.random()<0.5)){ op='+'; ans=a+b; }
     else { if(b>=a) b=ri(1,a-1); op='−'; ans=a-b; }
@@ -1449,14 +1499,14 @@ function genMath(theme){
   }
   if(t==='mult'){
     let a,b;
-    if(level===1){ a=[2,3,5][ri(0,2)]; b=ri(2,5); } else if(level===2){ a=ri(2,5); b=ri(2,9); }
+    if(level===1){ a=[2,3,5][ri(0,2)]; b=ri(gentle?1:2,gentle?3:5); } else if(level===2){ a=ri(2,5); b=ri(2,9); }
     else if(level===3){ a=ri(2,9); b=ri(2,9); } else { a=ri(2,12); b=ri(2,12); }
     const ans=a*b;
     return { kind:'math', host:'dog', skill:'multiplication', explanation:mathExplanation('×',a,b,ans), prompt:`${a} × ${b}`, sub:`${b} groups of ${a}`,
       answer:ans, choices:numChoices(ans), hint:`${a} × ${b} means ${a} added ${b} times. Count by ${a}s.` };
   }
   if(t==='div'){
-    const b=ri(2,9), q=ri(2,9), a=b*q;
+    const b=ri(2,gentle?5:9), q=ri(gentle?1:2,gentle?5:9), a=b*q;
     return { kind:'math', host:'dog', skill:'division', explanation:mathExplanation('÷',a,b,q), prompt:`${a} ÷ ${b}`, sub:`Share ${a} into groups of ${b}`,
       answer:q, choices:numChoices(q), hint:`How many groups of ${b} fit in ${a}? Count up by ${b}s until you reach ${a}.` };
   }
@@ -1468,17 +1518,17 @@ function genMath(theme){
   }
   const n=noun(); const travel=leadPrimary().name; const learner=(mathChars()[0]||ROSTER[0]).name;
   if(ops.add && (!ops.sub || Math.random()<0.5)){
-    let a,b; if(level<=2){ a=ri(12,40); b=ri(6,30); } else { a=ri(30,120); b=ri(20,90); } const ans=a+b;
+    let a,b; if(level<=2){ a=ri(gentle?2:12,gentle?20:40); b=ri(gentle?1:6,gentle?10:30); } else { a=ri(30,120); b=ri(20,90); } const ans=a+b;
     return { kind:'math', host:'dog', skill:'word', explanation:`Putting groups together means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`, prompt:mathStory(learner,a,b,n,false),
       sub:'Add them together', answer:ans, choices:numChoices(ans), hint:`Put the groups together: ${a} + ${b}.` };
   } else if(ops.sub){
-    let a,b; if(level<=2){ a=ri(20,50); b=ri(5,18); } else { a=ri(60,160); b=ri(20,90); }
+    let a,b; if(level<=2){ a=ri(gentle?5:20,gentle?20:50); b=ri(gentle?1:5,gentle?8:18); } else { a=ri(60,160); b=ri(20,90); }
     if(b>=a) b=ri(1,a-1); const ans=a-b;
     return { kind:'math', host:'dog', skill:'word', explanation:`Removing some means take away. ${mathExplanation('−',a,b,ans)} There are ${ans} ${n} left.`, prompt:mathStory(learner,a,b,n,true),
       sub:'Take away', answer:ans, choices:numChoices(ans), hint:`Start with ${a} and take ${b} away: ${a} − ${b}.` };
   }
   // Word problems are a standalone category; when arithmetic operations are off, use an addition story.
-  const a=ri(12,40), b=ri(6,30), ans=a+b;
+  const a=ri(gentle?2:12,gentle?20:40), b=ri(gentle?1:6,gentle?10:30), ans=a+b;
   return {kind:'math',host:'dog',skill:'word',explanation:`Putting groups together means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`,prompt:mathStory(learner,a,b,n,false),sub:'Add them together',answer:ans,choices:numChoices(ans),hint:`Put the groups together: ${a} + ${b}.`};
 }
 
@@ -1536,7 +1586,7 @@ function renderLearning(){
     `<p>Completed puzzles since this record began. “On own” means a correct first choice without a hint. These counts describe practice, not a grade.</p><table><thead><tr><th scope="col">Practice</th><th scope="col">Done</th><th scope="col">On own</th></tr></thead><tbody>${row('Math',learning.math)}${row('Reading',learning.read)}</tbody></table><p>With hints: ${learning.math.hinted+learning.read.hinted}. Wrong choices on completed puzzles: ${learning.math.wrong+learning.read.wrong}.</p><details><summary>Skills practiced</summary><table><thead><tr><th scope="col">Skill</th><th scope="col">Done</th><th scope="col">On own</th></tr></thead><tbody>${Object.keys(SKILLS).filter(k=>learning.skills[k]?.completed).map(k=>row(SKILLS[k],learning.skills[k])).join('')}</tbody></table></details><p>Stored only in this browser. Replaying keeps the record.</p>`:
     '<p>No completed puzzles recorded yet. New practice will appear here. Earlier play is not included.</p>';
 }
-function clearLearningProgress(){if(confirm('Clear the learning record? Your trail and stickers will stay.')){store.del(LKEY);learning=loadLearning();renderLearning();}}
+function clearLearningProgress(){if(confirm('Clear the learning record and adaptive adjustments? Your trail and stickers will stay.')){store.del(LKEY);learning=loadLearning();resetAdaptive();renderLearning();renderAdaptive();}}
 
 /* ================= game state + progress ================= */
 let acorns=0, themeIndex=0, stopIndex=0, current=null, answered=false, wrongCount=0, streak=0;
@@ -1666,6 +1716,7 @@ function startNextStop(){
   const kind=th.stops[stopIndex];
   current = kind==='math' ? genMath(th) : pickReading(th);
   if(!validQuestion(current)){ console.error('Invalid question generated',current); current=kind==='math'?genMath(th):pickReading(th); }
+  if(SETTINGS.adaptive)current.adaptation={grade:subjectGrade(kind),revision:adaptive[kind].revision,offset:adaptiveShift(kind)};
   current.hostChar = hostFor(kind);
   current.helper = pickHelper();
   loadChallenge(current); saveProgress(); go('screen-challenge');
@@ -1722,7 +1773,7 @@ function award(btn){
     const pool=current.kind==='math'?GOOD_MATH:GOOD_READ;
     fb.textContent=pool[Math.floor(Math.random()*pool.length)]; fb.className='feedback good';
   }
-  const explanation=questionExplanation(current); recordLearning(current);
+  const explanation=questionExplanation(current); recordLearning(current); recordAdaptive(current);
   acorns++; pendingCompletion=true; current=null; saveProgress(); document.getElementById('acorn-num2').textContent=acorns; sparkle(); chime(true);
   refreshStickers();
   document.querySelectorAll('.answer').forEach(a=>a.style.pointerEvents='none');
@@ -1933,6 +1984,7 @@ function closeGate(){ document.getElementById('gate-modal').classList.remove('sh
 function closeSettings(){ gateUnlocked=false; document.getElementById('settings-modal').classList.remove('show'); }
 function renderSettings(){
   renderLearning();
+  renderAdaptive();
   document.getElementById('sw-explanations').classList.toggle('on',!!SETTINGS.explanations);
   document.getElementById('sw-explanations').setAttribute('aria-pressed',String(!!SETTINGS.explanations));
   document.querySelectorAll('#seg-math button').forEach(b=>b.classList.toggle('on', b.dataset.v===SETTINGS.math));
@@ -1944,15 +1996,15 @@ function renderSettings(){
   document.getElementById('sw-readaloud').classList.toggle('on', SETTINGS.readAloud);
   document.getElementById('sw-motion').classList.toggle('on', SETTINGS.motion);
 }
-document.querySelectorAll('#seg-math button').forEach(b=> b.onclick=()=>{ SETTINGS.math=b.dataset.v; saveSettings(); renderSettings(); });
-document.querySelectorAll('#seg-read button').forEach(b=> b.onclick=()=>{ SETTINGS.reading=b.dataset.v; saveSettings(); renderSettings(); });
+document.querySelectorAll('#seg-math button').forEach(b=> b.onclick=()=>setSubjectGrade('math',b.dataset.v));
+document.querySelectorAll('#seg-read button').forEach(b=> b.onclick=()=>setSubjectGrade('read',b.dataset.v));
 document.querySelectorAll('#ops-row .op').forEach(b=> b.onclick=()=>{
   const k=b.dataset.k; const enabled=Object.values(SETTINGS.ops).filter(Boolean).length;
   if(SETTINGS.ops[k] && enabled<=1) return; // keep at least one on
-  SETTINGS.ops[k]=!SETTINGS.ops[k]; saveSettings(); renderSettings();
+  SETTINGS.ops[k]=!SETTINGS.ops[k]; resetAdaptive('math'); saveSettings(); renderSettings();
 });
 function toggleSetting(key){
-  SETTINGS[key]=!SETTINGS[key]; saveSettings(); renderSettings();
+  SETTINGS[key]=!SETTINGS[key]; if(key==='adaptive')resetAdaptive(); saveSettings(); renderSettings();
   if(key==='sound'){ const a=document.getElementById('sound-btn'), b=document.getElementById('sound-btn2');
     paintSound(); }
   if(key==='rain' && currentScene==='river'){ document.getElementById('particles').innerHTML=particlesFor(currentScene); }
@@ -1961,6 +2013,7 @@ function toggleSetting(key){
 function confirmReset(){
   if(confirm('Reset all trail progress, stickers and learning records, and start from the beginning?')){
     store.del(LKEY); learning=loadLearning();
+    resetAdaptive();
     cancelReward(); clearProgress(); acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false;
     stickerCounts={}; pendingUnlocks=[]; basketDot=false; saveStickers();
     for(const k in usedReading) delete usedReading[k];
