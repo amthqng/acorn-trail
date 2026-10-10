@@ -37,7 +37,7 @@ Chromium runs the saved HTML directly with its browser context offline, includin
 
 A downloaded HTML has no external runtime asset requirements. Reopening a hosted URL while offline is a separate capability: this repository has no service worker and does not guarantee offline navigation to the hosted page. No hosting or service-worker architecture was introduced.
 
-The stabilization fixes and head-only character artwork are merged into `main`. The learning improvements passed the QA branch checks and are promoted to `main`.
+The stabilization fixes and head-only character artwork are merged into `main`. The learning improvements passed the QA branch checks and are ready for explicit approval to merge into `main`.
 
 ## Learning improvements, 10 October 2026
 
