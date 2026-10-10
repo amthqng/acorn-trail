@@ -10,6 +10,7 @@ const html=fs.readFileSync('index.html','utf8');
 for(const [engineName,engine] of Object.entries({chromium,webkit})){
  for(const viewport of [{width:390,height:844},{width:320,height:568},{width:844,height:390}]){
   test(`${engineName} offline touch gameplay ${viewport.width}x${viewport.height}`,async()=>{
+   const adaptiveMode=viewport.width!==320;
    const browser=await engine.launch();
    let page;
    try{
@@ -39,6 +40,8 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     assert.equal(await page.evaluate(()=>SETTINGS.ops.add),true);
     for(const op of ['sub','mul','div','word'])await page.locator(`#ops-row button[data-k="${op}"]`).tap();
     await page.locator('#sw-explanations').tap();assert.equal(await page.evaluate(()=>SETTINGS.explanations),true);
+    assert.equal(await page.evaluate(()=>SETTINGS.adaptive),false);
+    if(adaptiveMode){await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'true');await layout();await capture('adaptive-settings');}
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     await page.getByRole('button',{name:'Make your team'}).tap();await layout();
     await page.getByRole('button',{name:'Edit Biscuit'}).tap();await page.clock.runFor(100);await layout();await capture('team-editor');
@@ -88,6 +91,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
        assert.equal(await page.locator('#ch-prompt').textContent(),prompt);
        assert.equal(await page.evaluate(()=>wrongCount),1);
       }
+      if(adaptiveMode&&region===0&&(stop===2||stop===3))await page.locator('.hint-btn:not(#speak-btn)').tap();
       const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
       const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
       await answerButton.tap({position:{x:10,y:answerBox.height/2}});
@@ -101,6 +105,19 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       }
       await dismiss();
       assert.equal(await page.evaluate(()=>acorns),region*12+stop+1);
+      if(adaptiveMode&&region===0){
+       if(stop===2)assert.equal(await page.evaluate(()=>adaptive.math.offset),-1);
+       if(stop===3){
+        assert.equal(await page.evaluate(()=>adaptive.read.offset),-1);
+        await page.locator('#screen-map button[aria-label="Settings"]').tap();
+        await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();
+        await page.locator('#adaptive-status').scrollIntoViewIfNeeded();await layout();await capture('adaptive-gentler');
+        assert.match(await page.locator('#adaptive-status').textContent(),/Math: gentler practice. Reading: gentler practice/);
+        await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
+       }
+       if(stop===10)assert.equal(await page.evaluate(()=>adaptive.math.offset),0);
+       if(stop===11)assert.equal(await page.evaluate(()=>adaptive.read.offset),0);
+      }
      }
      if(region<6){await page.locator('#screen-transition button').tap();await dismiss()}
     }
@@ -120,6 +137,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.locator('#learning-summary').scrollIntoViewIfNeeded();await layout();await capture('learning-summary');
     await page.locator('#learning-summary summary').tap();await layout();
     assert.match(await page.locator('#learning-summary').textContent(),/Math42/);
+    if(adaptiveMode){await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'false');assert.deepEqual(await page.evaluate(()=>[adaptive.math.offset,adaptive.read.offset]),[0,0]);}
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
     await browser.close();

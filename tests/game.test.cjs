@@ -354,3 +354,80 @@ test('hosted manifest keeps installation scoped to this game',()=>{
  assert.equal(manifest.scope,'./');assert.equal(manifest.start_url,'./');assert.equal(manifest.display,'standalone');
  for(const icon of manifest.icons)assert.ok(fs.existsSync(icon.src));
 });
+
+// Complete actual questions; each call represents another visit to that subject.
+function practice(b,kind,{hint=false,wrong=0}={}){
+ b.eval(`SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.explanations=true;themeIndex=${kind==='math'?0:1};stopIndex=0;pendingCompletion=false;startNextStop();current.hintUsed=${hint};wrongCount=${wrong};checkAnswer(document.getElementById('test-answer'),current.answer,current.answer)`);
+}
+test('adaptive practice is opt-in and fixed questions do not train it',()=>{
+ const b=boot();assert.equal(b.eval('SETTINGS.adaptive'),false);
+ practice(b,'math',{wrong:2});practice(b,'math',{hint:true});
+ assert.equal(b.eval('adaptive.math.offset'),0);assert.equal(b.eval('adaptive.math.support'),0);
+ const corrupt=boot({'acorn-trail-settings':{adaptive:'true'}});assert.equal(corrupt.eval('SETTINGS.adaptive'),false);
+});
+test('two assisted completions ease only that subject; hints and wrong taps alone do not',()=>{
+ const b=boot();b.eval("toggleSetting('adaptive');SETTINGS.readAloud=false;startNextStop();showHint();wrongCount=3;saveProgress()");
+ assert.equal(b.eval('adaptive.math.support'),0);assert.equal(b.eval('adaptive.math.offset'),0);
+ practice(b,'math',{hint:true});assert.equal(b.eval('adaptive.math.offset'),0);
+ practice(b,'read');practice(b,'math',{wrong:1});
+ assert.equal(b.eval('adaptive.math.offset'),-1);assert.equal(b.eval('adaptive.read.offset'),0);
+ practice(b,'read',{wrong:1});practice(b,'read',{hint:true});assert.equal(b.eval('adaptive.read.offset'),-1);
+});
+test('four consecutive independent answers restore usual difficulty without exceeding it',()=>{
+ const b=boot();b.eval("toggleSetting('adaptive')");practice(b,'math',{hint:true});practice(b,'math',{hint:true});
+ for(let i=0;i<3;i++)practice(b,'math');assert.equal(b.eval('adaptive.math.offset'),-1);
+ practice(b,'math',{wrong:1});for(let i=0;i<3;i++)practice(b,'math');assert.equal(b.eval('adaptive.math.offset'),-1);
+ practice(b,'math');assert.equal(b.eval('adaptive.math.offset'),0);
+ for(let i=0;i<8;i++)practice(b,'math');assert.equal(b.eval('adaptive.math.offset'),0);
+});
+test('mixed performance interrupts consecutive assisted answers',()=>{
+ const b=boot();b.eval("toggleSetting('adaptive')");practice(b,'read',{hint:true});practice(b,'read');practice(b,'read',{wrong:1});
+ assert.equal(b.eval('adaptive.read.offset'),0);assert.equal(b.eval('adaptive.read.support'),1);
+});
+test('adaptive generation respects grade ceilings, reading banks and selected operations',()=>{
+ const b=boot();
+ for(const grade of ['g1','g2','g3'])for(const offset of [0,-1]){
+  b.eval(`SETTINGS.math='${grade}';SETTINGS.reading='${grade}';SETTINGS.adaptive=true;adaptive.math.grade='${grade}';adaptive.read.grade='${grade}';adaptive.math.offset=${offset};adaptive.read.offset=${offset}`);
+  for(let region=0;region<7;region++){
+   const levels=JSON.parse(b.eval(`JSON.stringify([mathLevel(THEMES[${region}]),clamp(THEMES[${region}].mlevel+mathOffset(),1,4),readingTier(THEMES[${region}]),clamp(THEMES[${region}].rtier+readingOffset(),0,6)])`));
+   assert.ok(levels[0]>=1&&levels[0]<=levels[1]);assert.ok(levels[2]>=0&&levels[2]<=levels[3]);
+   const issues=JSON.parse(b.eval(`JSON.stringify(Array.from({length:40},()=>[genMath(THEMES[${region}]),pickReading(THEMES[${region}])]).flat().filter(q=>!validQuestion(q)))`));assert.deepEqual(issues,[]);
+  }
+ }
+ b.eval("SETTINGS.math='g1';adaptive.math.grade='g1';adaptive.math.offset=-1;SETTINGS.ops={add:true,sub:false,mul:false,div:false,word:false}");
+ const questions=JSON.parse(b.eval('JSON.stringify(Array.from({length:100},()=>genMath(THEMES[0])))'));
+ for(const q of questions){assert.equal(q.skill,'addition');assert.ok(q.answer<=20);assert.ok(q.answer>=3);}
+ b.eval("SETTINGS.adaptive=false");assert.equal(b.eval('mathLevel(THEMES[6])'),3);
+});
+test('saved assisted question resumes once, and pending reward cannot train twice',()=>{
+ const b=boot();b.eval("toggleSetting('adaptive')");practice(b,'math',{hint:true});
+ b.eval('pendingCompletion=false;startNextStop();showHint();wrongCount=1;saveProgress()');
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ c.eval("SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.explanations=true;continueTrail();checkAnswer(document.getElementById('test-answer'),current.answer,current.answer);checkAnswer(document.getElementById('test-answer'),0,0)");
+ assert.equal(c.eval('adaptive.math.offset'),-1);assert.equal(c.eval('adaptive.math.support'),0);
+ const d=boot(Object.fromEntries([...c.data].map(([k,v])=>[k,JSON.parse(v)])));d.eval('continueTrail()');
+ assert.equal(d.eval('adaptive.math.offset'),-1);assert.equal(d.eval('adaptive.math.support'),0);
+});
+test('grade and mode changes preserve the active puzzle but exclude stale performance',()=>{
+ const b=boot();b.eval("toggleSetting('adaptive');startNextStop();const originalPrompt=current.prompt;setSubjectGrade('math','g3')");
+ assert.equal(b.eval('current.prompt===originalPrompt'),true);
+ b.eval('wrongCount=1;recordAdaptive(current)');assert.equal(b.eval('adaptive.math.support'),0);
+ b.eval("startNextStop();toggleSetting('adaptive');toggleSetting('adaptive');wrongCount=1;recordAdaptive(current)");assert.equal(b.eval('adaptive.math.support'),0);
+ // Questions generated before opting in have no performance context.
+ b.eval("toggleSetting('adaptive');startNextStop();toggleSetting('adaptive');recordAdaptive(current)");assert.equal(b.eval('adaptive.math.support'),0);
+});
+test('replay keeps support, changing one grade resets only that subject, and clearing resets both',()=>{
+ const b=boot();b.eval("toggleSetting('adaptive')");for(const kind of ['math','read']){practice(b,kind,{hint:true});practice(b,kind,{hint:true});}
+ b.eval('restart()');assert.equal(b.eval('adaptive.math.offset'),-1);assert.equal(b.eval('adaptive.read.offset'),-1);
+ b.eval("setSubjectGrade('math','g3')");assert.equal(b.eval('adaptive.math.offset'),0);assert.equal(b.eval('adaptive.read.offset'),-1);
+ b.eval('acorns=8;stickerCounts={friend0:2};clearLearningProgress()');assert.equal(b.eval('adaptive.read.offset'),0);assert.equal(b.eval('acorns'),8);assert.equal(b.eval('stickerCounts.friend0'),2);
+ practice(b,'math',{hint:true});practice(b,'math',{hint:true});b.eval('confirmReset()');assert.equal(b.eval('adaptive.math.offset'),0);assert.equal(b.eval('acorns'),0);
+});
+test('malformed or outdated adaptive saves recover safely',()=>{
+ for(const raw of [null,'broken',{v:99,math:{offset:-1}},{v:1,math:{grade:'g2',offset:-99,clean:8,support:9,revision:4},read:{grade:'g1',offset:-1,clean:0,support:0,revision:2}}]){
+  const b=boot({'acorn-trail-settings':{adaptive:true},'acorn-trail-adaptive':raw});
+  assert.equal(b.eval('adaptive.math.offset'),0);assert.equal(b.eval('adaptive.read.offset'),0);b.eval('renderSettings()');
+ }
+ const b=boot({'acorn-trail-settings':{adaptive:true},'acorn-trail-adaptive':{v:1,math:{grade:'g2',offset:-1,clean:3,support:0,revision:8},read:{grade:'g2',offset:0,clean:0,support:1,revision:9}}});
+ assert.equal(b.eval('adaptive.math.offset'),-1);assert.equal(b.eval('adaptive.math.clean'),3);assert.equal(b.eval('adaptive.read.support'),1);
+});
