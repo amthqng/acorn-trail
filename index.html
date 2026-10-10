@@ -537,6 +537,59 @@ button, [role="button"]{touch-action:manipulation}
   #screen-map .theme-head{margin-top:64px}
 }
 :focus-visible{outline:3px solid var(--rust-dark);outline-offset:3px}
+
+/* Warm illustrated materials: local gradients, grain and layered light. */
+#app::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(#6f583817 .7px,transparent .9px);background-size:5px 5px;opacity:.36}
+#app.sky-meadow{background:radial-gradient(ellipse at 28% 12%,#fff8dd 0%,#f5dfac 35%,#ead4aa 78%)}
+#app.sky-orchard{background:radial-gradient(ellipse at 75% 12%,#fff4d3 0%,#f4cba1 40%,#e0b58d 100%)}
+#app.sky-river{background:radial-gradient(ellipse at 55% 8%,#eef2e9 0%,#c1d8db 42%,#8cb4b5 100%)}
+#app.sky-pumpkin{background:radial-gradient(ellipse at 50% 17%,#ffe7b2 0%,#edb580 38%,#a96c60 100%)}
+#app.sky-woods{background:radial-gradient(ellipse at 40% 10%,#fff0ba 0%,#deb477 42%,#967348 100%)}
+#app.sky-bridge{background:radial-gradient(ellipse at 22% 8%,#737591 0%,#484c73 42%,#292e4b 100%)}
+#app.sky-oak{background:radial-gradient(ellipse at 76% 10%,#86728e 0%,#554766 40%,#302f48 100%)}
+.title-lockup h1{color:#68402b;text-shadow:0 1px 0 #fff5d2,0 3px 0 #d7af77,0 7px 12px #744d2826}
+.title-icon{filter:drop-shadow(0 3px 2px #78512435)}
+.title-lockup p{color:#69523c}
+.cbadge.camper-badge{background:radial-gradient(circle at 32% 25%,#fffbea 0%,#f6dfac 68%,#d9b57c 100%);border-color:#d9b77b;box-shadow:inset 0 2px 2px #fffef2, inset 0 -3px 5px #ad824135,0 4px 0 #a7804e,0 8px 12px #5f472b26}
+.cbadge.camper-badge svg{filter:drop-shadow(0 3px 1px #67452520)}
+.companion .name{background:linear-gradient(#fffdf2,#f3e4c9);box-shadow:inset 0 1px 0 #fff,0 2px 0 #c6ab83,0 4px 6px #62482c20}
+.badge{box-shadow:inset 0 1px 0 #ffffff65,0 2px 0 #60472d55,0 4px 7px #583c292b}
+.icon-btn{background:linear-gradient(145deg,#fffdf6,#f1e1c3);box-shadow:inset 0 1px 0 #fff,0 3px 0 #bba17a,0 6px 11px #533b2526}
+.btn{box-shadow:inset 0 2px 0 #ffffff55,0 5px 0 #845329,0 9px 15px #5e402532}
+.btn.outline{background:linear-gradient(#fffdf4,#f5e6c9);box-shadow:inset 0 2px 0 #fff,0 4px 0 #bba17a,0 7px 12px #5e402526}
+.btn.green{background:linear-gradient(#89b773,#5e914c);box-shadow:inset 0 2px 0 #ffffff60,0 5px 0 #496c3d,0 9px 15px #344a2930}
+#screen-start .start-wrap .btn,#screen-map .map-cta .btn{background:linear-gradient(#ffdb88,#efad46);border-color:#a47139;box-shadow:inset 0 2px 0 #fff4c1,0 5px 0 #855c34,0 10px 17px #6a452d35}
+#screen-start .start-wrap .btn:active,#screen-map .map-cta .btn:active{box-shadow:inset 0 1px 0 #fff4c1,0 1px 0 #855c34,0 4px 7px #6a452d25}
+.story-card,.card,.modal-card,.editor,.continue-card,#screen-challenge .challenge,#screen-transition.camp-transition .card{background:radial-gradient(ellipse at 14% 0%,#fffdf4 0%,#fff3d7 60%,#f4e0bc 100%);box-shadow:inset 0 2px 0 #fffef9,inset 0 -3px 0 #dcc29885,0 7px 0 #8a664140,0 16px 30px #47342430}
+#screen-challenge .challenge,#screen-transition.camp-transition .card{border-color:#b78d59}
+#screen-challenge .challenge:before{color:#826347;text-shadow:0 1px 0 #fff}
+#screen-challenge .answer{background:linear-gradient(145deg,#fffef8,#f8edd4);border-color:#ceb389;box-shadow:inset 0 2px 0 #fff,0 4px 0 #ad9066,0 7px 10px #68503220}
+#screen-challenge .answer.correct,#screen-challenge .answer.reveal{background:linear-gradient(145deg,#e7f5d3,#b8dca1);border-color:#60935e;color:#254c2d;box-shadow:inset 0 2px 0 #f4ffeb,0 4px 0 #628557,0 0 14px #9bc47435}
+#screen-challenge .answer.wrong{background:linear-gradient(#ffede1,#f2c9b9);border-color:#c78873;color:#734330}
+#screen-challenge .hint-btn{background:linear-gradient(#fae1c9,#ecc5a7);box-shadow:inset 0 1px 0 #fff3e1,0 3px 0 #c39a7a}
+#screen-challenge .speak-btn{background:linear-gradient(#b9a9d5,#8d79b1);box-shadow:inset 0 1px 0 #d8cdea,0 3px 0 #6d5a91}
+#screen-challenge .hint-bubble,.answer-review{background:linear-gradient(135deg,#fff9df,#f7e4b2);box-shadow:inset 0 1px 0 #fff,0 3px 8px #6f542315}
+.camp-map{background:radial-gradient(ellipse at 25% 0%,#fff9e5,#f4dfb4);border-color:#ac8555;box-shadow:inset 0 2px 0 #fffdf1,0 7px 0 #795b3a,0 15px 27px #35432635}
+.camp-map-heading{color:#654d31;text-shadow:0 1px 0 #fff3da}
+.camp-map-world{border-color:#93b486;box-shadow:inset 0 2px 5px #4a65313b,0 2px 0 #fff8dc}
+.camp-map-world svg{border-radius:14px}
+.camp-map .camp-node circle{fill:url(#map-node);stroke:#987647}
+.camp-map .camp-node.current circle{fill:url(#map-current);stroke:#fff7d2}
+.camp-map .camp-node.done circle{fill:url(#map-node)}
+.camp-map .camp-node.locked circle{fill:#dac9a5}
+.lantern .glass{box-shadow:inset 2px 2px 2px #ffffff26,inset -2px -2px 2px #2c241c45,0 5px 9px #47332432}
+.lantern.lit .glass{background:radial-gradient(circle at 42% 42%,#fff9b8,#efc654 62%,#c49539);box-shadow:inset 0 2px 1px #fff5bc,0 0 18px #ffd9658c,0 5px 9px #47332432}
+.pc{background:linear-gradient(145deg,#fffcf0,#f3e0bf);box-shadow:inset 0 2px 0 #fff,0 3px 0 #c3a67c,0 8px 13px #58412722}
+.animal-grid button,.chip{background:linear-gradient(#fff9ec,#edd8b7);box-shadow:inset 0 1px 0 #fff,0 2px 0 #c7af8b}
+.animal-grid button.on{background:linear-gradient(#fffdf2,#fce8bd)}
+.chip.on{background:linear-gradient(#d58b4b,#aa622d)}
+.sticker{background:linear-gradient(145deg,#fffdf3,#f4e4c7);box-shadow:inset 0 2px 0 #fff,0 3px 0 #d1b78e,0 7px 12px #65452d22}
+.theme-progress{box-shadow:inset 0 1px 0 #ffffff55,0 3px 9px #49351d16}
+.foot-note{color:#4a5b36;text-shadow:0 1px 0 #ffffff50}
+#scenery .scene-depth{pointer-events:none}
+:focus-visible{outline:3px solid #244f82;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.btn.pulse,.lantern.current .glass{animation:none}}
+
 </style>
 </head>
 <body>
@@ -1033,14 +1086,36 @@ function campSceneDecor(scene){
     '<rect x="881" y="465" width="29" height="40" rx="7" fill="#ffe39b" stroke="#765a39" stroke-width="5"/>'+
     '<path d="M890 475L900 475L902 492L889 492Z" fill="#f7ad54"/>';
   return '<svg class="camp-scene-decor" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMax slice" aria-hidden="true">'+
+    '<defs><radialGradient id="camp-warmth"><stop stop-color="#ffc96a" stop-opacity=".45"/><stop offset="1" stop-color="#ffc96a" stop-opacity="0"/></radialGradient></defs>'+
     '<ellipse cx="784" cy="573" rx="190" ry="35" fill="'+c[1]+'" opacity=".72"/>'+
-    tent+campfire+lantern+'</svg>';
+    '<ellipse cx="650" cy="540" rx="95" ry="50" fill="url(#camp-warmth)"/>'+tent+'<path d="M717 550L786 428L860 550" stroke="#fff1c1" stroke-width="2" stroke-dasharray="4 7" opacity=".6" fill="none"/>'+campfire+lantern+'</svg>';
+}
+
+/* Foreground details and soft atmosphere remain static and fully offline. */
+function sceneDepth(scene){
+  const night=scene==='bridge'||scene==='oak';
+  const colors={meadow:['#d9edb0','#6c914e','#ffd6a3'],orchard:['#d6e5a0','#6f8e46','#f5d4b8'],river:['#b8d8cb','#527d76','#e6f0e7'],pumpkin:['#dfc487','#8b733f','#ffd6a3'],woods:['#dbb66b','#77643c','#ffe7ad'],bridge:['#929cac','#424e65','#e1d9ff'],oak:['#a4a5aa','#545a52','#ffe3ae']}[scene];
+  const [light,dark,glow]=colors;
+  const grass=(x,y)=>`<g transform="translate(${x} ${y})" stroke="${dark}" stroke-width="3" stroke-linecap="round" fill="none"><path d="M0 0q-4-17-13-24M0 0q2-25 12-32M0 0q-1-25-3-34M2 0q11-14 18-18"/></g>`;
+  const flower=(x,y,c)=>`<g transform="translate(${x} ${y})"><path d="M0 0q4-17 0-25" stroke="${dark}" stroke-width="3" fill="none"/><g fill="${c}"><circle cy="-30" r="5"/><circle cx="6" cy="-24" r="5"/><circle cx="-6" cy="-24" r="5"/><circle cy="-18" r="5"/></g><circle cy="-24" r="4" fill="#f4c755"/></g>`;
+  const mushroom=(x,y)=>`<g transform="translate(${x} ${y})"><ellipse cy="4" rx="17" ry="4" fill="#3b302e" opacity=".18"/><path d="M-4 0v-15h9V0" fill="#e9d6af"/><path d="M-17-14Q-13-37 0-35Q14-34 18-14Z" fill="#bd704a" stroke="#9e5838" stroke-width="2"/><g fill="#fff0cd"><circle cx="-7" cy="-22" r="3"/><circle cx="6" cy="-25" r="3"/></g></g>`;
+  let details='';
+  if(scene==='meadow'||scene==='orchard'){
+    details=[[280,582],[330,603],[610,603],[660,581]].map(([x,y],i)=>flower(x,y,i%2?'#fff7d6':'#ddb5a7')).join('');
+    if(scene==='orchard')details+='<g fill="#c87b55" stroke="#975735" stroke-width="2"><circle cx="374" cy="569" r="9"/><circle cx="598" cy="583" r="8"/></g>';
+  }else if(scene==='river'){
+    details='<g fill="#829c92" stroke="#647e75" stroke-width="2"><ellipse cx="330" cy="581" rx="24" ry="10"/><ellipse cx="642" cy="590" rx="31" ry="12"/></g><g stroke="#ebf5e9" stroke-width="3" opacity=".65" fill="none"><path d="M407 557q37 9 73-2M496 587q34 7 69-1"/></g>';
+  }else if(scene==='pumpkin'){
+    details='<g transform="translate(345 575)"><ellipse cy="6" rx="38" ry="10" fill="#593b2b" opacity=".2"/><ellipse rx="31" ry="23" fill="#d78a42"/><path d="M-10-19q-17 20 0 39M10-19q17 20 0 39" stroke="#b96931" stroke-width="3" fill="none"/><path d="M0-23q-3-10 5-13" stroke="#617147" stroke-width="6" fill="none"/><path d="M12-31q24-12 14 5" stroke="#668747" stroke-width="3" fill="none"/></g>';
+  }else if(scene==='woods')details=mushroom(327,574)+mushroom(620,590);
+  else details='<g fill="#ffe4aa" opacity=".5"><ellipse cx="426" cy="560" rx="34" ry="3"/><ellipse cx="555" cy="580" rx="24" ry="3"/></g>';
+  return `<svg class="scene-depth" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs><radialGradient id="scene-light"><stop stop-color="${glow}" stop-opacity="${night ? .24 : .42}"/><stop offset="1" stop-color="${glow}" stop-opacity="0"/></radialGradient><linearGradient id="scene-ground" x2="0" y2="1"><stop stop-color="${light}" stop-opacity=".2"/><stop offset="1" stop-color="${dark}" stop-opacity=".5"/></linearGradient></defs><ellipse cx="${night?720:380}" cy="170" rx="380" ry="280" fill="url(#scene-light)"/><path d="M0 552Q235 519 473 568T1000 550V620H0Z" fill="url(#scene-ground)"/><path d="M0 553Q235 520 473 569T1000 551" stroke="${light}" stroke-width="2" opacity=".45" fill="none"/>${[250,390,580,714].map((x,i)=>grass(x,590+i%2*16)).join('')}${details}</svg>`;
 }
 
 function setScene(scene){
   currentScene=scene;
   document.getElementById('app').className='sky-'+scene+(SETTINGS.motion?'':' calm');
-  document.getElementById('scenery').innerHTML=SCENERY[scene]+campSceneDecor(scene);
+  document.getElementById('scenery').innerHTML=SCENERY[scene]+sceneDepth(scene)+campSceneDecor(scene);
   document.getElementById('particles').innerHTML=particlesFor(scene);
 }
 
@@ -1505,24 +1580,30 @@ function renderAdventureMap(){
   if(!host)return;
   const pts=CAMP_MAP_PLACES;
   const path=pts.map((p,i)=>(i?'L':'M')+p.x+' '+p.y).join(' ');
-  const tree=(x,y)=>'<g transform="translate('+x+' '+y+')"><path d="M-5 14L0 -18L5 14Z" fill="#548e62"/><path d="M-17 6L0 -26L17 6Z" fill="#377956"/><rect x="-3" y="8" width="6" height="12" fill="#91643c"/></g>';
+  const tree=(x,y)=>'<g transform="translate('+x+' '+y+')"><ellipse cy="16" rx="17" ry="5" fill="#487850" opacity=".2"/><path d="M-5 14L0 -18L5 14Z" fill="#548e62"/><path d="M-17 6L0 -26L17 6Z" fill="url(#map-pine)"/><path d="M-11 2L0 -20" stroke="#add3a0" stroke-width="2" opacity=".45"/><rect x="-3" y="8" width="6" height="12" fill="#91643c"/></g>';
   const trees=[[25,55],[85,40],[142,67],[276,55],[456,44],[295,293],[412,289],[466,228],[20,266],[258,330],[144,323],[325,110],[46,116],[402,172]];
   const nodes=pts.map((p,i)=>{
     const state=i<themeIndex?'done':i===themeIndex?'current':'locked';
     const status=i<themeIndex?'completed':i===themeIndex?'current destination':'upcoming';
     return '<g class="camp-node '+state+'" aria-label="'+(i+1)+'. '+THEMES[i].name+', '+status+'" transform="translate('+p.x+' '+p.y+')">'+
+      '<ellipse cy="7" rx="27" ry="23" fill="#49653d" opacity=".25"/>'+
       '<circle r="'+(i===themeIndex?26:22)+'"/>'+
       '<text class="place-icon" y="8">'+p.icon+'</text>'+
       '<text y="43">'+p.short+'</text>'+
       (i<themeIndex?'<text y="-28">✓</text>':'')+'</g>';
   }).join('');
   host.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 375" role="img" aria-label="Seven woodland destinations on a winding trail; current destination is '+THEMES[themeIndex].name+'">'+
-    '<rect width="500" height="375" fill="#b9e2ad"/>'+
+    '<defs><linearGradient id="map-ground" x2=".2" y2="1"><stop stop-color="#d8edb8"/><stop offset="1" stop-color="#94c694"/></linearGradient><linearGradient id="map-pine" x2="1" y2="1"><stop stop-color="#679e6e"/><stop offset="1" stop-color="#2f674b"/></linearGradient><radialGradient id="map-node" cx=".3" cy=".2"><stop stop-color="#fff6d8"/><stop offset="1" stop-color="#dfbf82"/></radialGradient><radialGradient id="map-current" cx=".3" cy=".2"><stop stop-color="#ffeeb0"/><stop offset="1" stop-color="#e4a249"/></radialGradient></defs>'+
+    '<rect width="500" height="375" fill="url(#map-ground)"/>'+
     '<path d="M0 100 Q130 50 220 115 T500 105 L500 0H0Z" fill="#d8edb9"/>'+
     '<path d="M0 290Q120 250 215 310T500 260V375H0Z" fill="#9dd3a1"/>'+
+    '<path d="M-20 220Q120 175 190 205T520 235" fill="none" stroke="#628c68" stroke-opacity=".3" stroke-width="33"/>'+
     '<path d="M-20 215Q120 170 190 200T520 230" fill="none" stroke="#86cbd9" stroke-width="28"/>'+
     '<path d="M-20 215Q120 170 190 200T520 230" fill="none" stroke="#bde7eb" stroke-width="12"/>'+
+    '<g stroke="#e6f7eb" stroke-width="2" opacity=".7" fill="none"><path d="M32 200l24-5M224 212l23 4M401 229l26-1"/></g>'+
+    '<g fill="#fbf4d0"><circle cx="116" cy="131" r="2"/><circle cx="127" cy="142" r="2"/><circle cx="290" cy="246" r="2"/><circle cx="299" cy="250" r="2"/><circle cx="215" cy="341" r="2"/></g>'+
     trees.map(t=>tree(t[0],t[1])).join('')+
+    '<path d="'+path+'" fill="none" stroke="#668747" stroke-opacity=".2" stroke-width="22" stroke-linecap="round" transform="translate(0 2)"/>'+
     '<path class="trail-path" d="'+path+'"/><path class="trail-dashes" d="'+path+'"/>'+
     nodes+
     '<g transform="translate(13 355)"><text class="map-marker">🌰 '+acorns+' collected</text></g></svg>';
