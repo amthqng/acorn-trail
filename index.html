@@ -483,6 +483,12 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid #244f82;outline-
 #screen-start .start-wrap .btn,#screen-map .map-cta .btn{background:#f8bf58;color:#4b341f;border:2px solid #966331;box-shadow:0 5px 0 #795633}
 @media(max-width:480px){#screen-challenge .challenge{margin-inline:10px}#screen-challenge .answer{min-height:58px}}
 @media(prefers-reduced-motion:reduce){#screen-challenge .answer{transition:none}}
+
+/* Campsites sit behind the interface and reuse the same simple vector art. */
+#scenery .camp-scene-decor{pointer-events:none}
+#app.sky-river .camp-scene-decor,#app.sky-bridge .camp-scene-decor,#app.sky-oak .camp-scene-decor{opacity:.86}
+@media(max-width:600px){#scenery .camp-scene-decor{transform:translateX(12%) scale(.94);transform-origin:bottom right}}
+@media(prefers-reduced-motion:reduce){#scenery .camp-scene-decor{animation:none}}
 </style>
 </head>
 <body>
@@ -953,10 +959,40 @@ function particlesFor(scene){
   return html;
 }
 let currentScene='meadow';
+/* A lightweight campsite layer for each of the seven existing scene palettes. */
+function campSceneDecor(scene){
+  const palettes={
+    meadow:['#f7c96e','#b9d993','#dc9b52'],
+    orchard:['#f1bb83','#b4cf8d','#d78a61'],
+    river:['#d9cba4','#94b9ad','#6f8c8b'],
+    pumpkin:['#f7b66a','#d8b67b','#bf784f'],
+    woods:['#e9b56e','#a5b67d','#aa7047'],
+    bridge:['#a9a4b9','#777e99','#e3bd76'],
+    oak:['#c1a8bd','#8385a4','#f5d38b']
+  };
+  const c=palettes[scene]||palettes.meadow;
+  const tent='<path d="M706 562L786 415L872 562Z" fill="'+c[0]+'" stroke="#6c573f" stroke-width="7" stroke-linejoin="round"/>'+
+    '<path d="M786 415L786 562L872 562Z" fill="'+c[2]+'" opacity=".85"/>'+
+    '<path d="M756 562L786 490L819 562Z" fill="#584735"/>'+
+    '<path d="M786 490L786 562L819 562Z" fill="#3c382f"/>'+
+    '<path d="M698 564L881 564" stroke="#725c43" stroke-width="8" stroke-linecap="round"/>';
+  const campfire='<ellipse cx="647" cy="565" rx="52" ry="13" fill="#735b44" opacity=".22"/>'+
+    '<path d="M619 562L668 544M623 545L672 563" stroke="#805336" stroke-width="10" stroke-linecap="round"/>'+
+    '<path d="M641 548Q621 521 647 493Q646 520 659 520Q676 495 673 535Q669 551 641 548Z" fill="#ef9e48"/>'+
+    '<path d="M647 546Q638 531 652 517Q650 533 661 535Q660 547 647 546Z" fill="#ffe08a"/>';
+  const lantern='<path d="M896 562V457" stroke="#73563a" stroke-width="7" stroke-linecap="round"/>'+
+    '<path d="M879 464Q895 449 913 464" fill="none" stroke="#73563a" stroke-width="5"/>'+
+    '<rect x="881" y="465" width="29" height="40" rx="7" fill="#ffe39b" stroke="#765a39" stroke-width="5"/>'+
+    '<path d="M890 475L900 475L902 492L889 492Z" fill="#f7ad54"/>';
+  return '<svg class="camp-scene-decor" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMax slice" aria-hidden="true">'+
+    '<ellipse cx="784" cy="573" rx="190" ry="35" fill="'+c[1]+'" opacity=".72"/>'+
+    tent+campfire+lantern+'</svg>';
+}
+
 function setScene(scene){
   currentScene=scene;
   document.getElementById('app').className='sky-'+scene+(SETTINGS.motion?'':' calm');
-  document.getElementById('scenery').innerHTML=SCENERY[scene];
+  document.getElementById('scenery').innerHTML=SCENERY[scene]+campSceneDecor(scene);
   document.getElementById('particles').innerHTML=particlesFor(scene);
 }
 
