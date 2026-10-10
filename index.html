@@ -464,6 +464,25 @@
 .btn{border-radius:16px}
 button:focus-visible,[tabindex]:focus-visible{outline:3px solid #244f82;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.companion{transition:none}.companion:hover{transform:none}}
+
+/* Kid-friendly flat camping challenge and reward cards. */
+#screen-challenge .challenge{position:relative;background:#fff4d8;border:3px solid #a87949;box-shadow:0 8px 0 #765738,0 15px 30px #382e2440;padding:clamp(16px,4vw,30px);max-width:620px}
+#screen-challenge .challenge:before{content:'🏕️ TRAIL CHALLENGE';display:block;text-align:center;letter-spacing:.1em;font-size:12px;font-weight:900;color:#795a38;margin-bottom:12px}
+#screen-challenge.camp-reading .challenge:before{content:'📖 WORD CHALLENGE'}
+#screen-challenge.camp-math .challenge:before{content:'🧮 MATH CHALLENGE'}
+#screen-challenge .ch-prompt{color:#4a3525;font-weight:900;line-height:1.3;white-space:pre-line}
+#screen-challenge .ch-sub{color:#6e5b42;font-weight:700}
+#screen-challenge .answer{border-radius:17px;border:3px solid #d4b486;background:#fffdf3;color:#473322;min-height:62px;box-shadow:0 4px 0 #b5966b;transition:transform .14s ease,background .14s ease}
+#screen-challenge .answer:active{transform:translateY(3px);box-shadow:0 1px 0 #b5966b}
+#screen-challenge .answer.correct{background:#bce7a8;border-color:#4d9659;color:#23492f}
+#screen-challenge .answer.wrong{background:#ffe0d5;border-color:#cb796c}
+#screen-challenge .hint-btn{border-radius:15px;min-height:48px}
+#screen-challenge .hint-bubble{border-radius:16px;background:#fff4c7;color:#4b3c2c;border:2px solid #d6b66c}
+#screen-challenge .hint-emoji svg{width:32px;height:32px;vertical-align:middle}
+#screen-transition.camp-transition .card{background:#fff0ca;border:3px solid #a87949;border-radius:24px;box-shadow:0 8px 0 #795633}
+#screen-start .start-wrap .btn,#screen-map .map-cta .btn{background:#f8bf58;color:#4b341f;border:2px solid #966331;box-shadow:0 5px 0 #795633}
+@media(max-width:480px){#screen-challenge .challenge{margin-inline:10px}#screen-challenge .answer{min-height:58px}}
+@media(prefers-reduced-motion:reduce){#screen-challenge .answer{transition:none}}
 </style>
 </head>
 <body>
@@ -1363,8 +1382,11 @@ function loadChallenge(q){
   document.getElementById('ch-host').innerHTML =
     badge(host,54)+`<div style="text-align:left;"><div class="host-name">${esc(host.name)} says:</div><div class="host-kind">${q.kind==='math'?'Number puzzle':'Word puzzle'}</div></div>`;
   // hint button reflects the current helper
+  const challenge=document.getElementById('screen-challenge');
+  challenge.classList.toggle('camp-reading',q.kind==='read');
+  challenge.classList.toggle('camp-math',q.kind==='math');
   const he=document.getElementById('hint-emoji'), hl=document.getElementById('hint-label');
-  if(q.helper){ he.innerHTML=animalGlyph(q.helper.animal); hl.textContent='Ask '+q.helper.name; }
+  if(q.helper){ he.innerHTML=camperGlyph(q.helper.animal); hl.textContent='Ask '+q.helper.name; }
   else { he.innerHTML='💡'; hl.textContent='See a hint'; }
   document.getElementById('ch-prompt').textContent=q.prompt;
   document.getElementById('ch-sub').textContent=q.sub;
@@ -1454,6 +1476,7 @@ function toggleSound(){ SETTINGS.sound=!SETTINGS.sound; saveSettings();
   if(SETTINGS.sound) chime(true); }
 function themeComplete(){
   const th=THEMES[themeIndex]; if(!th.done){ finale(); return; }
+  document.getElementById('screen-transition').classList.add('camp-transition');
   document.getElementById('trans-emoji').textContent=th.done.emoji;
   document.getElementById('trans-title').textContent=th.done.title;
   document.getElementById('trans-text').textContent=th.done.text;
