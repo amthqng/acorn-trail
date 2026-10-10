@@ -38,6 +38,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.locator('#ops-row button[data-k="add"]').tap();
     assert.equal(await page.evaluate(()=>SETTINGS.ops.add),true);
     for(const op of ['sub','mul','div','word'])await page.locator(`#ops-row button[data-k="${op}"]`).tap();
+    await page.locator('#sw-explanations').tap();assert.equal(await page.evaluate(()=>SETTINGS.explanations),true);
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     await page.getByRole('button',{name:'Make your team'}).tap();await layout();
     await page.getByRole('button',{name:'Edit Biscuit'}).tap();await page.clock.runFor(100);await layout();await capture('team-editor');
@@ -68,6 +69,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       if(stop===0){await page.locator('#screen-map').evaluate(e=>e.scrollTop=0);await capture(`region-${region+1}`);}
       if(region===0&&stop<=1)await page.evaluate(()=>SETTINGS.readAloud=true);
       else await page.evaluate(()=>SETTINGS.readAloud=false);
+      await page.evaluate(s=>{SETTINGS.explanations=s%2===0;saveSettings()},stop);
       await page.locator('#map-cta-btn').tap();
       await layout();
       if(region===0&&(stop===0||stop===1)){
@@ -89,13 +91,22 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
       const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
       await answerButton.tap({position:{x:10,y:answerBox.height/2}});
-      await page.clock.runFor(1600);await dismiss();
+      await page.clock.runFor(1600);
+      if(stop%2===0){
+       assert.equal(await page.evaluate(()=>currentScreenId),'screen-challenge');
+       assert.ok((await page.locator('#answer-explanation').textContent()).length>20);
+       await layout();
+       if(region===0&&stop===0){await capture('answer-review');await page.locator('#explanation-audio').tap();assert.equal(await page.evaluate(()=>acorns),1);}
+       await page.locator('#answer-review').getByRole('button',{name:'Continue',exact:true}).tap();
+      }
+      await dismiss();
       assert.equal(await page.evaluate(()=>acorns),region*12+stop+1);
      }
      if(region<6){await page.locator('#screen-transition button').tap();await dismiss()}
     }
     assert.equal(await page.evaluate(()=>currentScreenId),'screen-finale');
     assert.equal(await page.evaluate(()=>STICKERS.every(s=>hasSticker(s.id))),true);
+    assert.deepEqual(await page.evaluate(()=>[learning.math.completed,learning.read.completed]),[42,42]);
     await layout();await capture('finale');
     const counts=await page.evaluate(()=>JSON.stringify(stickerCounts));
     await page.getByRole('button',{name:'See my stickers'}).tap();await layout();
@@ -104,6 +115,12 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     assert.equal(await page.evaluate(()=>acorns),0);
     assert.equal(await page.evaluate(()=>JSON.stringify(stickerCounts)),counts);
     assert.equal(await page.evaluate(()=>current),null);
+    await page.locator('#screen-map button[aria-label="Settings"]').tap();
+    await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();
+    await page.locator('#learning-summary').scrollIntoViewIfNeeded();await layout();await capture('learning-summary');
+    await page.locator('#learning-summary summary').tap();await layout();
+    assert.match(await page.locator('#learning-summary').textContent(),/Math42/);
+    await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
     await browser.close();
    }catch(e){

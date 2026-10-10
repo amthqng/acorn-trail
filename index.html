@@ -235,6 +235,14 @@
   .hint-btn svg{ width:30px; height:30px; background:var(--cream-card); border-radius:50%; padding:2px; box-shadow:0 1px 3px rgba(62,43,31,0.2); }
   .hint-bubble{ margin-top:14px; background:#fff6ef; border:2px dashed var(--pig-pink-dark);
     border-radius:16px; padding:12px 16px; font-weight:600; font-size:15px; max-width:440px; display:none; }
+  [hidden]{display:none!important}
+  .answer-review{margin-top:14px;background:#fff4c7;border:2px solid #d6b66c;border-radius:16px;padding:12px;text-align:left;overflow-wrap:anywhere}
+  .answer-review p{margin:0 0 12px;font-size:16px;line-height:1.5}
+  .answer-review .row-btns{flex-wrap:wrap;justify-content:center}
+  .learning-summary{margin-top:18px;font-size:14px;line-height:1.5}
+  .learning-summary table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .learning-summary th,.learning-summary td{text-align:left;padding:6px 3px;border-bottom:1px solid var(--sand-dark);overflow-wrap:anywhere}
+  .learning-summary th:first-child{width:44%}
   .hint-bubble.show{ display:block; animation:fadeIn 0.3s ease; }
 
   .burst{ position:absolute; inset:0; pointer-events:none; z-index:20; overflow:hidden; }
@@ -610,6 +618,10 @@ button, [role="button"]{touch-action:manipulation}
         </button>
       </div>
       <div class="hint-bubble" id="hint-bubble"></div>
+      <div class="answer-review" id="answer-review" tabindex="-1" hidden>
+        <p id="answer-explanation" role="status"></p>
+        <div class="row-btns"><button class="btn small" onclick="continueAfterReview()">Continue</button><button class="btn outline small" id="explanation-audio" onclick="speak(document.getElementById('answer-explanation').textContent)">Hear why</button></div>
+      </div>
     </div>
     <div class="burst" id="burst"></div>
     <div class="streak-badge" id="streak-badge"></div>
@@ -725,6 +737,11 @@ button, [role="button"]{touch-action:manipulation}
         <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="leaf"></span>Calm mode (less motion)</span><button class="sw" id="sw-motion" onclick="toggleSetting('motion')"></button></div>
       </div>
 
+      <div class="set-group">
+        <div class="toggle-row"><span class="tl">Pause to explain answers</span><button class="sw" id="sw-explanations" aria-label="Pause to explain answers" onclick="toggleSetting('explanations')"></button></div>
+        <div class="set-note">Show why after each correct answer, then tap Continue. Off keeps the trail moving automatically.</div>
+      </div>
+      <section class="learning-summary" aria-label="Learning progress"><h3>Learning progress</h3><div id="learning-summary"></div><button class="btn outline small" onclick="clearLearningProgress()">Clear learning record</button></section>
       <div class="modal-actions">
         <button class="btn outline small" onclick="confirmReset()">Reset progress</button>
         <button class="btn small" onclick="closeSettings()">Done</button>
@@ -762,7 +779,7 @@ const SKEY='acorn-trail-settings', PKEY='acorn-trail-progress', PVER=3;
 
 /* ================= settings ================= */
 const DEFAULTS = { math:'g2', reading:'g2',
-  ops:{add:true,sub:true,mul:true,div:true,word:true}, sound:true, rain:true, reveal:true, readAloud:true, motion:true };
+  ops:{add:true,sub:true,mul:true,div:true,word:true}, sound:true, rain:true, reveal:true, readAloud:true, motion:true, explanations:false };
 let SETTINGS = Object.assign({}, DEFAULTS, store.get(SKEY)||{});
 SETTINGS.ops = Object.assign({}, DEFAULTS.ops, (store.get(SKEY)||{}).ops||{});
 if(!Object.values(SETTINGS.ops).some(Boolean)) SETTINGS.ops={...DEFAULTS.ops};
@@ -1237,7 +1254,45 @@ function buildReading(cat,d){
   else if(cat==='fillblank'){ prompt=d.s; sub='Tap the word that best fills the blank'; answer=d.a; choices=[d.a,...d.o]; hint='Read the whole sentence and try each word. Which one makes the most sense?'; }
   else if(cat==='comp'){ prompt=`${d.p}\n\n${d.q}`; sub='Read the story, then tap the answer'; answer=d.a; choices=[d.a,...d.o]; hint='Read the little story again — the answer is hiding in the sentences.'; }
   else { prompt=`${d.s}\nWhat does ${d.w} mean?`; sub='Tap the best meaning'; answer=d.a; choices=[d.a,...d.o]; hint=`Read the sentence again and picture it. What fits ${d.w} best?`; }
-  return { kind:'read', host:'cat', prompt, sub, answer, choices:shuffle(choices), hint };
+  return { kind:'read', host:'cat', skill:cat, prompt, sub, answer, choices:shuffle(choices), hint, explanation:readingExplanation(cat,d) };
+}
+
+function readingExplanation(cat,d){
+  if(cat==='rhyme') return `“${d.w}” and “${d.a}” have the same ending sound. Say them together to hear the rhyme.`;
+  if(cat==='baby') return `${d.q.replace('What do we call a ', 'A ').replace('?', '')} is called a ${d.a}.`;
+  if(cat==='synonym') return `“${d.w}” and “${d.a}” mean almost the same thing. Words with similar meanings are synonyms.`;
+  if(cat==='antonym') return `“${d.a}” means the opposite of “${d.w}”. Words with opposite meanings are antonyms.`;
+  if(cat==='compound') return `${d.p} + ${d.a} = ${d.word}. Joining these two words makes a compound word.`;
+  if(cat==='plural'){
+    const rule=d.w.endsWith('y')?'Change the y to ies.':d.w.endsWith('f')?'Change the f to ves.':d.w.endsWith('x')?'Add es after x.':'This word changes its spelling instead of just adding s.';
+    return `One ${d.w}, two ${d.a}. ${rule}`;
+  }
+  if(cat==='contraction') return d.w==='will not'?`“Won’t” is the special short form of “will not”. The apostrophe takes the place of missing letters.`:`“${d.a}” is short for “${d.w}”. The apostrophe takes the place of missing letters.`;
+  if(cat==='prefix'){
+    const prefix=d.w.startsWith('re')?'re':d.w.startsWith('pre')?'pre':d.w.startsWith('dis')?'dis':'un';
+    const meaning={re:'again',pre:'before',dis:'away or not',un:'not or undo'}[prefix];
+    return `The beginning “${prefix}-” means ${meaning}. So “${d.w}” means ${d.a}.`;
+  }
+  if(cat==='homophone'){
+    const meaning={through:'moving from one side to the other',threw:'sent something through the air',two:'the number 2',too:'also',hear:'listen to a sound',here:'in this place',tail:'the part at the back of an animal',their:'belonging to them',night:'the dark part of the day'}[d.a];
+    return `${d.s.replace('___',d.a)} “${d.a}” means ${meaning}. Words can sound alike but have different meanings.`;
+  }
+  if(cat==='fillblank'){
+    const why={umbrella:'An umbrella keeps the rain off.',flowers:'Bees visit flowers for nectar.',sleep:'Sleep helps us rest when we are tired.',mud:'Boots protect our feet in mud.',blow:'Blowing gently helps hot soup cool.',nest:'A nest is a baby bird’s home.',lantern:'A lantern gives light in the dark.',fall:'Leaves change color in fall.',water:'Water is a drink that helps when we are thirsty.',sun:'We can watch the sun set behind a hill.',blanket:'A blanket helps keep a cold kitten warm.',quiet:'Being quiet helps a baby stay asleep.'}[d.a];
+    return `${d.s.replace('___',d.a)} ${why}`;
+  }
+  if(cat==='meaning') return `In “${d.s}”, “${d.w.toLowerCase()}” means ${d.a}. Use the other words in the sentence to help find its meaning.`;
+  const evidence=d.e||{
+    'to eat in winter':'He carried it home to save for winter.',
+    'a rainbow':'A bright rainbow stretched across the sky after the rain stopped.',
+    'water and sunlight':'Every day she gave it water and sunlight.',
+    'her friend helped her':'Her friend held her paw, and together they walked through.',
+    'the pumpkin pie':'The pie was his favorite part of the whole day.',
+    'a match':'Clover took out her little match and lit the lantern again.',
+    'to finish together':'He waited so they could reach the Great Oak together.',
+    'when the stars come out':'When the stars came out, she opened her eyes.'
+  }[d.a]||d.p;
+  return `The answer is “${d.a}”. The story gives this clue: ${evidence}`;
 }
 
 /* ================= math generators ================= */
@@ -1277,7 +1332,7 @@ function genMath(theme){
     let canPlus=ops.add, canMinus=ops.sub; if(!canPlus&&!canMinus){ canPlus=true; }
     if(canPlus && (!canMinus || Math.random()<0.5)){ op='+'; ans=a+b; }
     else { if(b>=a) b=ri(1,a-1); op='−'; ans=a-b; }
-    return { kind:'math', host:'dog', prompt:`${a} ${op} ${b}`, sub: op==='+'?'Add the two numbers':'Take the second from the first',
+    return { kind:'math', host:'dog', skill:op==='+'?'addition':'subtraction', explanation:mathExplanation(op,a,b,ans), prompt:`${a} ${op} ${b}`, sub: op==='+'?'Add the two numbers':'Take the second from the first',
       answer:ans, choices:numChoices(ans),
       hint: op==='+' ? `Add the ones first: ${a%10} + ${b%10}. If it's 10 or more, carry to the tens.`
                      : `Line them up. Start with the ones — you may need to borrow from the tens.` };
@@ -1287,41 +1342,84 @@ function genMath(theme){
     if(level===1){ a=[2,3,5][ri(0,2)]; b=ri(2,5); } else if(level===2){ a=ri(2,5); b=ri(2,9); }
     else if(level===3){ a=ri(2,9); b=ri(2,9); } else { a=ri(2,12); b=ri(2,12); }
     const ans=a*b;
-    return { kind:'math', host:'dog', prompt:`${a} × ${b}`, sub:`${b} groups of ${a}`,
+    return { kind:'math', host:'dog', skill:'multiplication', explanation:mathExplanation('×',a,b,ans), prompt:`${a} × ${b}`, sub:`${b} groups of ${a}`,
       answer:ans, choices:numChoices(ans), hint:`${a} × ${b} means ${a} added ${b} times. Count by ${a}s.` };
   }
   if(t==='div'){
     const b=ri(2,9), q=ri(2,9), a=b*q;
-    return { kind:'math', host:'dog', prompt:`${a} ÷ ${b}`, sub:`Share ${a} into groups of ${b}`,
+    return { kind:'math', host:'dog', skill:'division', explanation:mathExplanation('÷',a,b,q), prompt:`${a} ÷ ${b}`, sub:`Share ${a} into groups of ${b}`,
       answer:q, choices:numChoices(q), hint:`How many groups of ${b} fit in ${a}? Count up by ${b}s until you reach ${a}.` };
   }
   if(t==='two' && ops.add && ops.sub){
     const a=ri(20,60), b=ri(10,30), c=ri(5,20); const ans=a+b-c; const n=noun();
-    return { kind:'math', host:'dog', prompt:`${leadPrimary().name} had ${a} ${n}, found ${b} more, then gave ${c} away. How many now?`,
+    return { kind:'math', host:'dog', skill:'two', explanation:`First, ${a} + ${b} = ${a+b}. Then, ${a+b} − ${c} = ${ans}. There are ${ans} ${n} left.`, prompt:`${leadPrimary().name} had ${a} ${n}, found ${b} more, then gave ${c} away. How many now?`,
       sub:'Two steps: add, then subtract', answer:ans, choices:numChoices(ans),
       hint:`First add: ${a} + ${b}. Then take away ${c} from that total.` };
   }
   const n=noun(); const travel=leadPrimary().name; const learner=(mathChars()[0]||ROSTER[0]).name;
   if(ops.add && (!ops.sub || Math.random()<0.5)){
     let a,b; if(level<=2){ a=ri(12,40); b=ri(6,30); } else { a=ri(30,120); b=ri(20,90); } const ans=a+b;
-    return { kind:'math', host:'dog', prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,
+    return { kind:'math', host:'dog', skill:'word', explanation:`Finding more means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`, prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,
       sub:'Add them together', answer:ans, choices:numChoices(ans), hint:`Put the groups together: ${a} + ${b}.` };
   } else if(ops.sub){
     let a,b; if(level<=2){ a=ri(20,50); b=ri(5,18); } else { a=ri(60,160); b=ri(20,90); }
     if(b>=a) b=ri(1,a-1); const ans=a-b;
-    return { kind:'math', host:'dog', prompt:`There were ${a} ${n}. ${b} blew away in the wind. How many are left?`,
+    return { kind:'math', host:'dog', skill:'word', explanation:`Blowing away means take away. ${mathExplanation('−',a,b,ans)} There are ${ans} ${n} left.`, prompt:`There were ${a} ${n}. ${b} blew away in the wind. How many are left?`,
       sub:'Take away', answer:ans, choices:numChoices(ans), hint:`Start with ${a} and take ${b} away: ${a} − ${b}.` };
   }
   // Word problems are a standalone category; when arithmetic operations are off, use an addition story.
   const a=ri(12,40), b=ri(6,30), ans=a+b;
-  return {kind:'math',host:'dog',prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,sub:'Add them together',answer:ans,choices:numChoices(ans),hint:`Put the groups together: ${a} + ${b}.`};
+  return {kind:'math',host:'dog',skill:'word',explanation:`Finding more means add. ${mathExplanation('+',a,b,ans)} There are ${ans} ${n} in all.`,prompt:`${learner} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,sub:'Add them together',answer:ans,choices:numChoices(ans),hint:`Put the groups together: ${a} + ${b}.`};
 }
+
+function mathExplanation(op,a,b,ans){
+  if(op==='×') return `${b} groups of ${a} make ${ans}. ${a} × ${b} = ${ans}.`;
+  if(op==='÷') return `${ans} groups of ${b} make ${a}: ${ans} × ${b} = ${a}. So ${a} ÷ ${b} = ${ans}.`;
+  const tens=Math.floor(b/10)*10, ones=b%10;
+  const action=op==='+'?'add':'take away';
+  if(!tens||!ones) return `Start at ${a} and ${action} ${b}. ${a} ${op} ${b} = ${ans}.`;
+  const middle=op==='+'?a+tens:a-tens;
+  return `Split ${b} into ${tens} and ${ones}. First, ${a} ${op} ${tens} = ${middle}. Then, ${middle} ${op} ${ones} = ${ans}.`;
+}
+function questionExplanation(q){
+  if(typeof q.explanation==='string'&&q.explanation.trim()) return q.explanation;
+  // Older saved questions have no explanation metadata.
+  const match=q.kind==='math'&&q.prompt.match(/^(\d+) ([+−×÷]) (\d+)$/);
+  if(match) return mathExplanation(match[2],Number(match[1]),Number(match[3]),q.answer);
+  return `The answer is ${q.answer}. ${q.hint||''}`;
+}
+
+/* Learning totals stay on this device and do not infer past performance. */
+const LKEY='acorn-trail-learning';
+const SKILLS={addition:'Addition',subtraction:'Subtraction',multiplication:'Multiplication',division:'Division',word:'Math stories',two:'Two-step math',rhyme:'Rhymes',baby:'Animal names',synonym:'Similar meanings',plural:'Plurals',antonym:'Opposites',compound:'Compound words',homophone:'Sound-alike words',contraction:'Contractions',prefix:'Word beginnings',fillblank:'Sentence words',comp:'Story understanding',meaning:'Word meanings',math:'Other math',read:'Other reading'};
+function learningCount(v){return Number.isSafeInteger(v)&&v>=0?Math.min(v,1000000000):0;}
+function learningRow(r){r=r||{};const completed=learningCount(r.completed);return {completed,independent:Math.min(completed,learningCount(r.independent)),hinted:Math.min(completed,learningCount(r.hinted)),wrong:learningCount(r.wrong)};}
+function loadLearning(){
+  const raw=store.get(LKEY)||{},out={math:learningRow(raw.math),read:learningRow(raw.read),skills:{}};
+  for(const k of Object.keys(SKILLS))if(raw.skills&&raw.skills[k])out.skills[k]=learningRow(raw.skills[k]);
+  return out;
+}
+let learning=loadLearning();
+function recordLearning(q){
+  const key=Object.hasOwn(SKILLS,q.skill)?q.skill:q.kind;
+  const rows=[learning[q.kind],learning.skills[key]||(learning.skills[key]=learningRow())];
+  for(const r of rows){r.completed=learningCount(r.completed+1);r.independent=learningCount(r.independent+(wrongCount===0&&!q.hintUsed?1:0));r.hinted=learningCount(r.hinted+(q.hintUsed?1:0));r.wrong=learningCount(r.wrong+wrongCount);}
+  store.set(LKEY,learning);
+}
+function renderLearning(){
+  const row=(label,r)=>`<tr><th scope="row">${label}</th><td>${r.completed}</td><td>${r.independent}</td></tr>`;
+  const total=learning.math.completed+learning.read.completed;
+  document.getElementById('learning-summary').innerHTML=total?
+    `<p>Completed puzzles since this record began. “On own” means a correct first choice without a hint. These counts describe practice, not a grade.</p><table><thead><tr><th scope="col">Practice</th><th scope="col">Done</th><th scope="col">On own</th></tr></thead><tbody>${row('Math',learning.math)}${row('Reading',learning.read)}</tbody></table><p>With hints: ${learning.math.hinted+learning.read.hinted}. Wrong choices on completed puzzles: ${learning.math.wrong+learning.read.wrong}.</p><details><summary>Skills practiced</summary><table><thead><tr><th scope="col">Skill</th><th scope="col">Done</th><th scope="col">On own</th></tr></thead><tbody>${Object.keys(SKILLS).filter(k=>learning.skills[k]?.completed).map(k=>row(SKILLS[k],learning.skills[k])).join('')}</tbody></table></details><p>Stored only in this browser. Replaying keeps the record.</p>`:
+    '<p>No completed puzzles recorded yet. New practice will appear here. Earlier play is not included.</p>';
+}
+function clearLearningProgress(){if(confirm('Clear the learning record? Your trail and stickers will stay.')){store.del(LKEY);learning=loadLearning();renderLearning();}}
 
 /* ================= game state + progress ================= */
 let acorns=0, themeIndex=0, stopIndex=0, current=null, answered=false, wrongCount=0, streak=0;
 const REVEAL_AT=2;
 let pendingCompletion=false, rewardTimer=null, trailEpoch=0;
-function cancelReward(){ trailEpoch++; clearTimeout(rewardTimer); rewardTimer=null; pendingUnlocks=[]; unlockNext=null; wrongCount=0; current=null; answered=false; pendingCompletion=false; }
+function cancelReward(){ document.getElementById('answer-review').hidden=true; trailEpoch++; clearTimeout(rewardTimer); rewardTimer=null; pendingUnlocks=[]; unlockNext=null; wrongCount=0; current=null; answered=false; pendingCompletion=false; }
 function savedQuestion(){ const p=store.get(PKEY); return p&&p.v===PVER&&p.themeIndex===themeIndex&&p.stopIndex===stopIndex&&p.question&&validQuestion(p.question)?p:null; }
 function validQuestion(q){ return !!q&&['math','read'].includes(q.kind)&&typeof q.prompt==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&q.choices.length===new Set(q.choices.map(String)).size&&q.choices.every(x=>typeof x==='string'||(typeof x==='number'&&Number.isFinite(x)))&&q.choices.includes(q.answer); }
 function checkpoint(){ if(current&&!answered) saveProgress(); }
@@ -1444,6 +1542,7 @@ function startNextStop(){
   loadChallenge(current); saveProgress(); go('screen-challenge');
 }
 function loadChallenge(q){
+  document.getElementById('answer-review').hidden=true;
   answered=false; wrongCount=0;
   document.getElementById('acorn-num2').textContent=acorns;
   paintSound();
@@ -1494,10 +1593,24 @@ function award(btn){
     const pool=current.kind==='math'?GOOD_MATH:GOOD_READ;
     fb.textContent=pool[Math.floor(Math.random()*pool.length)]; fb.className='feedback good';
   }
+  const explanation=questionExplanation(current); recordLearning(current);
   acorns++; pendingCompletion=true; current=null; saveProgress(); document.getElementById('acorn-num2').textContent=acorns; sparkle(); chime(true);
   refreshStickers();
   document.querySelectorAll('.answer').forEach(a=>a.style.pointerEvents='none');
+  if(SETTINGS.explanations){
+    document.getElementById('answer-explanation').textContent=explanation;
+    document.getElementById('explanation-audio').hidden=!SETTINGS.readAloud;
+    document.getElementById('answer-review').hidden=false;
+    document.getElementById('answer-review').focus?.({preventScroll:true});
+    document.getElementById('answer-review').scrollIntoView?.({block:'nearest',behavior:SETTINGS.motion?'smooth':'auto'});
+    document.getElementById('hint-bubble').classList.remove('show');
+    return;
+  }
   const epoch=trailEpoch; rewardTimer=setTimeout(()=>{ if(epoch===trailEpoch){ rewardTimer=null; flushUnlocks(proceed); } },1500);
+}
+function continueAfterReview(){
+  if(!answered||!pendingCompletion||document.getElementById('answer-review').hidden)return;
+  document.getElementById('answer-review').hidden=true; flushUnlocks(proceed);
 }
 function checkAnswer(btn,chosen,correct){
   if(answered) return;
@@ -1509,6 +1622,7 @@ function checkAnswer(btn,chosen,correct){
   if(SETTINGS.reveal && wrongCount>=REVEAL_AT) revealAnswer(correct);
 }
 function revealAnswer(correct){
+  if(current){current.hintUsed=true;saveProgress();document.getElementById('hint-bubble').textContent=questionExplanation(current);}
   const fb=document.getElementById('feedback');
   fb.textContent=(current&&current.helper?current.helper.name:'Your helper')+' points to the answer — tap it! 💡'; fb.className='feedback reveal';
   document.querySelectorAll('.answer').forEach(a=>{
@@ -1518,8 +1632,8 @@ function revealAnswer(correct){
   if(SETTINGS.readAloud) speak(document.getElementById('hint-bubble').textContent);
   document.getElementById('hint-bubble').classList.add('show');
 }
-function showHint(){ if(!current) return; document.getElementById('hint-bubble').classList.add('show');
-  if(SETTINGS.readAloud) speak(current.hint); }
+function showHint(){ if(!current) return; current.hintUsed=true; saveProgress(); document.getElementById('hint-bubble').classList.add('show');
+  if(SETTINGS.readAloud) speak(document.getElementById('hint-bubble').textContent); }
 function sparkle(){
   const burst=document.getElementById('burst'); const icons=['🌰','✨','🍂','⭐'];
   for(let i=0;i<10;i++){ const s=document.createElement('div'); s.className='spark';
@@ -1689,6 +1803,9 @@ function tryGate(v,btn){
 function closeGate(){ document.getElementById('gate-modal').classList.remove('show'); }
 function closeSettings(){ gateUnlocked=false; document.getElementById('settings-modal').classList.remove('show'); }
 function renderSettings(){
+  renderLearning();
+  document.getElementById('sw-explanations').classList.toggle('on',!!SETTINGS.explanations);
+  document.getElementById('sw-explanations').setAttribute('aria-pressed',String(!!SETTINGS.explanations));
   document.querySelectorAll('#seg-math button').forEach(b=>b.classList.toggle('on', b.dataset.v===SETTINGS.math));
   document.querySelectorAll('#seg-read button').forEach(b=>b.classList.toggle('on', b.dataset.v===SETTINGS.reading));
   document.querySelectorAll('#ops-row .op').forEach(b=>b.classList.toggle('on', !!SETTINGS.ops[b.dataset.k]));
@@ -1713,7 +1830,8 @@ function toggleSetting(key){
   if(key==='motion'){ setScene(currentScene); }
 }
 function confirmReset(){
-  if(confirm('Reset all progress and stickers, and start from the beginning?')){
+  if(confirm('Reset all trail progress, stickers and learning records, and start from the beginning?')){
+    store.del(LKEY); learning=loadLearning();
     cancelReward(); clearProgress(); acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false;
     stickerCounts={}; pendingUnlocks=[]; basketDot=false; saveStickers();
     for(const k in usedReading) delete usedReading[k];

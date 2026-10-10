@@ -277,3 +277,57 @@ test('answer reveal uses the customized helper name',()=>{
  const b=boot();b.eval("SETTINGS.readAloud=false;startNextStop();current.helper.name='Clover';revealAnswer(current.answer)");
  assert.match(b.eval("document.getElementById('feedback').textContent"),/^Clover points to the answer/);
 });
+
+
+test('all reading questions explain their answer without missing content',()=>{
+ const b=boot();
+ const questions=JSON.parse(b.eval('JSON.stringify(Object.entries(READING).flatMap(([cat,bank])=>bank.map(d=>buildReading(cat,d))))'));
+ for(const q of questions){assert.ok(q.skill);assert.ok(q.explanation.length>20);assert.doesNotMatch(q.explanation,/undefined|NaN/);assert.ok(q.explanation.toLowerCase().replace(/[’]/g,"'").includes(String(q.answer).toLowerCase()));}
+});
+test('worked math explanations use correct intermediate and final values',()=>{
+ const b=boot();
+ assert.match(b.eval("mathExplanation('+',28,17,45)"),/28 \+ 10 = 38.*38 \+ 7 = 45/);
+ assert.match(b.eval("mathExplanation('−',52,28,24)"),/52 − 20 = 32.*32 − 8 = 24/);
+ assert.match(b.eval("mathExplanation('÷',24,6,4)"),/4 × 6 = 24/);
+ const questions=JSON.parse(b.eval('JSON.stringify(Array.from({length:1000},()=>genMath({mlevel:4})))'));
+ for(const q of questions){assert.ok(q.skill);assert.ok(q.explanation.includes(String(q.answer)));assert.doesNotMatch(q.explanation,/undefined|NaN/);}
+});
+test('answer review waits for Continue and never awards twice',()=>{
+ const b=boot();b.eval("SETTINGS.explanations=true;SETTINGS.sound=false;startNextStop();checkAnswer(document.getElementById('test-answer'),current.answer,current.answer)");
+ assert.equal(b.eval('acorns'),1);assert.equal(b.eval('learning.math.completed'),1);assert.equal(b.eval('stopIndex'),0);
+ assert.equal(b.eval("document.getElementById('answer-review').hidden"),false);assert.equal(b.eval('rewardTimer'),null);
+ assert.ok(b.eval("document.getElementById('answer-explanation').textContent.length")>20);
+ b.eval('pendingUnlocks=[];continueAfterReview();continueAfterReview()');
+ assert.equal(b.eval('stopIndex'),1);assert.equal(b.eval('acorns'),1);assert.equal(b.eval('learning.math.completed'),1);
+});
+test('learning totals separate subjects, hints and wrong choices across resume',()=>{
+ const b=boot();b.eval("SETTINGS.sound=false;SETTINGS.readAloud=false;startNextStop();showHint();wrongCount=1;saveProgress()");
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ c.eval("SETTINGS.sound=false;continueTrail();checkAnswer(document.getElementById('test-answer'),current.answer,current.answer)");
+ assert.equal(c.eval('learning.math.completed'),1);assert.equal(c.eval('learning.math.independent'),0);assert.equal(c.eval('learning.math.hinted'),1);assert.equal(c.eval('learning.math.wrong'),1);assert.equal(c.eval('learning.read.completed'),0);
+ const d=boot(Object.fromEntries([...c.data].map(([k,v])=>[k,JSON.parse(v)])));
+ d.eval('continueTrail()');assert.equal(d.eval('learning.math.completed'),1);
+});
+test('reveal explains the answer and records it as assisted',()=>{
+ const b=boot();b.eval("SETTINGS.sound=false;SETTINGS.readAloud=false;startNextStop();revealAnswer(current.answer)");
+ assert.equal(b.eval("document.getElementById('hint-bubble').textContent"),b.eval('questionExplanation(current)'));
+ assert.equal(b.eval('current.hintUsed'),true);
+ b.eval("checkAnswer(document.getElementById('test-answer'),current.answer,current.answer)");assert.equal(b.eval('learning.math.independent'),0);
+});
+test('learning record persists on replay and clears separately from trail rewards',()=>{
+ const b=boot();b.eval("SETTINGS.sound=false;startNextStop();checkAnswer(document.getElementById('test-answer'),current.answer,current.answer);restart()");
+ assert.equal(b.eval('learning.math.completed'),1);
+ b.eval("acorns=5;stickerCounts={friend0:2};clearLearningProgress()");
+ assert.equal(b.eval('learning.math.completed'),0);assert.equal(b.eval('acorns'),5);assert.equal(b.eval('stickerCounts.friend0'),2);
+ b.eval("learning.math.completed=3;store.set(LKEY,learning);confirmReset()");assert.equal(b.eval('learning.math.completed'),0);assert.equal(b.eval('acorns'),0);
+});
+test('corrupt learning records recover without displaying injected labels',()=>{
+ const b=boot({'acorn-trail-learning':{math:{completed:4,independent:10,hinted:-2,wrong:'oops'},read:null,skills:{addition:{completed:2},'<img src=x>':{completed:8}}}});
+ assert.equal(b.eval('learning.math.independent'),4);assert.equal(b.eval('learning.math.hinted'),0);assert.equal(b.eval('learning.math.wrong'),0);
+ b.eval('renderLearning()');assert.doesNotMatch(b.eval("document.getElementById('learning-summary').innerHTML"),/<img/);
+});
+test('older saved questions can explain answers and reset cancels paused review',()=>{
+ const b=boot();assert.match(b.eval("questionExplanation({kind:'math',prompt:'12 + 5',answer:17})"),/12 \+ 5 = 17/);
+ b.eval("SETTINGS.explanations=true;SETTINGS.sound=false;startNextStop();checkAnswer(document.getElementById('test-answer'),current.answer,current.answer);restart();continueAfterReview()");
+ assert.equal(b.eval('stopIndex'),0);assert.equal(b.eval('acorns'),0);assert.equal(b.eval('learning.math.completed'),1);
+});
