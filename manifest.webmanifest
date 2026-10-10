@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Acorn Trail",
+  "short_name": "Acorn Trail",
+  "description": "A cozy offline learning adventure with animal friends.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7EEDC",
+  "theme_color": "#C1652E",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
