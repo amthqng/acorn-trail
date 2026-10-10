@@ -130,3 +130,27 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
   });
  }
 }
+
+// Desktop screenshots complement the full phone journeys for visual review.
+test('desktop illustrated screens fit the browser',async()=>{
+ const browser=await chromium.launch();
+ try{
+  const context=await browser.newContext({viewport:{width:1280,height:800},offline:true});
+  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(fileUrl);
+  await page.evaluate(()=>{SETTINGS.motion=false;SETTINGS.sound=false;SETTINGS.readAloud=false;setScene(currentScene)});
+  async function capture(name){
+   const fits=await page.evaluate(()=>{const e=document.querySelector('.screen.active');return e.scrollWidth<=e.clientWidth+1});
+   assert.equal(fits,true,`desktop overflow on ${name}`);
+   fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:path.join('artifacts',`desktop-${name}.png`)});
+  }
+  await capture('start');
+  await page.getByRole('button',{name:'Make your team'}).tap();await page.getByRole('button',{name:'Edit Biscuit'}).tap();await capture('team-editor');
+  for(let region=0;region<7;region++){
+   await page.evaluate(r=>{themeIndex=r;stopIndex=0;go('screen-map')},region);
+   await capture(`region-${region+1}`);
+   await page.locator('#map-cta-btn').click();await capture(`challenge-${region+1}`);
+  }
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close()}
+});
