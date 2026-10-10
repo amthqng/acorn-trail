@@ -590,6 +590,18 @@ button, [role="button"]{touch-action:manipulation}
 :focus-visible{outline:3px solid #244f82;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.btn.pulse,.lantern.current .glass{animation:none}}
 
+
+/* Offline access stays visible without interrupting the trail. */
+.offline-strip{z-index:6;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 12px;margin-top:12px;max-width:410px;flex-shrink:0;font-size:12px;color:#4b6338}
+#offline-status{font-weight:700}
+#offline-status::before{content:'●';margin-right:6px;color:#9e793b}
+#offline-status.ready::before{color:#497b42}
+.offline-link{font:700 12px 'Quicksand';color:#805025;background:linear-gradient(#fff9e8,#f2dfba);border:1px solid #d9bd8e;border-radius:12px;min-height:44px;padding:8px 12px;cursor:pointer;box-shadow:inset 0 1px 0 #fff,0 2px 0 #c0a37b}
+.offline-help{text-align:left;line-height:1.5}
+.offline-help h4{margin:16px 0 6px}
+.offline-help ol{padding-left:22px;margin:6px 0 16px}
+.offline-help li{margin-bottom:8px}
+.offline-help summary{cursor:pointer;min-height:44px;padding-block:10px;font-weight:700}
 </style>
 </head>
 <body>
@@ -601,6 +613,7 @@ button, [role="button"]{touch-action:manipulation}
   <section class="screen active" id="screen-start">
     <div class="start-tools left"><button class="icon-btn" id="basket-btn" data-icon="basket" onclick="openBasket()" aria-label="Sticker basket"></button><button class="icon-btn" data-icon="gear" onclick="openSettings()" aria-label="Grown-up settings"></button></div>
     <div class="title-lockup"><div class="title-icon">🌰</div><h1>Acorn Trail</h1><p>a cozy journey with new friends</p></div>
+    <div class="offline-strip"><span id="offline-status" role="status" aria-live="polite">Checking offline access…</span><button class="offline-link" id="install-game" onclick="installGame()">Install / offline help</button><button class="offline-link" id="offline-update" hidden onclick="applyOfflineUpdate()">Update game</button></div>
     <div class="party" id="start-party"></div>
     <div class="start-wrap" id="start-actions"></div>
   <div class="foot-note">Tap “Light the lantern”, then tap an answer — Your helper always has a hint 💡</div>
@@ -799,6 +812,18 @@ button, [role="button"]{touch-action:manipulation}
         <button class="btn outline small" onclick="confirmReset()">Reset progress</button>
         <button class="btn small" onclick="closeSettings()">Done</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal" id="offline-modal" role="dialog" aria-modal="true" aria-labelledby="offline-title" onkeydown="offlineModalKeys(event)">
+    <div class="modal-card offline-help">
+      <h3 id="offline-title">Take the trail offline</h3>
+      <p id="offline-help-status"></p>
+      <h4>On iPhone or iPad</h4>
+      <ol><li>Open Acorn Trail in Safari.</li><li>Tap Share, then <strong>Add to Home Screen</strong>.</li><li>Keep <strong>Open as Web App</strong> on if it appears, then tap Add.</li><li>Open the new icon once while online. Wait for <strong>Ready for offline play</strong>.</li></ol>
+      <details><summary>Other browsers</summary><p>Use the browser’s Install app or Add to Home Screen option. If an install prompt is available, the Install button opens it.</p></details>
+      <p class="set-note">The game saves on this device in the browser or installed app you use. After clearing website data, open it online again to save a new offline copy.</p>
+      <div class="modal-actions"><button class="btn outline small" id="offline-retry" onclick="initOffline()">Check again</button><button class="btn small" onclick="closeOfflineHelp()">Done</button></div>
     </div>
   </div>
 
@@ -2017,12 +2042,86 @@ function playTeam(){ if(!teamValid()) return; cancelReward(); saveRoster();
   acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; pendingCompletion=false; answered=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress();
   go('screen-story'); }
 
+
+/* Hosted offline shell; downloaded HTML remains self-contained. */
+let offlineReady=false,offlineRegistration=null,offlineInstallPrompt=null,offlineApplyingUpdate=false;
+let offlineMessage='Checking offline access…',offlineCheckId=0;
+function paintOffline(message,ready=false){
+  offlineMessage=message;offlineReady=ready;
+  const status=document.getElementById('offline-status');status.textContent=message;status.classList.toggle('ready',ready);
+  document.getElementById('offline-help-status').textContent=message;
+  document.getElementById('offline-update').hidden=!offlineRegistration?.waiting;
+}
+function checkOfflineCache(){
+  const controller=navigator.serviceWorker.controller;
+  if(!controller)return;
+  const id=++offlineCheckId,channel=new MessageChannel();
+  const timeout=setTimeout(()=>{channel.port1.close();if(id===offlineCheckId)paintOffline('Offline copy could not be checked. Open online and try again.');},8000);
+  channel.port1.onmessage=event=>{
+    clearTimeout(timeout);channel.port1.close();if(id!==offlineCheckId)return;
+    paintOffline(event.data.ready?'Ready for offline play':'Open online to save the offline game',!!event.data.ready);
+  };
+  controller.postMessage({type:'ACORN_OFFLINE_STATUS',prepare:navigator.onLine},[channel.port2]);
+}
+async function initOffline(){
+  if(typeof location==='undefined'||location.protocol==='file:'){
+    paintOffline('Downloaded game · plays offline',true);
+    document.getElementById('offline-help-status').textContent='This downloaded HTML plays offline. Home Screen installation uses the hosted Safari link.';
+    return;
+  }
+  if(!('serviceWorker' in navigator)||!window.isSecureContext){paintOffline('Offline setup unavailable in this browser');return;}
+  if(!offlineReady)paintOffline('Saving game for offline play…');
+  if(navigator.serviceWorker.controller)checkOfflineCache();
+  document.querySelector('link[rel="manifest"]').href=new URL('manifest.webmanifest',location.href).href;
+  try{
+    const reg=await navigator.serviceWorker.register(new URL('sw.js',location.href),{updateViaCache:'none'});
+    offlineRegistration=reg;
+    const watch=worker=>{if(!worker)return;worker.addEventListener('statechange',()=>{
+      if(worker.state==='activated')checkOfflineCache();
+      if(worker.state==='installed'&&reg.active)paintOffline(offlineMessage,offlineReady);
+      if(worker.state==='redundant'&&!reg.active)paintOffline('Offline setup unavailable. Connect and try again.');
+    });};
+    watch(reg.installing);reg.addEventListener('updatefound',()=>watch(reg.installing));
+    if(reg.active&&navigator.serviceWorker.controller)checkOfflineCache();
+    if(reg.waiting)paintOffline(offlineMessage,offlineReady);
+    // Updates never reload a game in progress. Activation is a deliberate button tap.
+    if(navigator.onLine)reg.update().catch(()=>{});
+  }catch{if(!offlineReady)paintOffline('Offline setup unavailable. Connect and try again.');}
+}
+function openOfflineHelp(){
+  document.getElementById('offline-help-status').textContent=offlineMessage;
+  document.getElementById('offline-modal').classList.add('show');document.getElementById('offline-retry').focus?.();
+}
+function closeOfflineHelp(){document.getElementById('offline-modal').classList.remove('show');document.getElementById('install-game').focus?.();}
+function offlineModalKeys(event){
+  if(event.key==='Escape'){closeOfflineHelp();return;}
+  if(event.key!=='Tab')return;
+  const nodes=[...document.querySelectorAll('#offline-modal button,#offline-modal summary')].filter(e=>!e.hidden);
+  const first=nodes[0],last=nodes[nodes.length-1];
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+}
+async function installGame(){
+  if(offlineInstallPrompt&&offlineReady){const prompt=offlineInstallPrompt;offlineInstallPrompt=null;await prompt.prompt();await prompt.userChoice;return;}
+  openOfflineHelp();
+}
+function applyOfflineUpdate(){
+  if(!offlineRegistration?.waiting)return;
+  checkpoint();offlineApplyingUpdate=true;offlineRegistration.waiting.postMessage({type:'ACORN_ACTIVATE_UPDATE'});
+}
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();offlineInstallPrompt=event;});
+window.addEventListener('online',()=>initOffline());
+window.addEventListener('appinstalled',()=>{offlineInstallPrompt=null;document.getElementById('install-game').textContent='Offline info';});
+if(typeof navigator!=='undefined'&&navigator.serviceWorker){
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(offlineApplyingUpdate){location.reload();return;}checkOfflineCache();});
+}
 /* init */
 paintIcons();
 setScene('meadow');
 renderStartParty();
 renderStart();
 updateBasketDot();
+initOffline();
 </script>
 </body>
 </html>
