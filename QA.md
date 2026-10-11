@@ -104,3 +104,17 @@ Eight additional seeded regressions cover shuffled skill coverage, reading-bank 
 Validation: **60 Node tests and nine browser checks**, including **504 phone stop completions**. Gameplay remains in one approximately **402 KB HTML file**, with no runtime dependency or service-worker change. Physical iPhone coverage remains unverified.
 
 Question-variety checks: https://github.com/amthqng/acorn-trail/actions/runs/38089319834
+
+## Character expressions and personalities, 11 October 2026
+
+The existing head-only SVG artwork now supports happy, thoughtful and encouraging expressions for all 18 selectable animals. Correct answers and the finale show happy faces; hints and answer reveals show thoughtful faces; wrong choices show encouragement. Expressions are static, so they remain available with motion disabled without adding animation, images, fonts or network dependencies.
+
+Biscuit's dog voice is enthusiastic, Aster's cat voice curious, Tansy's mouse voice adventurous and Nutmeg's pig voice reassuring. Other animals use their chosen role to select a voice. Challenge greetings, success and retry feedback, helper introductions and the leader's story greeting use these voices and respect customized names. Hints retain the original puzzle clue and answer reveals retain the worked explanation. Grades, question selection, rewards and adaptive rules are unchanged.
+
+The active question saves its greeting and reaction. Resume restores them without generating a replacement puzzle or awarding progress; new puzzles begin with the usual expression. Older saves acquire a greeting, invalid expression metadata recovers, and displayed character text is escaped. Happy reward expressions are transient and never saved as an unanswered puzzle.
+
+Validation: **64 Node regressions and nine browser checks passed**, including **504 stop completions** across Chromium and WebKit at 390×844, 320×568 and 844×390. New assertions cover reaction changes, customized dialogue, exact greeting/reaction restoration, one-time rewards and reset behavior. Existing checks cover team editing, all seven regions, learning records, stickers, adaptive difficulty and hosted offline/update recovery. Reviewed the all-animal expression sheet, portrait hint and success screens, and narrow-phone encouragement screenshot. Narrow screens scroll vertically to keep controls reachable; no horizontal overflow was detected. Physical iPhone/Home Screen testing remains unverified.
+
+Gameplay remains one approximately **406 KB HTML file**, with no service-worker or runtime dependency change. Accessories, friendship progression and role-specific hint mechanics are future work.
+
+Character checks: https://github.com/amthqng/acorn-trail/actions/runs/38115858874
