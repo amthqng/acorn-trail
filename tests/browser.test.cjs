@@ -76,22 +76,33 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       await page.evaluate(s=>{SETTINGS.explanations=s%2===0;saveSettings()},stop);
       await page.locator('#map-cta-btn').tap();
       await layout();
+      assert.equal(await page.locator('#ch-host svg').getAttribute('data-expression'),'ready');
+      assert.ok((await page.locator('.host-greeting').textContent()).length>10);
       if(region===0&&(stop===0||stop===1)){
        await capture(stop===0?'math-audio':'reading-audio');
        const audio=page.locator('.ans-speak').first();const box=await audio.boundingBox();
        assert.ok(box.width>=44&&box.height>=44);
        await audio.tap();assert.equal(await page.evaluate(()=>answered),false);
        await page.locator('.hint-btn:not(#speak-btn)').tap();assert.equal(await page.evaluate(()=>answered),false);
+       assert.equal(await page.locator('#ch-host svg').getAttribute('data-expression'),'thoughtful');
+       assert.equal(await page.locator('#hint-emoji svg').getAttribute('data-expression'),'thoughtful');
+       await layout();await capture('character-hint');
        const prompt=await page.locator('#ch-prompt').textContent();
        const wrong=await page.evaluate(()=>current.choices.findIndex(c=>c!==current.answer));
        const wrongButton=page.locator('.answer').nth(wrong);const wrongBox=await wrongButton.boundingBox();
        await wrongButton.tap({position:{x:10,y:wrongBox.height/2}});
+       assert.equal(await page.locator('#ch-host svg').getAttribute('data-expression'),'encouraging');
+       assert.match(await page.locator('#feedback').textContent(),new RegExp(await page.evaluate(()=>current.hostChar.name)));
+       const greeting=await page.locator('.host-greeting').textContent();
+       await layout();await capture('character-encouragement');
        const savedHistory=await page.evaluate(()=>JSON.stringify(loadVariety()));
        if(engineName==='webkit')await context.setOffline(false);
        await page.reload();await context.setOffline(true);await page.clock.runFor(500);
        await page.getByRole('button',{name:'Continue trail'}).tap();
        assert.equal(await page.locator('#ch-prompt').textContent(),prompt);
        assert.equal(await page.evaluate(()=>wrongCount),1);
+       assert.equal(await page.locator('#ch-host svg').getAttribute('data-expression'),'encouraging');
+       assert.equal(await page.locator('.host-greeting').textContent(),greeting);
        assert.equal(await page.evaluate(()=>JSON.stringify(variety)),savedHistory,'resume must not draw a replacement question');
       }
       if(adaptiveMode&&((region===0&&(stop===2||stop===3))||(region===1&&stop<4)))await page.locator('.hint-btn:not(#speak-btn)').tap();
@@ -102,6 +113,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
       const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
       await answerButton.tap({position:{x:10,y:answerBox.height/2}});
+      assert.equal(await page.locator('#ch-host svg').getAttribute('data-expression'),'happy');
       await page.clock.runFor(1600);
       if(stop%2===0){
        assert.equal(await page.evaluate(()=>currentScreenId),'screen-challenge');
@@ -179,6 +191,14 @@ test('desktop illustrated screens fit the browser',async()=>{
    await capture(`region-${region+1}`);
    await page.locator('#map-cta-btn').click();await capture(`challenge-${region+1}`);
   }
+  await page.evaluate(()=>{
+   const gallery=document.createElement('div');gallery.id='character-gallery';
+   gallery.style.cssText='position:fixed;inset:0;z-index:9999;background:#fff7e8;padding:16px;overflow:auto;display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-content:start';
+   gallery.innerHTML=ANIMALS.map(animal=>`<div style="text-align:center;font:14px sans-serif">${esc(animal)}<div style="display:flex">${['ready','happy','thoughtful','encouraging'].map(m=>`<div style="width:25%">${camperGlyph(animal,m)}</div>`).join('')}</div></div>`).join('');
+   document.body.appendChild(gallery);
+  });
+  await page.screenshot({path:path.join('artifacts','desktop-character-expressions.png')});
+  assert.equal(await page.locator('#character-gallery svg').count(),await page.evaluate(()=>ANIMALS.length*4));
   assert.deepEqual(errors,[]);
  }finally{await browser.close()}
 });

@@ -497,3 +497,52 @@ test('reading cycle boundaries avoid the last entry even after selection-cache e
  b.ctx.Math=Object.create(Math);b.ctx.Math.random=()=>0;
  const id=b.eval('pickReading(THEMES[0]).readingId');assert.notEqual(id,'rhyme:1');
 });
+
+test('all animal expressions preserve head art and expose accessible states',()=>{
+ const b=boot();
+ for(const animal of JSON.parse(b.eval('JSON.stringify(ANIMALS)'))){
+  for(const mood of ['ready','happy','thoughtful','encouraging']){
+   const svg=b.eval(`camperGlyph(${JSON.stringify(animal)},${JSON.stringify(mood)})`);
+   assert.match(svg,/viewBox="0 0 100 100"/);
+   assert.match(svg,new RegExp(`data-expression="${mood}"`));
+   assert.match(svg,/role="img" aria-label="[^"]+"/);
+   assert.doesNotMatch(svg,/undefined|NaN|<script/);
+   if(mood!=='ready')assert.match(svg,/character-smile/);
+  }
+ }
+ assert.equal(b.eval("camperGlyph('dog','invalid')===camperGlyph('dog')"),true);
+});
+test('personalities stay distinct and custom animals follow their roles',()=>{
+ const b=boot();
+ assert.deepEqual(JSON.parse(b.eval('JSON.stringify(DEFAULT_ROSTER.map(characterVoice))')),['eager','curious','adventurous','gentle']);
+ for(const [role,voice] of Object.entries({math:'eager',read:'curious',lead:'adventurous',help:'gentle',both:'curious'}))
+  assert.equal(b.eval(`characterVoice({animal:'fox',role:'${role}'})`),voice);
+});
+test('character reactions survive resume without altering questions or awarding hints',()=>{
+ const b=boot();b.eval("SETTINGS.readAloud=false;SETTINGS.reveal=false;startNextStop();current.hostChar.name='Maple';current.helper.name='Clover';loadChallenge(current);showHint()");
+ assert.equal(b.eval('acorns'),0);
+ assert.equal(b.eval('current.characterMood'),'thoughtful');
+ assert.match(b.eval("document.getElementById('hint-bubble').textContent"),/^Clover says:/);
+ assert.ok(b.eval("document.getElementById('hint-bubble').textContent.endsWith(current.hint)"));
+ b.eval("checkAnswer(document.createElement('button'),current.choices.find(x=>x!==current.answer),current.answer)");
+ assert.equal(b.eval('current.characterMood'),'encouraging');
+ assert.match(b.eval("document.getElementById('feedback').textContent"),/^Maple says:/);
+ const before=JSON.parse(b.eval('JSON.stringify(current)'));
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ c.eval('continueTrail()');
+ assert.equal(c.eval('current.prompt'),before.prompt);
+ assert.equal(c.eval('current.characterIntro'),before.characterIntro);
+ assert.equal(c.eval('current.characterMood'),'encouraging');
+ assert.equal(c.eval('wrongCount'),1);
+ c.eval("SETTINGS.explanations=true;checkAnswer(document.createElement('button'),current.answer,current.answer)");
+ assert.match(c.eval("document.getElementById('ch-host').innerHTML"),/data-expression="happy"/);
+ assert.equal(c.eval('acorns'),1);
+ c.eval('restart();startNextStop()');assert.equal(c.eval('current.characterMood'),'ready');
+});
+test('older saves gain a greeting and malformed expression metadata recovers safely',()=>{
+ const b=boot();b.eval("startNextStop();delete current.characterIntro;current.characterMood='happy';loadChallenge(current)");
+ assert.equal(b.eval('current.characterMood'),'ready');
+ assert.ok(b.eval('current.characterIntro.length>10'));
+ b.eval("current.characterIntro='<img src=x onerror=alert(1)>';loadChallenge(current)");
+ assert.doesNotMatch(b.eval("document.getElementById('ch-host').innerHTML"),/<img/);
+});
