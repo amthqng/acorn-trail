@@ -110,9 +110,26 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       if(adaptiveMode&&region===1&&stop===5)assert.equal(await page.evaluate(()=>['addition','subtraction','multiplication'].includes(current.skill)),true,'gentler math must use level one skills');
       const readingId=await page.evaluate(()=>current.kind==='read'?current.readingId:null);
       if(readingId){assert.equal(readingSeen.has(readingId),false,'reading entries should vary across this trail');readingSeen.add(readingId);}
-      const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
-      const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
-      await answerButton.tap({position:{x:10,y:answerBox.height/2}});
+      const format=await page.evaluate(()=>current.format||null);
+      if(format){
+       if(region===0)await capture('activity-'+format);
+       while(await page.evaluate(()=>!!current&&!answered)){
+        const target=await page.evaluate(()=>{
+         if(current.format==='order')return {side:'order',index:current.sequence[current.activityState.done.length]};
+         return {side:'right',left:current.pairs.findIndex((_,i)=>!current.activityState.done.includes(i)),index:0};
+        });
+        if(format==='match'){
+         await page.locator(`#activity [data-side="left"][data-index="${target.left}"]`).tap();
+         target.index=await page.evaluate(()=>current.choices.indexOf(current.pairs[current.activityState.selected].right));
+        }
+        await page.locator(`#activity [data-side="${target.side}"][data-index="${target.index}"]`).tap();
+        await layout();
+       }
+      }else{
+       const correct=await page.evaluate(()=>current.choices.findIndex(c=>c===current.answer));
+       const answerButton=page.locator('.answer').nth(correct);const answerBox=await answerButton.boundingBox();
+       await answerButton.tap({position:{x:10,y:answerBox.height/2}});
+      }
       assert.equal(await page.locator('#ch-host svg').getAttribute('data-expression'),'happy');
       await page.clock.runFor(1600);
       if(stop%2===0){
@@ -202,3 +219,60 @@ test('desktop illustrated screens fit the browser',async()=>{
   assert.deepEqual(errors,[]);
  }finally{await browser.close()}
 });
+
+for(const [engineName,engine] of Object.entries({chromium,webkit})){
+ test(`${engineName} tap activities preserve partial progress and guided touch controls`,async()=>{
+  const browser=await engine.launch();
+  try{
+   const context=await browser.newContext({viewport:{width:320,height:568},isMobile:true,hasTouch:true,offline:engineName==='chromium'});
+   const page=await context.newPage();const errors=[];const remote=[];
+   const url=engineName==='webkit'?'http://acorn-trail.test/index.html':fileUrl;
+   if(engineName==='webkit')await context.route(url,r=>r.fulfill({status:200,contentType:'text/html',body:html}));
+   page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url())&&r.url()!==url)remote.push(r.url())});
+   await page.clock.install();await page.goto(url);await context.setOffline(true);
+   for(const format of ['order','match']){
+    await page.evaluate(f=>{
+     restart();SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;SETTINGS.explanations=true;SETTINGS.reveal=true;SETTINGS.math='g3';saveSettings();
+     themeIndex=0;stopIndex=f==='order'?4:5;
+     if(f==='order'){SETTINGS.ops={add:true,sub:false,mul:false,div:false,word:false};startNextStop();}
+     else{const q=buildReading('rhyme',READING.rhyme[0]);q.readingId='rhyme:0';current=makeTrailActivity(q,THEMES[0],5);current.hostChar=ROSTER[1];current.helper=ROSTER[3];loadChallenge(current);saveProgress();go('screen-challenge');}
+    },format);
+    assert.equal(await page.evaluate(()=>current.format),format);
+    async function fits(){assert.equal(await page.locator('#screen-challenge').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);for(const b of await page.locator('#activity button:visible').all()){const box=await b.boundingBox();assert.ok(box.width>=44&&box.height>=44);}}
+    await fits();
+    if(format==='match'){
+     const first=page.locator('#activity [data-side="left"][data-index="0"]');await first.focus();await page.keyboard.press('Enter');
+    }
+    const wrong=await page.evaluate(()=>current.format==='order'?current.sequence[1]:current.choices.indexOf(current.pairs[1].right));
+    const side=format==='order'?'order':'right';
+    await page.locator(`#activity [data-side="${side}"][data-index="${wrong}"]`).tap();await page.clock.runFor(450);
+    await page.locator(`#activity [data-side="${side}"][data-index="${wrong}"]`).tap();await page.clock.runFor(450);
+    assert.equal(await page.evaluate(()=>wrongCount),2);assert.equal(await page.evaluate(()=>acorns),0);
+    assert.equal(await page.locator('#activity .reveal').count(),1);
+    const first=await page.evaluate(()=>current.format==='order'?current.sequence[0]:current.choices.indexOf(current.pairs[0].right));
+    await page.locator(`#activity [data-side="${side}"][data-index="${first}"]`).tap();
+    assert.equal(await page.evaluate(()=>acorns),0);assert.equal(await page.evaluate(()=>current.activityState.done.length),1);
+    if(format==='order'){
+     await page.locator('.activity-undo').focus();await page.keyboard.press('Enter');
+     assert.equal(await page.evaluate(()=>current.activityState.done.length),0);
+     await page.locator(`#activity [data-side="order"][data-index="${first}"]`).tap();
+    }
+    const snapshot=await page.evaluate(()=>JSON.stringify({choices:current.choices,state:current.activityState,prompt:current.prompt}));
+    if(engineName==='webkit')await context.setOffline(false);
+    await page.reload();await context.setOffline(true);await page.getByRole('button',{name:'Continue trail'}).tap();
+    assert.equal(await page.evaluate(()=>JSON.stringify({choices:current.choices,state:current.activityState,prompt:current.prompt})),snapshot);
+    assert.equal(await page.evaluate(()=>wrongCount),2);await fits();
+    fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:path.join('artifacts',`${engineName}-320x568-${format}-resumed.png`)});
+    while(await page.evaluate(()=>!!current&&!answered)){
+     const left=await page.evaluate(()=>current.format==='match'?current.pairs.findIndex((_,i)=>!current.activityState.done.includes(i)):null);
+     if(left!==null&&await page.evaluate(()=>current.activityState.selected)!==left)await page.locator(`#activity [data-side="left"][data-index="${left}"]`).tap();
+     const next=await page.evaluate(()=>current.format==='order'?current.sequence[current.activityState.done.length]:current.choices.indexOf(current.pairs[current.activityState.selected].right));
+     await page.locator(`#activity [data-side="${side}"][data-index="${next}"]`).tap();
+    }
+    assert.equal(await page.evaluate(()=>acorns),1);assert.equal(await page.locator('#answer-review').isVisible(),true);await fits();
+    await page.evaluate(()=>answerActivity(null,0));assert.equal(await page.evaluate(()=>acorns),1);
+   }
+   assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
+  }finally{await browser.close()}
+ });
+}

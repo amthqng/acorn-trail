@@ -221,7 +221,7 @@ test('real answer callbacks award once at every stop and unlock all rewards',()=
  const b=boot(); b.eval('SETTINGS.sound=false;SETTINGS.readAloud=false');
  for(let region=0;region<7;region++){
   for(let stop=0;stop<12;stop++){
-   b.eval('startNextStop();checkAnswer(document.createElement("button"),current.answer,current.answer)');
+   b.eval(`startNextStop();if(current.format){while(current&&!answered){if(current.format==='match'){if(current.activityState.selected===null)selectMatch(current.pairs.findIndex((_,i)=>!current.activityState.done.includes(i)));answerActivity(document.createElement('button'),current.choices.indexOf(current.pairs[current.activityState.selected].right));}else answerActivity(document.createElement('button'),current.sequence[current.activityState.done.length]);}}else checkAnswer(document.createElement('button'),current.answer,current.answer)`);
    b.eval('checkAnswer(document.createElement("button"),0,0)');
    while(b.timers.length)b.timers.shift()();
    for(let i=0;i<30&&b.eval('currentScreenId')==='screen-sticker-unlock';i++)b.eval('unlockContinue()');
@@ -545,4 +545,71 @@ test('older saves gain a greeting and malformed expression metadata recovers saf
  assert.ok(b.eval('current.characterIntro.length>10'));
  b.eval("current.characterIntro='<img src=x onerror=alert(1)>';loadChallenge(current)");
  assert.doesNotMatch(b.eval("document.getElementById('ch-host').innerHTML"),/<img/);
+});
+
+test('tap activities stay within scheduled stops, grades and enabled operations',()=>{
+ const b=boot();
+ const issues=JSON.parse(b.eval(`JSON.stringify((()=>{const errors=[];for(const grade of ['g1','g2','g3']){SETTINGS.math=grade;SETTINGS.reading=grade;for(const ops of [{add:true,sub:false,mul:false,div:false,word:false},{add:false,sub:true,mul:false,div:false,word:false},{add:false,sub:false,mul:true,div:false,word:false},{add:false,sub:false,mul:false,div:true,word:false},{add:false,sub:false,mul:false,div:false,word:true}]){SETTINGS.ops=ops;for(const theme of THEMES)for(let i=0;i<20;i++){const base=genMath(theme),q=makeTrailActivity(base,theme,4);if(!validQuestion(q)||q.skill!==base.skill)errors.push(q);if(q.format&&q.choices.some(c=>!Number.isFinite(cardValue(c))))errors.push(q);if(makeTrailActivity(base,theme,3)!==base)errors.push(base);}}for(const theme of THEMES)for(let i=0;i<40;i++){const base=pickReading(theme),q=makeTrailActivity(base,theme,5);if(!validQuestion(q)||q.skill!==base.skill||!READING_TIERS[readingTier(theme)].includes(q.skill))errors.push(q);}}return errors;})())`));
+ assert.deepEqual(issues,[]);
+});
+function activityBoot(format){
+ const b=boot();b.eval("SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.explanations=true;SETTINGS.reveal=false");
+ if(format==='order')b.eval("themeIndex=0;stopIndex=4;SETTINGS.ops={add:true,sub:false,mul:false,div:false,word:false};startNextStop()");
+ else b.eval("themeIndex=0;stopIndex=5;const q=buildReading('rhyme',READING.rhyme[0]);q.readingId='rhyme:0';current=makeTrailActivity(q,THEMES[0],5);current.hostChar=ROSTER[1];current.helper=ROSTER[3];loadChallenge(current);saveProgress()");
+ return b;
+}
+function solveActivity(b){
+ b.eval(`while(current&&!answered){if(current.format==='match'){if(current.activityState.selected===null)selectMatch(current.pairs.findIndex((_,i)=>!current.activityState.done.includes(i)));answerActivity(document.createElement('button'),current.choices.indexOf(current.pairs[current.activityState.selected].right));}else answerActivity(document.createElement('button'),current.sequence[current.activityState.done.length]);}`);
+}
+test('partial ordering saves exact cards, supports undo and awards only once at completion',()=>{
+ const b=activityBoot('order');
+ b.eval("answerActivity(document.createElement('button'),current.sequence[1])");
+ assert.equal(b.eval('wrongCount'),1);assert.equal(b.eval('current.activityState.done.length'),0);
+ b.eval("answerActivity(document.createElement('button'),current.sequence[0])");
+ assert.equal(b.eval('acorns'),0);assert.equal(b.eval('learning.math.completed'),0);
+ const before=JSON.parse(b.eval('JSON.stringify(current)'));
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));c.eval('continueTrail()');
+ assert.deepEqual(JSON.parse(c.eval('JSON.stringify(current.choices)')),before.choices);
+ assert.deepEqual(JSON.parse(c.eval('JSON.stringify(current.activityState)')),before.activityState);
+ assert.equal(c.eval('wrongCount'),1);
+ c.eval('SETTINGS.explanations=true;undoOrder()');assert.equal(c.eval('current.activityState.done.length'),0);
+ solveActivity(c);c.eval("answerActivity(document.createElement('button'),0);continueAfterReview()");
+ for(let i=0;i<30&&c.eval('currentScreenId')==='screen-sticker-unlock';i++)c.eval('unlockContinue()');
+ assert.equal(c.eval('acorns'),1);assert.equal(c.eval('learning.math.completed'),1);assert.equal(c.eval('learning.math.wrong'),1);assert.equal(c.eval('stopIndex'),5);
+});
+test('matching requires both cards, retains solved pairs and selection on resume',()=>{
+ const b=activityBoot('match');
+ b.eval("answerActivity(document.createElement('button'),0)");assert.equal(b.eval('wrongCount'),0);
+ b.eval("selectMatch(0);answerActivity(document.createElement('button'),current.choices.indexOf(current.pairs[1].right))");
+ assert.equal(b.eval('wrongCount'),1);assert.equal(b.eval('current.activityState.done.length'),0);
+ b.eval("answerActivity(document.createElement('button'),current.choices.indexOf(current.pairs[0].right));selectMatch(1)");
+ assert.equal(b.eval('acorns'),0);assert.equal(b.eval('learning.read.completed'),0);
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));c.eval('continueTrail()');
+ assert.deepEqual(JSON.parse(c.eval('JSON.stringify(current.activityState)')),{done:[0],selected:1});
+ solveActivity(c);assert.equal(c.eval('acorns'),1);assert.equal(c.eval('learning.read.completed'),1);
+});
+test('guided activities reveal only the next card and still require taps to finish',()=>{
+ for(const format of ['order','match']){
+  const b=activityBoot(format);b.eval('revealActivity()');
+  assert.equal(b.eval('current.hintUsed'),true);assert.equal(b.eval('acorns'),0);assert.equal(b.eval('current.activityState.done.length'),0);
+  solveActivity(b);assert.equal(b.eval(`learning.${format==='order'?'math':'read'}.hinted`),1);
+  assert.equal(b.eval('acorns'),1);
+ }
+});
+test('malformed saved activities cannot resume impossible progress or unsafe cards',()=>{
+ for(const format of ['order','match']){
+  const b=activityBoot(format);const q=JSON.parse(b.eval('JSON.stringify(current)'));
+  for(const patch of [{format:'other'},{activityState:{done:[0,0],selected:null}},{activityState:{done:[99],selected:null}},{activityState:{done:[0,1,2],selected:null}},{choices:['same','same']}]){
+   assert.equal(b.eval('validQuestion('+JSON.stringify({...q,...patch})+')'),false);
+  }
+  if(format==='order'){
+   assert.equal(b.eval('validQuestion('+JSON.stringify({...q,cardValues:q.cardValues.map(v=>v+1)})+')'),false);
+   assert.equal(b.eval('validQuestion('+JSON.stringify({...q,activityState:{done:[q.sequence[1]],selected:null}})+')'),false);
+  }else assert.equal(b.eval('validQuestion('+JSON.stringify({...q,activityState:{done:[],selected:99}})+')'),false);
+ }
+});
+test('matching cards avoid shared answers and interchangeable rhyme or synonym groups',()=>{
+ const b=boot();
+ const bad=JSON.parse(b.eval(`JSON.stringify((()=>{const bad=[];for(const cat of Object.keys(MATCH_INSTRUCTIONS))for(let i=0;i<READING[cat].length;i++){const q=buildReading(cat,READING[cat][i]);q.readingId=cat+':'+i;const a=makeTrailActivity(q,THEMES[0],5);if(a.format){const entries=a.readingIds.map(id=>READING[cat][Number(id.split(':')[1])]);if(new Set(entries.map(d=>matchingGroup(cat,d))).size!==entries.length)bad.push(a);}}return bad;})())`));
+ assert.deepEqual(bad,[]);
 });
