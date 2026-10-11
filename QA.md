@@ -118,3 +118,19 @@ Validation: **64 Node regressions and nine browser checks passed**, including **
 Gameplay remains one approximately **406 KB HTML file**, with no service-worker or runtime dependency change. Accessories, friendship progression and role-specific hint mechanics are future work.
 
 Character checks: https://github.com/amthqng/acorn-trail/actions/runs/38115858874
+
+## Tap matching and ordering activities, 11 October 2026
+
+The fifth and sixth stops of each region can now introduce a short tap activity while retaining the alternating subjects, 84-stop trail, grade settings and one-acorn-per-stop rewards. Other stops keep the existing answer format. Number activities use two equation cards at the lowest supported math level and three at later levels. Children solve the cards and tap them from the smallest result to the largest; each card uses the original question's enabled operation and grade/adaptive level. Word stories retain their existing format. Bounded generation falls back to the existing question if distinct suitable cards cannot be generated. Every displayed equation is included in recent-question history.
+
+Reading activities match animal/baby names, rhymes, similar meanings, plurals, opposites, contractions or word beginnings within the selected tier. Children choose a left card and its partner on the right, in any pair order. Easier tiers use two pairs; later tiers use three. Duplicate answers, shared rhyme families and interchangeable synonym groups are excluded. Additional displayed reading entries are remembered in the variety history. Sentence, compound-word and comprehension questions retain their original format, avoiding ambiguous or overly long matching boards.
+
+The seven regions supply context for the activity prompts: meadow flower tags, orchard basket labels, riverside stepping stones, pumpkin lanterns, woodland leaves, bridge lanterns and gathering tables at the Great Oak. No dragging, time limit, external asset or runtime dependency is required. Native buttons support touch and keyboard; selection has an accessible pressed state, completed cards have check marks, feedback is announced, and keyboard focus remains on the activity board after rendering. Ordering includes Undo last card.
+
+A partial activity saves its exact cards, completed pairs/order, current selection and cumulative wrong choices. Resume restores this state without replacing the puzzle or awarding progress. Only final completion records one learning result, trains adaptive support once and grants one acorn. Hints retain the category clue; guided answers highlight and explain the next card while requiring the child to tap it. Invalid formats, impossible progress, duplicate cards and incorrect saved equation values are rejected. Older multiple-choice saves remain supported.
+
+Validation: **71 Node regressions and 11 browser checks passed**, including **504 stop completions** in the six Chromium/WebKit touch journeys at 390×844, 320×568 and 844×390. Both engines have additional narrow-phone checks for partial matching/ordering resume, incorrect choices, guided reveals, ordering undo, keyboard operation, minimum 44-pixel touch controls, offline operation and one-time rewards. Existing hosted cache, recovery and update checks also passed. Reviewed ordering, resumed guided matching and ordering, and landscape matching screenshots; no horizontal overflow was detected. Physical iPhone/Home Screen testing remains unverified.
+
+Gameplay remains one approximately **419 KB HTML file**, with no service-worker or runtime dependency change. Cooperative character puzzles, campsite choices and more region-specific story content remain future work.
+
+Tap activity checks: https://github.com/amthqng/acorn-trail/actions/runs/38117161693
