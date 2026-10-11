@@ -218,6 +218,20 @@
   .answer{ font-family:'Baloo 2'; font-weight:700; font-size:clamp(17px,2.8vw,24px); color:var(--bark);
     background:var(--cream); border:3px solid var(--sand-dark); border-radius:18px; padding:16px 10px;
     cursor:pointer; transition:transform 0.1s,background 0.15s,border-color 0.15s; min-height:60px; }
+  .trail-activity{width:100%;text-align:left}
+  .activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .activity-column{display:grid;gap:10px;align-content:start;min-width:0}
+  .activity-card{font-family:'Baloo 2';font-weight:700;font-size:17px;line-height:1.35;min-height:60px;width:100%;padding:12px 8px;background:linear-gradient(#fffdf4,#f5e6c9);border:3px solid var(--sand-dark);border-radius:16px;color:var(--bark);cursor:pointer;overflow-wrap:anywhere;box-shadow:0 3px 0 #bba17a}
+  .activity-card.selected{border-color:var(--rust);background:#fff0cb}
+  .activity-card.matched{border-color:var(--good-dark);background:#e3edcc;box-shadow:none}
+  .activity-card:disabled{cursor:default}
+  .activity-card.reveal{border-color:var(--good-dark);background:#e3edcc}
+  .activity-card.wrong{border-color:var(--rust);background:var(--blush)}
+  .activity-order{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .activity-order .activity-card{font-size:16px}
+  .activity-progress{margin:12px 0;font-size:14px;font-weight:700;color:var(--sage-dark);line-height:1.5}
+  .activity-slots{padding:10px;border:2px dashed var(--sand-dark);border-radius:12px;font-size:15px;line-height:1.5;margin-bottom:12px;overflow-wrap:anywhere;background:#fff9e9}
+  .activity-undo{font:inherit;min-height:44px;padding:8px 12px;border:2px solid var(--sand-dark);border-radius:12px;background:var(--cream);color:var(--bark);cursor:pointer}
   .answer:active{ transform:scale(0.96); }
   .answer.correct{ background:var(--good); border-color:var(--good-dark); color:#fff; animation:pop 0.3s ease; }
   .answer.wrong{ background:var(--blush); border-color:var(--rust); animation:shake 0.35s ease; }
@@ -675,7 +689,8 @@ button, [role="button"]{touch-action:manipulation}
       <div class="ch-prompt" id="ch-prompt"></div>
       <div class="ch-sub" id="ch-sub"></div>
       <div class="answers" id="answers"></div>
-      <div class="feedback" id="feedback"></div>
+      <div id="activity" class="trail-activity" hidden></div>
+      <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
       <div class="ch-tools">
         <button class="hint-btn speak-btn" id="speak-btn" onclick="speakPrompt()">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
@@ -1702,7 +1717,131 @@ const REVEAL_AT=2;
 let pendingCompletion=false, rewardTimer=null, trailEpoch=0;
 function cancelReward(){ document.getElementById('answer-review').hidden=true; trailEpoch++; clearTimeout(rewardTimer); rewardTimer=null; pendingUnlocks=[]; unlockNext=null; wrongCount=0; current=null; answered=false; pendingCompletion=false; }
 function savedQuestion(){ const p=store.get(PKEY); return p&&p.v===PVER&&p.themeIndex===themeIndex&&p.stopIndex===stopIndex&&p.question&&validQuestion(p.question)?p:null; }
-function validQuestion(q){ return !!q&&['math','read'].includes(q.kind)&&typeof q.prompt==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&q.choices.length===new Set(q.choices.map(String)).size&&q.choices.every(x=>typeof x==='string'||(typeof x==='number'&&Number.isFinite(x)))&&q.choices.includes(q.answer); }
+/* Occasional tap activities retain the existing question grade and operation. */
+const REGION_TASKS={
+  meadow:{order:'Line up the flower tags.',match:'Match the word cards for the meadow trail.'},
+  orchard:{order:'Arrange the apple basket labels.',match:'Match the word cards for the orchard signs.'},
+  river:{order:'Put the stepping-stone labels in order.',match:'Match the word cards beside the river.'},
+  pumpkin:{order:'Arrange the pumpkin lantern labels.',match:'Match the word cards for the pumpkin patch.'},
+  woods:{order:'Put the leaf collection labels in order.',match:'Match the word cards for the woodland signs.'},
+  bridge:{order:'Arrange the bridge lantern labels.',match:'Match the word cards beneath the stars.'},
+  oak:{order:'Arrange the gathering table labels.',match:'Match the word cards for the Great Oak gathering.'}
+};
+const MATCH_INSTRUCTIONS={rhyme:'Match words with the same ending sound.',baby:'Match each animal with its baby name.',synonym:'Match words with similar meanings.',plural:'Match one with more than one.',antonym:'Match each word with its opposite.',contraction:'Match the words with their short form.',prefix:'Match each word with its meaning.'};
+function matchingGroup(cat,d){
+  if(cat==='rhyme')return d.w==='goat'?'boat':d.w;
+  if(cat==='synonym'&&['happy','glad'].includes(d.w))return 'happy';
+  return d.a;
+}
+function matchingLeft(cat,d){return cat==='baby'?d.q.replace('What do we call a baby ','').replace('?',''):d.w;}
+function makeTrailActivity(q,theme,stop){
+  if(stop!==4&&stop!==5)return q;
+  if(q.kind==='math'){
+    const type={addition:'add',subtraction:'sub',multiplication:'mult',division:'div'}[q.skill];
+    if(!type)return q;
+    const cards=[q],count=mathLevel(theme)===1?2:3;
+    for(let tries=0;tries<24&&cards.length<count;tries++){
+      const next=makeMath(theme,type);
+      if(!cards.some(c=>c.answer===next.answer))cards.push(next);
+    }
+    if(cards.length<count)return q;
+    const mixed=shuffle(cards),choices=mixed.map(c=>c.prompt),cardValues=mixed.map(c=>c.answer);
+    const sequence=mixed.map((_,i)=>i).sort((a,b)=>cardValues[a]-cardValues[b]);
+    return {...q,format:'order',prompt:REGION_TASKS[theme.scene].order,sub:'Solve each card. Tap from the smallest answer to the largest.',choices,answer:choices[sequence[0]],cardValues,sequence,activityState:{done:[],selected:null},hint:'Solve each number card, then compare the answers. Start with the smallest.',explanation:cards.sort((a,b)=>a.answer-b.answer).map(c=>c.prompt+' = '+c.answer).join('; ')+'. These answers go from smallest to largest.'};
+  }
+  if(!MATCH_INSTRUCTIONS[q.skill])return q;
+  const cat=q.skill,bank=READING[cat],first=Number(q.readingId.split(':')[1]);
+  const entries=[first],count=readingTier(theme)<2?2:3;
+  const candidates=shuffle(bank.map((_,i)=>i).filter(i=>i!==first));
+  // Prefer unseen entries and reject duplicate or interchangeable answers.
+  candidates.sort((a,b)=>Number((variety.reading[cat]||[]).includes(a))-Number((variety.reading[cat]||[]).includes(b)));
+  for(const i of candidates){
+    if(entries.length>=count)break;
+    const d=bank[i];
+    if(entries.some(j=>bank[j].a===d.a||matchingLeft(cat,bank[j])===matchingLeft(cat,d)||matchingGroup(cat,bank[j])===matchingGroup(cat,d)))continue;
+    entries.push(i);
+  }
+  if(entries.length<count)return q;
+  for(const i of entries.slice(1)){
+    const history=variety.reading[cat]||(variety.reading[cat]=[]);
+    if(history.length>=bank.length)variety.reading[cat]=[];
+    if(!variety.reading[cat].includes(i))variety.reading[cat].push(i);
+  }
+  saveVariety();
+  const pairs=entries.map(i=>({left:matchingLeft(cat,bank[i]),right:bank[i].a}));
+  return {...q,format:'match',prompt:REGION_TASKS[theme.scene].match,sub:MATCH_INSTRUCTIONS[cat]+' Tap a left card, then its partner on the right.',pairs,choices:shuffle(pairs.map(p=>p.right)),answer:pairs[0].right,readingIds:entries.map(i=>cat+':'+i),activityState:{done:[],selected:null},hint:MATCH_INSTRUCTIONS[cat]+' Say the two cards together and check that they belong together.',explanation:entries.map(i=>readingExplanation(cat,bank[i])).join(' ')};
+}
+function cardValue(label){
+  const m=typeof label==='string'&&label.match(/^(\d+) ([+−×÷]) (\d+)$/);
+  if(!m)return NaN;
+  const a=Number(m[1]),b=Number(m[3]);
+  return m[2]==='+'?a+b:m[2]==='−'?a-b:m[2]==='×'?a*b:a/b;
+}
+function validActivity(q){
+  const n=q.choices.length,state=q.activityState;
+  if(n<2||n>3||!state||!Array.isArray(state.done)||state.done.length>=n||state.done.some(i=>!Number.isInteger(i)||i<0||i>=n)||new Set(state.done).size!==state.done.length)return false;
+  if(q.format==='order')return q.kind==='math'&&Array.isArray(q.cardValues)&&q.cardValues.length===n&&q.cardValues.every((v,i)=>Number.isFinite(v)&&v===cardValue(q.choices[i]))&&new Set(q.cardValues).size===n&&Array.isArray(q.sequence)&&q.sequence.length===n&&new Set(q.sequence).size===n&&q.sequence.every((i,k)=>Number.isInteger(i)&&i>=0&&i<n&&(k===0||q.cardValues[q.sequence[k-1]]<q.cardValues[i]))&&q.answer===q.choices[q.sequence[0]]&&state.done.every((i,k)=>i===q.sequence[k]);
+  if(q.format==='match')return q.kind==='read'&&Array.isArray(q.pairs)&&q.pairs.length===n&&q.pairs.every(p=>p&&typeof p.left==='string'&&p.left.length>0&&p.left.length<=160&&q.choices.includes(p.right))&&new Set(q.pairs.map(p=>p.left)).size===n&&new Set(q.pairs.map(p=>p.right)).size===n&&(state.selected===null||Number.isInteger(state.selected)&&state.selected>=0&&state.selected<n&&!state.done.includes(state.selected));
+  return false;
+}
+function validQuestion(q){
+  const base=!!q&&['math','read'].includes(q.kind)&&typeof q.prompt==='string'&&Array.isArray(q.choices)&&q.choices.length>=2&&q.choices.length===new Set(q.choices.map(String)).size&&q.choices.every(x=>typeof x==='string'||(typeof x==='number'&&Number.isFinite(x)))&&q.choices.includes(q.answer);
+  return base&&(q.format===undefined||validActivity(q));
+}
+function renderActivity(){
+  const q=current,st=q.activityState,done=st.done;
+  const el=document.getElementById('activity');
+  const button=(label,side,i,matched,selected=false)=>`<button class="activity-card${matched?' matched':''}${selected?' selected':''}" data-side="${side}" data-index="${i}" ${matched?'disabled':''} ${side==='left'?`aria-pressed="${selected}"`:''} onclick="${side==='left'?'selectMatch('+i+')':'answerActivity(this,'+i+')'}">${esc(label)}${matched?' ✓':''}</button>`;
+  let board;
+  if(q.format==='match'){
+    board=`<div class="activity-grid"><div class="activity-column">${q.pairs.map((p,i)=>button(p.left,'left',i,done.includes(i),st.selected===i)).join('')}</div><div class="activity-column">${q.choices.map((c,i)=>button(c,'right',i,done.some(j=>q.pairs[j].right===c))).join('')}</div></div>`;
+  }else{
+    board=`<div class="activity-slots" aria-label="Your order">${done.length?done.map((i,k)=>(k+1)+'. '+esc(q.choices[i])).join(' → '):'Your ordered cards will appear here.'}</div><div class="activity-order" style="grid-template-columns:repeat(${q.choices.length},minmax(0,1fr))">${q.choices.map((c,i)=>button(c,'order',i,done.includes(i))).join('')}</div>${done.length&&done.length<q.choices.length?'<button class="activity-undo" onclick="undoOrder()">Undo last card</button>':''}`;
+  }
+  el.innerHTML=`<div class="activity-progress">${done.length} of ${q.choices.length} ${q.format==='match'?'pairs matched':'cards placed'}. ${done.length===q.choices.length?'All done!':q.format==='match'?(st.selected===null?'Choose a left card.':'Selected: '+esc(q.pairs[st.selected].left)+'. Choose its partner.'):'Smallest answer first.'}</div>${board}`;
+}
+function selectMatch(i){
+  if(answered||!current||current.format!=='match'||!Number.isInteger(i)||i<0||i>=current.pairs.length||current.activityState.done.includes(i))return;
+  current.activityState.selected=current.activityState.selected===i?null:i;
+  renderActivity();saveProgress();
+  if(SETTINGS.readAloud&&current.activityState.selected!==null)speak(current.pairs[i].left);
+  if(SETTINGS.reveal&&wrongCount>=REVEAL_AT)revealActivity();
+}
+function answerActivity(btn,i){
+  if(answered||!current||!current.format||!Number.isInteger(i)||i<0||i>=current.choices.length)return;
+  const q=current,st=q.activityState;
+  if(q.format==='match'&&st.selected===null){document.getElementById('feedback').textContent='Choose a left card first, then its partner.';return;}
+  const target=q.format==='order'?q.sequence[st.done.length]:st.selected;
+  if(q.format==='order'&&st.done.includes(i)||q.format==='match'&&st.done.some(j=>q.pairs[j].right===q.choices[i]))return;
+  const correct=q.format==='order'?i===target:q.choices[i]===q.pairs[target].right;
+  if(!correct){wrongChoice(btn);return;}
+  st.done.push(target);st.selected=null;
+  if(st.done.length===q.choices.length){renderActivity();award(btn);return;}
+  q.characterMood='ready';paintChallengeMood(q,'ready');renderActivity();saveProgress();
+  const fb=document.getElementById('feedback');fb.className='feedback good';fb.textContent=q.format==='match'?'Pair matched! Choose another left card.':'Card placed! Find the next smallest answer.';
+  const hb=document.getElementById('hint-bubble');hb.classList.remove('show');hb.textContent=q.hint;
+  if(SETTINGS.reveal&&wrongCount>=REVEAL_AT)revealActivity();
+}
+function undoOrder(){
+  if(answered||!current||current.format!=='order'||!current.activityState.done.length)return;
+  current.activityState.done.pop();renderActivity();saveProgress();
+  document.getElementById('feedback').textContent='Last card returned. Choose the next smallest answer.';
+  if(SETTINGS.reveal&&wrongCount>=REVEAL_AT)revealActivity();
+}
+function revealActivity(){
+  if(!current||!current.format||answered)return;
+  const q=current,st=q.activityState;
+  if(q.format==='match'&&st.selected===null){st.selected=q.pairs.findIndex((_,i)=>!st.done.includes(i));renderActivity();}
+  q.hintUsed=true;q.characterMood='thoughtful';paintChallengeMood(q,'thoughtful');saveProgress();
+  const index=q.format==='order'?q.sequence[st.done.length]:q.choices.indexOf(q.pairs[st.selected].right);
+  const side=q.format==='order'?'order':'right';
+  const target=document.querySelector(`#activity [data-side="${side}"][data-index="${index}"]`);
+  target?.classList.add('reveal');
+  const clue=q.format==='order'?q.choices[index]+' = '+q.cardValues[index]+'. This is the smallest answer still waiting.':q.pairs[st.selected].left+' matches '+q.choices[index]+'.';
+  const hb=document.getElementById('hint-bubble');hb.textContent=clue;hb.classList.add('show');
+  const fb=document.getElementById('feedback');fb.className='feedback reveal';fb.textContent=(q.helper?q.helper.name:'Your helper')+' points to the next card. Tap it to keep going.';
+  if(SETTINGS.readAloud)speak(clue);
+}
 function checkpoint(){ if(current&&!answered) saveProgress(); }
 window.addEventListener('pagehide',checkpoint);
 
@@ -1822,7 +1961,7 @@ function startNextStop(){
   const th=THEMES[themeIndex];
   if(stopIndex>=th.stops.length){ themeComplete(); return; }
   const kind=th.stops[stopIndex];
-  current = kind==='math' ? genMath(th) : pickReading(th);
+  current = makeTrailActivity(kind==='math' ? genMath(th) : pickReading(th),th,stopIndex);
   if(!validQuestion(current)){ console.error('Invalid question generated',current); current=kind==='math'?genMath(th):pickReading(th); }
   if(SETTINGS.adaptive)current.adaptation={grade:subjectGrade(kind),revision:adaptive[kind].revision,offset:adaptiveShift(kind)};
   current.hostChar = hostFor(kind);
@@ -1850,7 +1989,10 @@ function loadChallenge(q){
   document.getElementById('ch-sub').textContent=q.sub;
   document.getElementById('feedback').textContent=''; document.getElementById('feedback').className='feedback';
   const hb=document.getElementById('hint-bubble'); hb.textContent=q.hint; hb.classList.remove('show');
-  const el=document.getElementById('answers'); el.innerHTML='';
+  const activity=document.getElementById('activity');activity.hidden=!q.format;activity.innerHTML='';
+  const el=document.getElementById('answers'); el.innerHTML='';el.hidden=!!q.format;
+  if(q.format)renderActivity();
+  if(!q.format)
   q.choices.forEach(c=>{
     const b=document.createElement('button'); b.className='answer'+(SETTINGS.readAloud?' has-speech':''); b.dataset.val=String(c);
     b.innerHTML = `<span class="ans-txt">${esc(c)}</span>` + (SETTINGS.readAloud?`<span class="ans-speak" role="button" tabindex="0" aria-label="Hear this choice">🔊</span>`:'');
@@ -1884,7 +2026,7 @@ function award(btn){
   const explanation=questionExplanation(current); recordLearning(current); recordAdaptive(current);
   acorns++; pendingCompletion=true; current=null; saveProgress(); document.getElementById('acorn-num2').textContent=acorns; sparkle(); chime(true);
   refreshStickers();
-  document.querySelectorAll('.answer').forEach(a=>a.style.pointerEvents='none');
+  document.querySelectorAll('.answer,.activity-card,.activity-undo').forEach(a=>{a.style.pointerEvents='none';a.disabled=true;});
   if(SETTINGS.explanations){
     document.getElementById('answer-explanation').textContent=explanation;
     document.getElementById('explanation-audio').hidden=!SETTINGS.readAloud;
@@ -1901,16 +2043,21 @@ function continueAfterReview(){
   document.getElementById('answer-review').hidden=true; flushUnlocks(proceed);
 }
 function checkAnswer(btn,chosen,correct){
-  if(answered) return;
+  if(answered||!current||current.format) return;
   if(chosen===correct){ award(btn); return; }
+  wrongChoice(btn);
+}
+function wrongChoice(btn){
   current.characterMood='encouraging';paintChallengeMood(current,'encouraging');
   btn.classList.add('wrong'); wrongCount++; saveProgress();
   const fb=document.getElementById('feedback');
   fb.textContent=current.hostChar.name+' says: '+characterLine(current.hostChar,'retry'); fb.className='feedback tryagain';
-  btn.style.pointerEvents='none'; chime(false); setTimeout(()=>{ btn.classList.remove('wrong'); btn.classList.add('used'); },400);
-  if(SETTINGS.reveal && wrongCount>=REVEAL_AT) revealAnswer(correct);
+  if(!current.format)btn.style.pointerEvents='none';
+  const activity=!!current.format;chime(false);setTimeout(()=>{btn.classList.remove('wrong');if(!activity)btn.classList.add('used');},400);
+  if(SETTINGS.reveal && wrongCount>=REVEAL_AT) revealAnswer(current.answer);
 }
 function revealAnswer(correct){
+  if(current?.format){revealActivity();return;}
   if(current){current.hintUsed=true;current.characterMood='thoughtful';paintChallengeMood(current,'thoughtful');saveProgress();document.getElementById('hint-bubble').textContent=questionExplanation(current);}
   const fb=document.getElementById('feedback');
   fb.textContent=(current&&current.helper?current.helper.name:'Your helper')+' points to the answer — tap it! 💡'; fb.className='feedback reveal';
@@ -1980,7 +2127,7 @@ function speak(text){
     speechSynthesis.speak(u);
   }catch(e){}
 }
-function speakPrompt(){ if(current) speak(current.prompt); }
+function speakPrompt(){ if(current) speak(current.format?current.prompt+' '+current.sub+' '+(current.format==='order'?current.choices.join('. '):'Left cards: '+current.pairs.map(p=>p.left).join('. ')+'. Right cards: '+current.choices.join('. ')):current.prompt); }
 
 /* ================= sticker basket ================= */
 const STKEY='acorn-trail-stickers';
