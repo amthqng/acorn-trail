@@ -613,3 +613,11 @@ test('matching cards avoid shared answers and interchangeable rhyme or synonym g
  const bad=JSON.parse(b.eval(`JSON.stringify((()=>{const bad=[];for(const cat of Object.keys(MATCH_INSTRUCTIONS))for(let i=0;i<READING[cat].length;i++){const q=buildReading(cat,READING[cat][i]);q.readingId=cat+':'+i;const a=makeTrailActivity(q,THEMES[0],5);if(a.format){const entries=a.readingIds.map(id=>READING[cat][Number(id.split(':')[1])]);if(new Set(entries.map(d=>matchingGroup(cat,d))).size!==entries.length)bad.push(a);}}return bad;})())`));
  assert.deepEqual(bad,[]);
 });
+
+test('ordering remembers every displayed equation and bounded retries tolerate constant randomness',()=>{
+ const b=activityBoot('order');
+ assert.equal(b.eval("current.choices.every((prompt,i)=>variety.recentMath.includes(mathQuestionKey({skill:current.skill,prompt,answer:current.cardValues[i]})))"),true);
+ b.eval('const savedRandom=Math.random;Math.random=()=>0.5');
+ assert.equal(b.eval("validQuestion(makeTrailActivity(genMath(THEMES[0]),THEMES[0],4))"),true);
+ b.eval('Math.random=savedRandom');
+});

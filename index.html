@@ -1742,9 +1742,11 @@ function makeTrailActivity(q,theme,stop){
     const cards=[q],count=mathLevel(theme)===1?2:3;
     for(let tries=0;tries<24&&cards.length<count;tries++){
       const next=makeMath(theme,type);
-      if(!cards.some(c=>c.answer===next.answer))cards.push(next);
+      if(!cards.some(c=>c.answer===next.answer)&&!variety.recentMath.includes(mathQuestionKey(next)))cards.push(next);
     }
     if(cards.length<count)return q;
+    for(const card of cards.slice(1)){const key=mathQuestionKey(card);variety.recentMath=variety.recentMath.filter(k=>k!==key);variety.recentMath.push(key);}
+    variety.recentMath=variety.recentMath.slice(-20);saveVariety();
     const mixed=shuffle(cards),choices=mixed.map(c=>c.prompt),cardValues=mixed.map(c=>c.answer);
     const sequence=mixed.map((_,i)=>i).sort((a,b)=>cardValues[a]-cardValues[b]);
     return {...q,format:'order',prompt:REGION_TASKS[theme.scene].order,sub:'Solve each card. Tap from the smallest answer to the largest.',choices,answer:choices[sequence[0]],cardValues,sequence,activityState:{done:[],selected:null},hint:'Solve each number card, then compare the answers. Start with the smallest.',explanation:cards.sort((a,b)=>a.answer-b.answer).map(c=>c.prompt+' = '+c.answer).join('; ')+'. These answers go from smallest to largest.'};
@@ -1790,7 +1792,8 @@ function validQuestion(q){
 }
 function renderActivity(){
   const q=current,st=q.activityState,done=st.done;
-  const el=document.getElementById('activity');
+  const el=document.getElementById('activity'),active=document.activeElement;
+  const hadFocus=!!el.contains?.(active),focusSide=active?.dataset?.side,focusIndex=active?.dataset?.index;
   const button=(label,side,i,matched,selected=false)=>`<button class="activity-card${matched?' matched':''}${selected?' selected':''}" data-side="${side}" data-index="${i}" ${matched?'disabled':''} ${side==='left'?`aria-pressed="${selected}"`:''} onclick="${side==='left'?'selectMatch('+i+')':'answerActivity(this,'+i+')'}">${esc(label)}${matched?' ✓':''}</button>`;
   let board;
   if(q.format==='match'){
@@ -1799,6 +1802,10 @@ function renderActivity(){
     board=`<div class="activity-slots" aria-label="Your order">${done.length?done.map((i,k)=>(k+1)+'. '+esc(q.choices[i])).join(' → '):'Your ordered cards will appear here.'}</div><div class="activity-order" style="grid-template-columns:repeat(${q.choices.length},minmax(0,1fr))">${q.choices.map((c,i)=>button(c,'order',i,done.includes(i))).join('')}</div>${done.length&&done.length<q.choices.length?'<button class="activity-undo" onclick="undoOrder()">Undo last card</button>':''}`;
   }
   el.innerHTML=`<div class="activity-progress">${done.length} of ${q.choices.length} ${q.format==='match'?'pairs matched':'cards placed'}. ${done.length===q.choices.length?'All done!':q.format==='match'?(st.selected===null?'Choose a left card.':'Selected: '+esc(q.pairs[st.selected].left)+'. Choose its partner.'):'Smallest answer first.'}</div>${board}`;
+  if(hadFocus){
+    const same=focusSide&&el.querySelector(`[data-side="${focusSide}"][data-index="${focusIndex}"]:not(:disabled)`);
+    (same||el.querySelector('.activity-card:not(:disabled)'))?.focus?.({preventScroll:true});
+  }
 }
 function selectMatch(i){
   if(answered||!current||current.format!=='match'||!Number.isInteger(i)||i<0||i>=current.pairs.length||current.activityState.done.includes(i))return;

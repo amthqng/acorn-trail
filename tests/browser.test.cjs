@@ -242,6 +242,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await fits();
     if(format==='match'){
      const first=page.locator('#activity [data-side="left"][data-index="0"]');await first.focus();await page.keyboard.press('Enter');
+     assert.equal(await page.evaluate(()=>document.activeElement.dataset.side),'left','selecting a card must retain keyboard focus');
     }
     const wrong=await page.evaluate(()=>current.format==='order'?current.sequence[1]:current.choices.indexOf(current.pairs[1].right));
     const side=format==='order'?'order':'right';
