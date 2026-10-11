@@ -207,6 +207,9 @@
   .ch-host{ display:flex; align-items:center; gap:12px; margin-bottom:2px; }
   .ch-host svg{ width:56px; height:56px; }
   .ch-host .host-name{ font-family:'Baloo 2'; font-weight:700; font-size:15px; color:var(--rust-dark); }
+  .ch-host .host-copy{min-width:0;text-align:left;flex:1}
+  .ch-host .host-greeting{font-size:13px;line-height:1.4;color:var(--rust-dark);margin-top:3px}
+  .ch-host .camper-badge{flex-shrink:0}
   .ch-host .host-kind{ font-size:11px; font-weight:700; color:var(--sage-dark); }
   .ch-prompt{ font-family:'Baloo 2'; font-weight:700; font-size:clamp(20px,3.7vw,31px); margin:12px 0 6px;
     line-height:1.34; white-space:pre-line; }
@@ -978,8 +981,38 @@ const ANIMAL_SVG = {
 };
 const ANIMALS = Object.keys(ANIMAL_SVG);
 /* Use each animal's original head artwork throughout the game. */
-function camperGlyph(a){
-  return animalGlyph(a).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animal character" ');
+function camperGlyph(a,mood='ready'){
+  if(!['happy','thoughtful','encouraging'].includes(mood))mood='ready';
+  let svg=animalGlyph(a);
+  if(mood!=='ready'){
+    // Replace only the eyes, preserving each animal's ears, markings and nose.
+    const eyeColor=a==='panda'?'#fff':'#3E2B1F';
+    svg=svg.replace(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)" fill="([^"]+)"\/>/g,(tag,x,y,r,fill)=>{
+      if(fill!==eyeColor||Number(r)>6)return tag;
+      x=Number(x);y=Number(y);r=Number(r);
+      if(mood==='happy')return `<path d="M${x-r} ${y+1} Q${x} ${y-r-2} ${x+r} ${y+1}" fill="none" stroke="${fill}" stroke-width="2.5" stroke-linecap="round"/>`;
+      return `<ellipse cx="${x+(mood==='thoughtful'?1:0)}" cy="${y}" rx="${r}" ry="${r}" fill="${fill}"/><circle cx="${x}" cy="${y-1}" r="1" fill="${a==='panda'?'#3B352F':'#fff'}"/>`+(mood==='thoughtful'?`<path d="M${x-r} ${y-r-4} q${r} -2 ${r*2} 0" fill="none" stroke="${fill}" stroke-width="1.5" stroke-linecap="round"/>`:'');
+    });
+    if(a==='frog')svg=svg.replace(/<path d="M36 62 Q50 72 64 62"[^>]*\/>/,'');
+    const y=a==='frog'?68:78;
+    const smile=`<path class="character-smile" d="M44 ${y} Q50 ${y+(mood==='happy'?8:mood==='encouraging'?5:2)} 56 ${y}" fill="none" stroke="#3E2B1F" stroke-width="2" stroke-linecap="round"/>`;
+    svg=svg.replace('</svg>',smile+'</svg>');
+  }
+  return svg.replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${mood==='ready'?'Animal character':mood+' animal character'}" data-expression="${mood}" `);
+}
+// Personalities follow the animal; other teammates use their chosen role.
+const CHARACTER_VOICE={
+  eager:{intro:['Let’s light this lantern!','Ready for a little puzzle?'],success:['Hooray! We lit another lantern!','Yes! That was lovely teamwork!'],retry:['We can work this out. Try another choice!','Keep going, I’m cheering for you!'],hint:['Let’s work it out together.','Here’s a clue to help us.']},
+  curious:{intro:['What can we discover here?','Let’s look closely at this puzzle.'],success:['You found it! What a lovely discovery!','Aha! You solved the puzzle!'],retry:['Let’s look for another clue.','Take another look. What do you notice?'],hint:['Let’s explore this clue.','Here’s something to notice.']},
+  adventurous:{intro:['Another lantern to explore!','Let’s see what’s around this bend.'],success:['One more lantern on our adventure!','We found the way. Onward, friends!'],retry:['Take your time. We’ll find the way.','Let’s try another path through this puzzle.'],hint:['Here’s a clue for our next step.','Let’s take it one step at a time.']},
+  gentle:{intro:['Take your time. I’m here with you.','Let’s solve this together.'],success:['Lovely work. We did it together!','You kept going. Our lantern is lit!'],retry:['It’s okay to try again. I’m here with you.','Take your time and try another choice.'],hint:['We can take this one step at a time.','Here’s a little help.']}
+};
+function characterVoice(char){return ({dog:'eager',cat:'curious',mouse:'adventurous',pig:'gentle'})[char.animal]||({lead:'adventurous',help:'gentle',read:'curious',math:'eager',both:'curious'})[char.role]||'gentle';}
+function characterLine(char,event){return pickRand(CHARACTER_VOICE[characterVoice(char)][event]);}
+function paintChallengeMood(q,mood){
+  const host=q.hostChar||hostFor(q.kind);
+  document.getElementById('ch-host').innerHTML=badge(host,54,mood)+`<div class="host-copy"><div class="host-name">${esc(host.name)} says:</div><div class="host-kind">${q.kind==='math'?'Number puzzle':'Word puzzle'}</div><div class="host-greeting">${esc(q.characterIntro)}</div></div>`;
+  if(q.helper)document.getElementById('hint-emoji').innerHTML=camperGlyph(q.helper.animal,mood==='thoughtful'?'thoughtful':mood==='happy'?'happy':'ready');
 }
 function animalGlyph(a){ return ANIMAL_SVG[a] || a; }
 const CUTE_NAMES = ['Biscuit','Aster','Tansy','Nutmeg','Clover','Pip','Maple','Hazel','Poppy','Willow','Ginger','Juniper','Sage','Acorn','Pumpkin','Mochi','Waffles','Cocoa','Honey','Marshmallow'];
@@ -1005,7 +1038,7 @@ function helpChars(){ return ROSTER.filter(c=>c.role==='help'); }
 function hostFor(kind){ const pool = kind==='math'?mathChars():readChars(); return pool.length?pickRand(pool):ROSTER[0]; }
 function leadPrimary(){ const l=leadChars(); return l.length?l[0]:ROSTER[0]; }
 function pickHelper(){ const h=helpChars(); return h.length?pickRand(h):null; }
-function badge(char, size){ size=size||64; return `<span class="cbadge camper-badge" style="font-size:${Math.round(size*0.6)}px;width:${size}px;height:${size}px">${camperGlyph(char.animal)}</span>`; }
+function badge(char, size, mood){ size=size||64; return `<span class="cbadge camper-badge" style="font-size:${Math.round(size*0.6)}px;width:${size}px;height:${size}px">${camperGlyph(char.animal,mood)}</span>`; }
 function paintIcons(){ document.querySelectorAll('[data-icon]').forEach(el=>{ const k=el.dataset.icon; if(ICON[k]) el.innerHTML=ICON[k]; }); paintSound(); }
 function paintSound(){ ['sound-btn','sound-btn2'].forEach(id=>{ const b=document.getElementById(id); if(b) b.innerHTML = SETTINGS.sound?ICON.soundOn:ICON.soundOff; }); }
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1020,7 +1053,7 @@ function renderStartParty(){
     return `<div class="companion">${badgeHtml}${badge(c,scale)}<span class="name">${esc(c.name)}</span><span class="lead-tag">${ROLE_TAG[c.role]}</span></div>`;
   }).join('');
 }
-function renderFinaleParty(){ document.getElementById('finale-party').innerHTML = ROSTER.map(c=>badge(c,52)).join(''); }
+function renderFinaleParty(){ document.getElementById('finale-party').innerHTML = ROSTER.map(c=>badge(c,52,'happy')).join(''); }
 
 /* ================= scenery ================= */
 const SCENERY = {
@@ -1198,7 +1231,7 @@ function buildStory(){
   const lead=leadPrimary(), m=hostFor('math'), r=hostFor('read'), h=pickHelper();
   const S=[
     {char:lead, text:"Every autumn, the Great Oak at the top of the hill holds the Harvest Gathering — the coziest night of the year."},
-    {char:lead, text:"I found the old trail map! But the autumn winds blew out every lantern that lights the way."},
+    {char:lead, text:characterLine(lead,'intro')+" I found the old trail map! But the autumn winds blew out every lantern that lights the way."},
     {char:m,    text:"No lanterns, no gathering. So I'll relight them! Each post has a little number puzzle."},
     {char:r,    text:"And some posts have word puzzles. Those ones are mine — I do love a good word."}
   ];
@@ -1802,14 +1835,16 @@ function loadChallenge(q){
   document.getElementById('acorn-num2').textContent=acorns;
   paintSound();
   const host=q.hostChar||hostFor(q.kind);
-  document.getElementById('ch-host').innerHTML =
-    badge(host,54)+`<div style="text-align:left;"><div class="host-name">${esc(host.name)} says:</div><div class="host-kind">${q.kind==='math'?'Number puzzle':'Word puzzle'}</div></div>`;
+  q.hostChar=host;
+  if(typeof q.characterIntro!=='string'||q.characterIntro.length>100)q.characterIntro=characterLine(host,'intro');
+  if(!['thoughtful','encouraging'].includes(q.characterMood))q.characterMood='ready';
+  paintChallengeMood(q,q.characterMood);
   // hint button reflects the current helper
   const challenge=document.getElementById('screen-challenge');
   challenge.classList.toggle('camp-reading',q.kind==='read');
   challenge.classList.toggle('camp-math',q.kind==='math');
   const he=document.getElementById('hint-emoji'), hl=document.getElementById('hint-label');
-  if(q.helper){ he.innerHTML=camperGlyph(q.helper.animal); hl.textContent='Ask '+q.helper.name; }
+  if(q.helper){ he.innerHTML=camperGlyph(q.helper.animal,q.characterMood==='thoughtful'?'thoughtful':'ready'); hl.textContent='Ask '+q.helper.name; }
   else { he.innerHTML='💡'; hl.textContent='See a hint'; }
   document.getElementById('ch-prompt').textContent=q.prompt;
   document.getElementById('ch-sub').textContent=q.sub;
@@ -1828,25 +1863,23 @@ function loadChallenge(q){
   sb.style.display = SETTINGS.readAloud ? 'inline-flex' : 'none';
   if(SETTINGS.readAloud && q.kind==='read'){ setTimeout(()=>speak(q.prompt), 450); }
 }
-const GOOD_MATH=["Wonderful! 🌰","You did it!","Lantern lit! ✨","Cozy work!","Yes! Well counted!"];
-const GOOD_READ=["Lovely reading! ✨","You did it!","Lantern lit! 🌰","Nicely read!","Yes! Great word!"];
-const TRY=["Not quite — try again!","Give it another go 💛","Almost! Look once more.","Try another one!"];
 function proceed(){
   pendingCompletion=false; current=null; stopIndex++; saveProgress(); const th=THEMES[themeIndex];
   if(stopIndex>=th.stops.length) themeComplete(); else go('screen-map');
 }
 function award(btn){
+  paintChallengeMood(current,'happy');
+  const cheer=current.hostChar.name+' says: '+characterLine(current.hostChar,'success');
   answered=true; btn.classList.add('correct');
   const fb=document.getElementById('feedback');
   // streak: only counts clean, first-try correct answers
   if(wrongCount===0) streak++; else streak=0;
   if(streak>0 && streak%3===0){
-    fb.textContent=`${streak} in a row! 🔥`; fb.className='feedback good';
+    fb.textContent=cheer+` ${streak} in a row! 🔥`; fb.className='feedback good';
     const sbg=document.getElementById('streak-badge'); sbg.textContent=`${streak} in a row! 🔥`;
     sbg.classList.remove('show'); void sbg.offsetWidth; sbg.classList.add('show');
   } else {
-    const pool=current.kind==='math'?GOOD_MATH:GOOD_READ;
-    fb.textContent=pool[Math.floor(Math.random()*pool.length)]; fb.className='feedback good';
+    fb.textContent=cheer; fb.className='feedback good';
   }
   const explanation=questionExplanation(current); recordLearning(current); recordAdaptive(current);
   acorns++; pendingCompletion=true; current=null; saveProgress(); document.getElementById('acorn-num2').textContent=acorns; sparkle(); chime(true);
@@ -1870,14 +1903,15 @@ function continueAfterReview(){
 function checkAnswer(btn,chosen,correct){
   if(answered) return;
   if(chosen===correct){ award(btn); return; }
+  current.characterMood='encouraging';paintChallengeMood(current,'encouraging');
   btn.classList.add('wrong'); wrongCount++; saveProgress();
   const fb=document.getElementById('feedback');
-  fb.textContent=TRY[Math.floor(Math.random()*TRY.length)]; fb.className='feedback tryagain';
+  fb.textContent=current.hostChar.name+' says: '+characterLine(current.hostChar,'retry'); fb.className='feedback tryagain';
   btn.style.pointerEvents='none'; chime(false); setTimeout(()=>{ btn.classList.remove('wrong'); btn.classList.add('used'); },400);
   if(SETTINGS.reveal && wrongCount>=REVEAL_AT) revealAnswer(correct);
 }
 function revealAnswer(correct){
-  if(current){current.hintUsed=true;saveProgress();document.getElementById('hint-bubble').textContent=questionExplanation(current);}
+  if(current){current.hintUsed=true;current.characterMood='thoughtful';paintChallengeMood(current,'thoughtful');saveProgress();document.getElementById('hint-bubble').textContent=questionExplanation(current);}
   const fb=document.getElementById('feedback');
   fb.textContent=(current&&current.helper?current.helper.name:'Your helper')+' points to the answer — tap it! 💡'; fb.className='feedback reveal';
   document.querySelectorAll('.answer').forEach(a=>{
@@ -1887,7 +1921,10 @@ function revealAnswer(correct){
   if(SETTINGS.readAloud) speak(document.getElementById('hint-bubble').textContent);
   document.getElementById('hint-bubble').classList.add('show');
 }
-function showHint(){ if(!current) return; current.hintUsed=true; saveProgress(); document.getElementById('hint-bubble').classList.add('show');
+function showHint(){ if(!current) return; current.hintUsed=true;current.characterMood='thoughtful';paintChallengeMood(current,'thoughtful');
+  const helper=current.helper||current.hostChar;
+  document.getElementById('hint-bubble').textContent=helper.name+' says: '+characterLine(helper,'hint')+' '+current.hint;
+  saveProgress(); document.getElementById('hint-bubble').classList.add('show');
   if(SETTINGS.readAloud) speak(document.getElementById('hint-bubble').textContent); }
 function sparkle(){
   const burst=document.getElementById('burst'); const icons=['🌰','✨','🍂','⭐'];
