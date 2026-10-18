@@ -621,3 +621,55 @@ test('ordering remembers every displayed equation and bounded retries tolerate c
  assert.equal(b.eval("validQuestion(makeTrailActivity(genMath(THEMES[0]),THEMES[0],4))"),true);
  b.eval('Math.random=savedRandom');
 });
+
+test('focused friend editing cancels safely and persists saved jobs',()=>{
+ const b=boot();b.eval("openCharacters();editChar(0);typeName('Maple');cancelEditor()");
+ assert.equal(b.eval('ROSTER[0].name'),'Biscuit');
+ b.eval("editChar(0);typeName('Maple');setDraft('role','both');commitDraft()");
+ assert.equal(b.eval('currentScreenId'),'screen-characters');
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ c.eval('openCharacters()');assert.equal(c.eval('ROSTER[0].name'),'Maple');assert.equal(c.eval('ROSTER[0].role'),'both');
+});
+test('incomplete team drafts survive reload without breaking the home screen',()=>{
+ const b=boot();b.eval('openCharacters();while(ROSTER.length)removeChar(0);leaveCharacters()');
+ assert.equal(b.eval('ROSTER.length'),4);
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ c.eval('openCharacters()');assert.equal(c.eval('ROSTER.length'),0);assert.equal(c.eval('teamValid()'),false);
+ c.eval('playTeam()');assert.equal(c.eval('currentScreenId'),'screen-characters');
+ c.eval('leaveCharacters()');assert.equal(c.eval('currentScreenId'),'screen-start');
+});
+test('intro speakers are the customized travel guide and helper',()=>{
+ const b=boot();b.eval("ROSTER=[{animal:'dog',name:'Maple',role:'lead'},{animal:'cat',name:'Clover',role:'help'},{animal:'pig',name:'Pip',role:'both'}]");
+ assert.deepEqual(JSON.parse(b.eval('JSON.stringify([...new Set(buildStory().map(s=>s.char.name))])')),['Maple','Clover']);
+ assert.equal(b.eval('teamValid()'),true);
+});
+
+test('two friends can cover guide and helper plus math and reading and survive reload',()=>{
+ const b=boot();b.eval("ROSTER=[{animal:'dog',name:'Maple',role:'guidehelp'},{animal:'cat',name:'Clover',role:'both'}];persistTeam()");
+ assert.equal(b.eval('teamValid()'),true);assert.equal(b.eval('validRoster(ROSTER)'),true);
+ assert.equal(b.eval('leadPrimary().name'),'Maple');assert.equal(b.eval('pickHelper().name'),'Maple');
+ assert.equal(b.eval("buildStory().every(s=>s.char.name==='Maple')"),true);
+ const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+ assert.equal(c.eval('ROSTER.length'),2);assert.equal(c.eval('teamValid()'),true);
+ c.eval("go('screen-story');playTeam()");assert.equal(c.eval('currentScreenId'),'screen-story');
+});
+
+test('incomplete teams explain missing jobs when starting and preserve progress',()=>{
+ const b=boot();b.eval("ROSTER=ROSTER.filter(c=>c.role!=='help');renderCharacters();acorns=7;playTeam()");
+ assert.equal(b.eval('acorns'),7);
+ assert.equal(b.eval("missingTeamJobs().join(', ')"),'Helper');
+ assert.ok(b.eval("document.getElementById('cc-actions').innerHTML.includes('Your team still needs: Helper.')"));
+ assert.ok(!b.eval("document.getElementById('cc-actions').innerHTML.includes('team-start\" disabled')"));
+ b.eval("ROSTER.push({animal:'cat',name:'Pip',role:'help'});renderCharacters()");
+ assert.equal(b.eval('missingTeamJobs().length'),0);
+ assert.ok(b.eval("document.getElementById('cc-actions').innerHTML.includes('All jobs covered.')"));
+});
+
+test('new animal friends support saved teams and all expressions',()=>{
+ for(const animal of ['axolotl','capybara','otter','raccoon','turtle']){
+  const b=boot();b.eval(`ROSTER[0].animal=${JSON.stringify(animal)};persistTeam()`);
+  const c=boot(Object.fromEntries([...b.data].map(([k,v])=>[k,JSON.parse(v)])));
+  assert.equal(c.eval('ROSTER[0].animal'),animal);
+  for(const mood of ['ready','happy','thoughtful','encouraging'])assert.match(c.eval(`camperGlyph(${JSON.stringify(animal)},${JSON.stringify(mood)})`),new RegExp('data-expression="'+mood+'"'));
+ }
+});

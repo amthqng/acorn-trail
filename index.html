@@ -192,6 +192,7 @@
   .lantern.lit .flame{ opacity:1; }
   .lantern.current .glass{ animation:wobble 1.6s ease-in-out infinite; cursor:pointer; }
   .lantern.current{ cursor:pointer; }
+  .lantern.current:focus-visible{outline:3px solid var(--rust);outline-offset:4px;border-radius:12px}
   @keyframes wobble{ 0%,100%{transform:rotate(-3deg);} 50%{transform:rotate(3deg);} }
   .lantern .lbl{ font-weight:700; font-size:10px; }
   #app.sky-oak .lantern .lbl, #app.sky-bridge .lantern .lbl{ color:#F0E4CE; }
@@ -392,7 +393,8 @@
     font-family:'Baloo 2'; font-weight:700; color:var(--rust-dark); font-size:14px; cursor:pointer; opacity:0.85; }
 
   /* calm mode (less motion) */
-  #app.calm .leaf, #app.calm .petal, #app.calm .rain, #app.calm .firefly, #app.calm .mist, #app.calm .star{ display:none; }
+  #app.calm .leaf, #app.calm .petal, #app.calm .firefly, #app.calm .mist, #app.calm .star{ display:none; }
+  #app.calm .rain{ display:block; opacity:.45; animation:none !important; }
   #app.calm *{ animation:none !important; }
   @media (prefers-reduced-motion: reduce){
     .leaf,.petal,.rain,.firefly,.mist,.star{ display:none; }
@@ -465,6 +467,9 @@
 .camp-map .camp-node circle{stroke:#7a5937;stroke-width:3}
 .camp-map .camp-node text{font:700 12px system-ui,sans-serif;fill:#503822;text-anchor:middle;paint-order:stroke;stroke:#fff5d6;stroke-width:4;stroke-linejoin:round}
 .camp-map .camp-node .place-icon{font:25px system-ui,sans-serif;stroke:none}
+.camp-map .camp-node .place-art{stroke-width:3.5}
+.camp-map .camp-node .river-art{stroke:#43889a}
+.camp-map .camp-node .bridge-art{stroke:#795738;stroke-width:3}
 .camp-map .camp-node.current circle{stroke:#fff8d7;stroke-width:5}
 .camp-map .camp-node.locked{opacity:.7}
 .camp-map .camp-node.done circle{fill:#f9d88e}
@@ -594,6 +599,15 @@ button, [role="button"]{touch-action:manipulation}
 .camp-map .camp-node.current circle{fill:url(#map-current);stroke:#fff7d2}
 .camp-map .camp-node.done circle{fill:url(#map-node)}
 .camp-map .camp-node.locked circle{fill:#dac9a5}
+.camp-map .camp-node .current-ring{fill:#ffdc70;stroke:#fff9d6;stroke-width:3;opacity:.9;transform-box:fill-box;transform-origin:center;animation:map-pulse 1.8s ease-in-out infinite}
+.camp-map .camp-node .done-halo{fill:#e9f5bf;stroke:#fff7d2;stroke-width:3}
+.camp-map .camp-node.done circle:not(.done-halo){fill:url(#map-done);stroke:#54834e;stroke-width:4}
+.camp-map .camp-node .camp-check circle{fill:#4f8b54;stroke:#fff9d8;stroke-width:2}
+.camp-map .camp-node .camp-check path{fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.camp-map .trail-progress{fill:none;stroke:#d78a32;stroke-width:12;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px #79522980)}
+.camp-map .trail-progress-glint{fill:none;stroke:#fff1a3;stroke-width:3;stroke-linecap:round;stroke-dasharray:1 11}
+@keyframes map-pulse{0%,100%{transform:scale(.9);opacity:.65}50%{transform:scale(1.12);opacity:1}}
+@media(prefers-reduced-motion:reduce){.camp-map .camp-node .current-ring{animation:none;opacity:1;transform:none}}
 .lantern .glass{box-shadow:inset 2px 2px 2px #ffffff26,inset -2px -2px 2px #2c241c45,0 5px 9px #47332432}
 .lantern.lit .glass{background:radial-gradient(circle at 42% 42%,#fff9b8,#efc654 62%,#c49539);box-shadow:inset 0 2px 1px #fff5bc,0 0 18px #ffd9658c,0 5px 9px #47332432}
 .pc{background:linear-gradient(145deg,#fffcf0,#f3e0bf);box-shadow:inset 0 2px 0 #fff,0 3px 0 #c3a67c,0 8px 13px #58412722}
@@ -609,16 +623,90 @@ button, [role="button"]{touch-action:manipulation}
 
 
 /* Offline access stays visible without interrupting the trail. */
-.offline-strip{z-index:6;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 12px;margin-top:12px;max-width:410px;flex-shrink:0;font-size:12px;color:#4b6338}
-#offline-status{font-weight:700}
+.offline-strip{z-index:6;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:2px 10px;margin-top:8px;max-width:410px;flex-shrink:0;font-size:11px;color:#596b48}
+#offline-status{font-weight:600;opacity:.85}
 #offline-status::before{content:'●';margin-right:6px;color:#9e793b}
 #offline-status.ready::before{color:#497b42}
-.offline-link{font:700 12px 'Quicksand';color:#805025;background:linear-gradient(#fff9e8,#f2dfba);border:1px solid #d9bd8e;border-radius:12px;min-height:44px;padding:8px 12px;cursor:pointer;box-shadow:inset 0 1px 0 #fff,0 2px 0 #c0a37b}
+.offline-link{font:700 12px 'Quicksand';color:#805025;background:transparent;border:0;border-radius:8px;min-height:44px;padding:8px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;box-shadow:none}
+.offline-link:hover{background:#fff5df80;color:#633c20}
 .offline-help{text-align:left;line-height:1.5;max-height:min(92vh,calc(100dvh - 48px))}
 .offline-help h4{margin:16px 0 6px}
 .offline-help ol{padding-left:22px;margin:6px 0 16px}
 .offline-help li{margin-bottom:8px}
 .offline-help summary{cursor:pointer;min-height:44px;padding-block:10px;font-weight:700}
+
+/* Focused team setup: overview first, one friend at a time. */
+#screen-characters .cc-head{margin-top:48px;text-align:center}
+.team-subtitle{font-size:15px;margin:8px 0 12px;color:var(--sage-dark)}
+.cc-req{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:0 auto 8px}
+.team-job{font-size:12px;padding:7px 10px;border-radius:20px;background:#fff8e8;color:#705138;border:1px solid #cdbb99}
+.team-job.covered{color:#295b3e;background:#edf4df;border-color:#9bb68b}
+#screen-characters .party-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;max-width:560px;gap:12px;margin:14px auto}
+#screen-characters .pc{width:auto;min-width:0;border:2px solid #e3cd9f;padding:12px 10px 8px;color:var(--bark);cursor:pointer;font:inherit;gap:2px}
+.pc .pc-emoji{width:56px;height:56px}.pc .pc-name{font-size:18px}.pc .pc-role{font-size:12px;min-height:24px;display:flex;align-items:center;justify-content:center}
+.pc-edit{font-size:12px;font-weight:700;color:#804923;text-decoration:underline;margin-top:6px;min-height:28px;display:flex;align-items:center}
+#cc-actions{display:flex;flex-direction:column;align-items:center;width:100%;max-width:560px;gap:12px;margin:0 auto}
+.team-status,.team-note{font-size:13px;text-align:center;margin:4px 0;line-height:1.5;max-width:400px}.team-note{color:var(--rust-dark)}
+.team-start{width:100%;max-width:360px}.team-options{font-size:13px;margin:12px 0;text-align:center}.team-options summary{padding:12px;cursor:pointer;text-decoration:underline}.team-options button{margin-top:10px}
+#screen-friend{justify-content:flex-start;overflow-y:auto;padding-top:76px}
+#screen-friend .editor{width:100%;margin:0 auto;padding:24px;box-sizing:border-box}
+.editor h2{font-family:'Baloo 2';font-size:25px;text-align:center;margin:0 0 12px}.friend-preview{display:flex;flex-direction:column;align-items:center;gap:10px;margin:8px 0 24px}.friend-preview span:last-child{font-family:'Baloo 2';font-size:22px;font-weight:700;overflow-wrap:anywhere;max-width:100%}
+.editor-label{display:block;font-weight:700;font-size:15px;margin:20px 0 8px}.editor .name-row{gap:10px}.editor .name-input{width:100%;min-width:0;box-sizing:border-box}.suggest-name{background:none;border:0;color:#80502c;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 0;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.animal-picker{margin:16px 0 24px}.animal-picker summary{cursor:pointer;font-weight:700;padding:12px 0;min-height:44px;box-sizing:border-box}.animal-picker summary span{font-weight:400;font-size:13px}.editor .animal-grid{max-height:none;margin-top:10px;grid-template-columns:repeat(auto-fill,minmax(48px,1fr))}.editor .animal-grid button{min-height:48px}
+#friend-role{width:100%;font:inherit;font-size:16px;color:var(--bark);padding:12px;border:2px solid var(--sand-dark);border-radius:12px;background:var(--cream);min-height:48px}.role-description{font-size:14px;line-height:1.5;margin:10px 0 24px;color:var(--sage-dark)}
+.editor-actions{display:flex;flex-wrap:wrap;gap:12px}.editor-actions .btn{flex:1;min-width:100px;padding:14px 12px;font-size:16px;white-space:nowrap}.remove-friend{display:block;margin:22px auto 0;background:none;border:0;color:var(--rust-dark);font:inherit;font-size:13px;min-height:44px;text-decoration:underline;cursor:pointer}
+@media(min-width:760px){#screen-characters .party-list{grid-template-columns:repeat(4,minmax(0,1fr));max-width:700px}}
+
+
+/* Team setup refinements. */
+#screen-characters .btn,#screen-friend .btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;gap:8px;line-height:1.3}
+#screen-friend #editor-holder{flex:0 0 auto;padding-bottom:8px}
+#screen-friend .animal-grid{display:grid;max-height:240px;min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:6px 4px 10px;scrollbar-gutter:stable;scrollbar-width:auto;scrollbar-color:#a66b3a #f6e8cd}
+#screen-friend .animal-grid::-webkit-scrollbar{width:10px}#screen-friend .animal-grid::-webkit-scrollbar-thumb{background:#a66b3a;border-radius:8px;border:2px solid #f6e8cd}#screen-friend .animal-grid::-webkit-scrollbar-track{background:#f6e8cd;border-radius:8px}
+.team-reset{background:none;border:0;color:#80502c;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:12px;margin:4px 0}
+.job-select{position:relative}#friend-role{appearance:none;-webkit-appearance:none;padding:12px 42px 12px 12px;line-height:1.4;text-overflow:ellipsis}.job-chevron{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+
+
+.team-job.missing{background:#fff0e4;color:#8a321c;border:2px solid #ae512c;font-weight:800}
+#cc-actions .team-needs{background:#fff3df;border:2px solid #ae512c;border-radius:14px;padding:14px;color:#76321f;max-width:100%;width:100%;box-sizing:border-box;text-align:left}
+.team-needs strong{display:block;font-size:15px;line-height:1.5}.team-needs span{display:block;margin-top:6px;font-size:13px;line-height:1.6;color:#624633}
+.team-needs-attention{outline:3px solid #8a321c;outline-offset:3px}
+
+
+.animal-picker h3{font:700 15px 'Quicksand',sans-serif;margin:0 0 8px}.animal-picker h3 span{font-size:13px;font-weight:500}
+#screen-friend .animal-grid{grid-template-columns:repeat(auto-fill,minmax(66px,1fr));max-height:280px;gap:8px}
+#screen-friend .animal-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:7px 3px;min-width:0;min-height:78px;position:relative}
+#screen-friend .animal-grid button svg{width:46px;height:46px;flex-shrink:0}
+#screen-friend .animal-grid button span{font:700 10px 'Quicksand',sans-serif;color:var(--bark);line-height:1.4}
+#screen-friend .animal-grid button.on::after{content:'✓';position:absolute;top:1px;right:3px;font:bold 12px sans-serif;color:#7b3e22}
+
+
+/* Grown-up settings are grouped by what they change. */
+#settings-modal .modal-card{max-width:520px;padding:20px}
+#settings-modal .hintline{margin-bottom:14px}
+.settings-tabs{display:flex;gap:8px;border-bottom:1px solid #e2cfaa;margin:0 0 16px}
+.settings-tabs [role=tab]{flex:1;min-height:42px;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--sage-dark);font:700 16px 'Quicksand',sans-serif;cursor:pointer}
+.settings-tabs [role=tab][aria-selected=true]{color:var(--bark);border-bottom-color:#c8792e}
+.settings-panel[hidden]{display:none}
+.settings-section{margin:0 0 18px}
+.settings-section>h4{font-family:'Baloo 2';font-size:18px;margin:0 0 8px;color:var(--bark)}
+.settings-card{background:#fff9eb;border:1px solid #e2cfaa;border-radius:16px;padding:14px 14px 12px;margin-bottom:10px}
+.settings-card .set-group{margin:0}
+.settings-card .set-note{font-size:13px;line-height:1.45;font-weight:600;color:var(--sage-dark);margin:4px 0 0;padding-left:26px}
+.math-operations{border-top:1px solid #e2cfaa;margin-top:12px;padding-top:12px}
+.math-operations .set-label{margin-bottom:7px}
+.settings-detail{margin:6px 0 0 26px;font-size:12px;color:var(--sage-dark);line-height:1.5}
+.settings-detail summary{cursor:pointer;min-height:36px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:2px}
+.settings-detail p{margin:4px 0 8px}
+.settings-card .toggle-row{padding:8px 0}
+.practice-setting+.practice-setting{border-top:1px solid #e2cfaa;margin-top:8px;padding-top:6px}
+.practice-setting .set-note{margin-top:0}
+.settings-progress .learning-summary{margin:0 0 10px}
+.settings-progress .reset-progress{display:inline-flex;justify-content:center}
+.settings-footer{position:sticky;bottom:-20px;background:transparent;padding:10px 0 max(4px,env(safe-area-inset-bottom));z-index:2}
+.settings-footer .btn{width:100%;justify-content:center}
+@media(max-width:480px){#settings-modal{padding:10px}.settings-card{padding:12px}.settings-section{margin-bottom:14px}}
+
 </style>
 </head>
 <body>
@@ -630,7 +718,7 @@ button, [role="button"]{touch-action:manipulation}
   <section class="screen active" id="screen-start">
     <div class="start-tools left"><button class="icon-btn" id="basket-btn" data-icon="basket" onclick="openBasket()" aria-label="Sticker basket"></button><button class="icon-btn" data-icon="gear" onclick="openSettings()" aria-label="Grown-up settings"></button></div>
     <div class="title-lockup"><div class="title-icon">🌰</div><h1>Acorn Trail</h1><p>a cozy journey with new friends</p></div>
-    <div class="offline-strip"><span id="offline-status" role="status" aria-live="polite">Checking offline access…</span><button class="offline-link" id="install-game" onclick="installGame()">Install / offline help</button><button class="offline-link" id="offline-update" hidden onclick="applyOfflineUpdate()">Update game</button></div>
+    <div class="offline-strip"><span id="offline-status" role="status" aria-live="polite">Checking offline access…</span><button class="offline-link" id="install-game" onclick="installGame()">Offline help</button><button class="offline-link" id="offline-update" hidden onclick="applyOfflineUpdate()">Update game</button></div>
     <div class="party" id="start-party"></div>
     <div class="start-wrap" id="start-actions"></div>
   <div class="foot-note">Tap “Light the lantern”, then tap an answer — Your helper always has a hint 💡</div>
@@ -657,7 +745,7 @@ button, [role="button"]{touch-action:manipulation}
       <div class="left-tools">
         <button class="icon-btn" data-icon="gear" onclick="openSettings()" aria-label="Settings"></button>
         <button class="icon-btn" id="basket-btn2" data-icon="basket" onclick="openBasket()" aria-label="Sticker basket"></button>
-        <button class="icon-btn" data-icon="restart" onclick="confirmRestartTrail()" aria-label="Start the trail over"></button>
+        <button class="icon-btn" data-icon="restart" onclick="confirmRestartTrail()" aria-label="Start the trail over" title="Start the trail over"></button>
       </div>
       <div class="theme-dots" id="theme-dots"></div>
       <div class="acorn-counter"><span>🌰</span><span id="acorn-num">0</span></div>
@@ -772,10 +860,13 @@ button, [role="button"]{touch-action:manipulation}
 
   <!-- CHARACTER CREATOR -->
   <section class="screen" id="screen-characters">
-    <div class="start-tools left"><button class="icon-btn" data-icon="back" onclick="go('screen-start')" aria-label="Back"></button></div>
-    <div class="cc-head"><h2>Make Your Team 🐾</h2><div class="cc-req" id="cc-req"></div></div>
+    <div class="start-tools left"><button class="icon-btn" data-icon="back" onclick="leaveCharacters()" aria-label="Back"></button></div>
+    <div class="cc-head"><h2>Your Team</h2><p class="team-subtitle">A little crew for a big adventure.</p><div class="cc-req" id="cc-req" role="status"></div></div>
     <div class="party-list" id="party-list"></div>
     <div class="cc-actions" id="cc-actions"></div>
+  </section>
+  <section class="screen" id="screen-friend">
+    <div class="start-tools left"><button class="icon-btn" data-icon="back" onclick="cancelEditor()" aria-label="Back to team"></button></div>
     <div id="editor-holder"></div>
   </section>
 
@@ -783,56 +874,82 @@ button, [role="button"]{touch-action:manipulation}
   <div class="modal" id="settings-modal">
     <div class="modal-card">
       <h3>Grown-up Settings <svg class="h-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.3" fill="var(--cream-card)"/><circle cx="16" cy="12" r="2.3" fill="var(--cream-card)"/><circle cx="8" cy="17" r="2.3" fill="var(--cream-card)"/></svg></h3>
-      <div class="hintline">Set the challenge to fit your child.</div>
+      <div class="hintline">Tune learning and play for your child.</div>
 
-      <div class="set-group">
-        <div class="set-label">Math grade</div>
-        <div class="seg" id="seg-math">
-          <button data-v="g1">Grade 1</button><button data-v="g2">Grade 2</button><button data-v="g3">Grade 3</button>
+      <div class="settings-tabs" role="tablist" aria-label="Grown-up settings sections" onkeydown="settingsTabKeys(event)">
+        <button id="settings-tab-settings" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-settings" tabindex="0" onclick="showSettingsTab('settings')">Settings</button>
+        <button id="settings-tab-progress" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-progress" tabindex="-1" onclick="showSettingsTab('progress')">Progress</button>
+      </div>
+      <div class="settings-panel" id="settings-panel-settings" role="tabpanel" aria-labelledby="settings-tab-settings" tabindex="0">
+      <section class="settings-section" aria-labelledby="learning-settings-title">
+        <h4 id="learning-settings-title">Learning</h4>
+        <div class="settings-card">
+          <div class="set-label">Math</div>
+          <div class="seg" id="seg-math">
+            <button data-v="g1">Grade 1</button><button data-v="g2">Grade 2</button><button data-v="g3">Grade 3</button>
+          </div>
+          <div class="set-note">Grade sets the number sizes and skills.</div>
+          <div class="math-operations">
+            <div class="set-label">Math in the trail</div>
+            <div class="ops" id="ops-row">
+              <button class="op" data-k="add">➕ Add</button>
+              <button class="op" data-k="sub">➖ Subtract</button>
+              <button class="op" data-k="mul">✖️ Multiply</button>
+              <button class="op" data-k="div">➗ Divide</button>
+              <button class="op" data-k="word">📖 Word problems</button>
+            </div>
+            <div class="set-note" id="math-availability" aria-live="polite"></div>
+          </div>
         </div>
-        <div class="set-note">Sets the number sizes and skills to that grade across all themes.</div>
-      </div>
-
-      <div class="set-group">
-        <div class="set-label">Reading grade</div>
-        <div class="seg" id="seg-read">
-          <button data-v="g1">Grade 1</button><button data-v="g2">Grade 2</button><button data-v="g3">Grade 3</button>
+        <div class="settings-card">
+          <div class="set-label">Reading</div>
+          <div class="seg" id="seg-read">
+            <button data-v="g1">Grade 1</button><button data-v="g2">Grade 2</button><button data-v="g3">Grade 3</button>
+          </div>
+          <details class="settings-detail"><summary>What changes by grade?</summary><p>Grade 1 leans on rhymes and sight words. Grade 3 adds meanings and short reading passages.</p></details>
         </div>
-        <div class="set-note">Grade 1 leans on rhymes & sight words; Grade 3 adds meanings and short reading passages.</div>
-      </div>
+      </section>
 
-      <div class="set-group">
-        <div class="set-label">Which math appears</div>
-        <div class="ops" id="ops-row">
-          <button class="op" data-k="add">➕ Add</button>
-          <button class="op" data-k="sub">➖ Subtract</button>
-          <button class="op" data-k="mul">✖️ Multiply</button>
-          <button class="op" data-k="div">➗ Divide</button>
-          <button class="op" data-k="word">📖 Word problems</button>
+      <section class="settings-section" aria-labelledby="practice-settings-title">
+        <h4 id="practice-settings-title">Practice</h4>
+        <div class="settings-card">
+          <div class="practice-setting">
+            <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="help"></span>Reveal answer after 2 wrong tries</span><button class="sw" id="sw-reveal" aria-label="Reveal answer after 2 wrong tries" onclick="toggleSetting('reveal')"></button></div>
+            <p class="set-note">Shows the correct answer so your child can continue.</p>
+          </div>
+          <div class="practice-setting">
+            <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="speak"></span>Explain after correct answers</span><button class="sw" id="sw-explanations" aria-label="Explain after correct answers" onclick="toggleSetting('explanations')"></button></div>
+            <p class="set-note">Pauses to explain why, then waits for Continue.</p>
+          </div>
+          <div class="practice-setting">
+            <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="leaf"></span>Adaptive practice</span><button class="sw" id="sw-adaptive" aria-label="Adaptive practice" aria-pressed="false" onclick="toggleSetting('adaptive')"></button></div>
+            <p class="set-note" id="adaptive-status" role="status" aria-live="polite"></p>
+            <details class="settings-detail"><summary>How adaptive practice works</summary><p>Math and reading adjust separately. Two puzzles in a row with hints or wrong choices bring gentler practice. Four in a row answered on the first try without hints return to the usual challenge. Practice never goes above the selected grade. Changing a grade resets that subject’s adjustment.</p></details>
+          </div>
         </div>
-        <div class="set-note">Divide, word problems, and two-step appear in later themes; earlier themes show simpler math even if only those are picked.</div>
+      </section>
+
+      <section class="settings-section" aria-labelledby="comfort-settings-title">
+        <h4 id="comfort-settings-title">Sound &amp; appearance</h4>
+        <div class="settings-card">
+          <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="soundOn"></span>Sound effects</span><button class="sw" id="sw-sound" onclick="toggleSetting('sound')"></button></div>
+          <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="speak"></span>Read questions aloud</span><button class="sw" id="sw-readaloud" onclick="toggleSetting('readAloud')"></button></div>
+          <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="leaf"></span>Reduce motion</span><button class="sw" id="sw-motion" onclick="toggleSetting('motion')"></button></div>
+          <div class="set-note">Stops animations and floating effects.</div>
+        </div>
+      </section>
       </div>
 
-      <div class="set-group">
-        <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="soundOn"></span>Sound</span><button class="sw" id="sw-sound" onclick="toggleSetting('sound')"></button></div>
-        <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="rain"></span>Rain on the Riverside</span><button class="sw" id="sw-rain" onclick="toggleSetting('rain')"></button></div>
-        <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="help"></span>Help after 2 tries</span><button class="sw" id="sw-reveal" onclick="toggleSetting('reveal')"></button></div>
-        <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="speak"></span>Read questions aloud</span><button class="sw" id="sw-readaloud" onclick="toggleSetting('readAloud')"></button></div>
-        <div class="toggle-row"><span class="tl"><span class="tl-ico" data-icon="leaf"></span>Calm mode (less motion)</span><button class="sw" id="sw-motion" onclick="toggleSetting('motion')"></button></div>
+      <div class="settings-panel" id="settings-panel-progress" role="tabpanel" aria-labelledby="settings-tab-progress" tabindex="0" hidden>
+      <section class="settings-section settings-progress" aria-label="Progress">
+        <section class="learning-summary" aria-label="Practice summary"><h3>Your practice</h3><div id="learning-summary"></div></section>
+        <div id="progress-clear-controls" hidden>
+          <button class="btn outline small reset-progress" onclick="confirmReset()">Clear all saved progress</button>
+          <p class="set-note">Clears your trail, stickers, practice totals, and adaptive practice. Keeps your team and settings.</p>
+        </div>
+      </section>
       </div>
-
-      <div class="set-group">
-        <div class="toggle-row"><span class="tl">Pause to explain answers</span><button class="sw" id="sw-explanations" aria-label="Pause to explain answers" onclick="toggleSetting('explanations')"></button></div>
-        <div class="set-note">Show why after each correct answer, then tap Continue. Off keeps the trail moving automatically.</div>
-      </div>
-      <div class="set-group">
-        <div class="toggle-row"><span class="tl">Adaptive practice</span><button class="sw" id="sw-adaptive" aria-label="Adaptive practice" aria-pressed="false" onclick="toggleSetting('adaptive')"></button></div>
-        <div class="set-note">Math and reading adjust separately. Two puzzles in a row with hints or wrong choices bring gentler practice; four in a row answered on the first try without hints return to the usual challenge. It never goes above the selected grade's usual trail difficulty. Changing a grade resets that subject's adjustment.</div>
-        <p class="set-note" id="adaptive-status" role="status" aria-live="polite"></p>
-      </div>
-      <section class="learning-summary" aria-label="Learning progress"><h3>Learning progress</h3><div id="learning-summary"></div><button class="btn outline small" onclick="clearLearningProgress()">Clear learning record</button></section>
-      <div class="modal-actions">
-        <button class="btn outline small" onclick="confirmReset()">Reset progress</button>
+      <div class="modal-actions settings-footer">
         <button class="btn small" onclick="closeSettings()">Done</button>
       </div>
     </div>
@@ -861,6 +978,14 @@ button, [role="button"]{touch-action:manipulation}
     </div>
   </div>
 
+  <div class="modal" id="restart-modal" role="dialog" aria-modal="true" aria-labelledby="restart-title" aria-describedby="restart-description">
+    <div class="modal-card">
+      <h3 id="restart-title">Start the trail over?</h3>
+      <p id="restart-description">Your current trail progress and acorns will be cleared. Your stickers, practice history, team, and settings will stay.</p>
+      <div class="modal-actions"><button class="btn outline small" onclick="closeRestartPrompt()">Keep playing</button><button class="btn small" onclick="restartFromPrompt()">Start over</button></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -880,8 +1005,9 @@ const SKEY='acorn-trail-settings', PKEY='acorn-trail-progress', PVER=3;
 
 /* ================= settings ================= */
 const DEFAULTS = { math:'g2', reading:'g2',
-  ops:{add:true,sub:true,mul:true,div:true,word:true}, sound:true, rain:true, reveal:true, readAloud:true, motion:true, explanations:false, adaptive:false };
+  ops:{add:true,sub:true,mul:true,div:true,word:true}, sound:true, reveal:true, readAloud:true, motion:true, explanations:false, adaptive:false };
 let SETTINGS = Object.assign({}, DEFAULTS, store.get(SKEY)||{});
+delete SETTINGS.rain;
 SETTINGS.ops = Object.assign({}, DEFAULTS.ops, (store.get(SKEY)||{}).ops||{});
 if(!Object.values(SETTINGS.ops).some(Boolean)) SETTINGS.ops={...DEFAULTS.ops};
 /* migrate old difficulty labels -> grade levels */
@@ -928,8 +1054,8 @@ function renderAdaptive(){
   const button=document.getElementById('sw-adaptive');
   button.classList.toggle('on',SETTINGS.adaptive);button.setAttribute('aria-pressed',String(SETTINGS.adaptive));
   document.getElementById('adaptive-status').textContent=SETTINGS.adaptive?
-    `Math: ${adaptiveShift('math')<0?'gentler practice':'usual challenge'}. Reading: ${adaptiveShift('read')<0?'gentler practice':'usual challenge'}. Changes apply to the next puzzle; replay keeps these adjustments.`:
-    'Off: the trail uses fixed difficulty. Turning this on starts both subjects at their usual challenge.';
+    `On: math ${adaptiveShift('math')<0?'is gentler':'at usual level'}; reading ${adaptiveShift('read')<0?'is gentler':'at usual level'}.`:
+    'Off: uses the selected grade and trail difficulty.';
 }
 function setSubjectGrade(kind,grade){
   if(subjectGrade(kind)!==grade){SETTINGS[kind==='read'?'reading':'math']=grade;resetAdaptive(kind);saveSettings();}
@@ -977,7 +1103,7 @@ function roleIcon(n){ return (ROLE_ICON[n]||'').replace('<svg ','<svg class="rol
 const ANIMAL_SVG = {
   dog:`<svg viewBox="0 0 100 100"><ellipse cx="28" cy="44" rx="11" ry="17" fill="#C9A576"/><ellipse cx="72" cy="44" rx="11" ry="17" fill="#C9A576"/><circle cx="50" cy="55" r="31" fill="#E8C9A0"/><ellipse cx="50" cy="66" rx="14" ry="10" fill="#FFF7EA"/><circle cx="41" cy="52" r="4" fill="#3E2B1F"/><circle cx="59" cy="52" r="4" fill="#3E2B1F"/><ellipse cx="50" cy="62" rx="5" ry="4" fill="#3E2B1F"/></svg>`,
   cat:`<svg viewBox="0 0 100 100"><path d="M30 42 L26 22 L46 37 Z" fill="#A996C4"/><path d="M70 42 L74 22 L54 37 Z" fill="#A996C4"/><path d="M32 40 L30 28 L42 37 Z" fill="#8471A6"/><path d="M68 40 L70 28 L58 37 Z" fill="#8471A6"/><circle cx="50" cy="56" r="30" fill="#A996C4"/><ellipse cx="50" cy="65" rx="13" ry="9" fill="#F7EEDC"/><circle cx="41" cy="53" r="4" fill="#3E2B1F"/><circle cx="59" cy="53" r="4" fill="#3E2B1F"/><path d="M50 61 l-4 4 M50 61 l4 4" stroke="#3E2B1F" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`,
-  rabbit:`<svg viewBox="0 0 100 100"><ellipse cx="38" cy="26" rx="8" ry="20" fill="#FBF6EE"/><ellipse cx="62" cy="26" rx="8" ry="20" fill="#FBF6EE"/><ellipse cx="38" cy="26" rx="4" ry="14" fill="#F3C0C8"/><ellipse cx="62" cy="26" rx="4" ry="14" fill="#F3C0C8"/><circle cx="50" cy="58" r="28" fill="#FBF6EE"/><circle cx="42" cy="56" r="4" fill="#3E2B1F"/><circle cx="58" cy="56" r="4" fill="#3E2B1F"/><ellipse cx="50" cy="63" rx="3.5" ry="2.6" fill="#E79AA8"/></svg>`,
+  rabbit:`<svg viewBox="0 0 100 100"><ellipse cx="38" cy="26" rx="8" ry="20" fill="#FBF6EE" stroke="#D8BBA6" stroke-width="1.5"/><ellipse cx="62" cy="26" rx="8" ry="20" fill="#FBF6EE" stroke="#D8BBA6" stroke-width="1.5"/><ellipse cx="38" cy="26" rx="4" ry="14" fill="#F3C0C8"/><ellipse cx="62" cy="26" rx="4" ry="14" fill="#F3C0C8"/><circle cx="50" cy="58" r="28" fill="#FBF6EE" stroke="#D8BBA6" stroke-width="1.5"/><circle cx="42" cy="56" r="4" fill="#3E2B1F"/><circle cx="58" cy="56" r="4" fill="#3E2B1F"/><ellipse cx="50" cy="63" rx="3.5" ry="2.6" fill="#E79AA8"/></svg>`,
   bear:`<svg viewBox="0 0 100 100"><circle cx="28" cy="34" r="12" fill="#B08654"/><circle cx="72" cy="34" r="12" fill="#B08654"/><circle cx="28" cy="34" r="6" fill="#8E6A40"/><circle cx="72" cy="34" r="6" fill="#8E6A40"/><circle cx="50" cy="56" r="31" fill="#B08654"/><ellipse cx="50" cy="64" rx="15" ry="12" fill="#E6CDA6"/><circle cx="41" cy="52" r="4" fill="#3E2B1F"/><circle cx="59" cy="52" r="4" fill="#3E2B1F"/><ellipse cx="50" cy="60" rx="5" ry="4" fill="#3E2B1F"/></svg>`,
   fox:`<svg viewBox="0 0 100 100"><path d="M26 40 L22 18 L44 34 Z" fill="#E08A4E"/><path d="M74 40 L78 18 L56 34 Z" fill="#E08A4E"/><path d="M28 36 L26 24 L40 34 Z" fill="#3E2B1F"/><path d="M72 36 L74 24 L60 34 Z" fill="#3E2B1F"/><circle cx="50" cy="54" r="30" fill="#E08A4E"/><path d="M50 84 C34 78 30 60 34 54 L66 54 C70 60 66 78 50 84 Z" fill="#FBF3E6"/><circle cx="41" cy="52" r="4" fill="#3E2B1F"/><circle cx="59" cy="52" r="4" fill="#3E2B1F"/><ellipse cx="50" cy="64" rx="4.5" ry="3.6" fill="#3E2B1F"/></svg>`,
   panda:`<svg viewBox="0 0 100 100"><circle cx="28" cy="32" r="12" fill="#3B352F"/><circle cx="72" cy="32" r="12" fill="#3B352F"/><circle cx="50" cy="56" r="31" fill="#FFFFFF"/><ellipse cx="40" cy="52" rx="8" ry="10" fill="#3B352F" transform="rotate(-15 40 52)"/><ellipse cx="60" cy="52" rx="8" ry="10" fill="#3B352F" transform="rotate(15 60 52)"/><circle cx="40" cy="52" r="3.4" fill="#fff"/><circle cx="60" cy="52" r="3.4" fill="#fff"/><ellipse cx="50" cy="64" rx="4.5" ry="3.4" fill="#3B352F"/></svg>`,
@@ -992,7 +1118,12 @@ const ANIMAL_SVG = {
   owl:`<svg viewBox="0 0 100 100"><path d="M28 30 L34 44 L22 44 Z" fill="#9A7B4A"/><path d="M72 30 L66 44 L78 44 Z" fill="#9A7B4A"/><circle cx="50" cy="56" r="31" fill="#C6A06A"/><circle cx="40" cy="52" r="12" fill="#FBF3E6"/><circle cx="60" cy="52" r="12" fill="#FBF3E6"/><circle cx="40" cy="52" r="5" fill="#3E2B1F"/><circle cx="60" cy="52" r="5" fill="#3E2B1F"/><path d="M50 60 l-5 6 h10 Z" fill="#E7912F"/></svg>`,
   penguin:`<svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="32" fill="#3B3B44"/><path d="M50 30 C36 30 30 46 32 60 Q50 74 68 60 C70 46 64 30 50 30 Z" fill="#FBF6EE"/><circle cx="43" cy="50" r="3.6" fill="#3E2B1F"/><circle cx="57" cy="50" r="3.6" fill="#3E2B1F"/><path d="M50 56 l-6 5 h12 Z" fill="#E7912F"/></svg>`,
   deer:`<svg viewBox="0 0 100 100"><g stroke="#8A5A34" stroke-width="3" fill="none" stroke-linecap="round"><path d="M34 28 q-6 -12 -14 -14 M34 28 q-10 -4 -16 -12"/><path d="M66 28 q6 -12 14 -14 M66 28 q10 -4 16 -12"/></g><ellipse cx="28" cy="44" rx="8" ry="12" fill="#C79A5E"/><ellipse cx="72" cy="44" rx="8" ry="12" fill="#C79A5E"/><circle cx="50" cy="56" r="28" fill="#C79A5E"/><ellipse cx="50" cy="66" rx="12" ry="9" fill="#F0E2CC"/><circle cx="42" cy="53" r="4" fill="#3E2B1F"/><circle cx="58" cy="53" r="4" fill="#3E2B1F"/><ellipse cx="50" cy="62" rx="4" ry="3" fill="#3E2B1F"/></svg>`,
-  hedgehog:`<svg viewBox="0 0 100 100"><g fill="#6E5A44"><path d="M20 48 L14 30 L30 40 Z"/><path d="M34 40 L30 20 L44 34 Z"/><path d="M50 36 L50 16 L60 34 Z"/><path d="M66 40 L72 22 L74 40 Z"/><path d="M80 48 L86 32 L70 42 Z"/></g><circle cx="50" cy="58" r="26" fill="#6E5A44"/><path d="M50 84 C40 84 32 74 34 64 Q50 58 66 64 C68 74 60 84 50 84 Z" fill="#D8BE98"/><circle cx="43" cy="60" r="3.4" fill="#3E2B1F"/><circle cx="57" cy="60" r="3.4" fill="#3E2B1F"/><circle cx="50" cy="70" r="3.2" fill="#3E2B1F"/></svg>`
+  hedgehog:`<svg viewBox="0 0 100 100"><g fill="#6E5A44"><path d="M20 48 L14 30 L30 40 Z"/><path d="M34 40 L30 20 L44 34 Z"/><path d="M50 36 L50 16 L60 34 Z"/><path d="M66 40 L72 22 L74 40 Z"/><path d="M80 48 L86 32 L70 42 Z"/></g><circle cx="50" cy="58" r="26" fill="#6E5A44"/><path d="M50 84 C40 84 32 74 34 64 Q50 58 66 64 C68 74 60 84 50 84 Z" fill="#D8BE98"/><circle cx="43" cy="60" r="3.4" fill="#3E2B1F"/><circle cx="57" cy="60" r="3.4" fill="#3E2B1F"/><circle cx="50" cy="70" r="3.2" fill="#3E2B1F"/></svg>`,
+  axolotl:`<svg viewBox="0 0 100 100"><g stroke="#CD6C91" stroke-width="6" stroke-linecap="round"><path d="M27 44 13 29M25 53 8 50M27 64 13 73M73 44 87 29M75 53 92 50M73 64 87 73"/></g><g stroke="#EF9DB9" stroke-width="3" stroke-linecap="round"><path d="m17 33-7 1m9 3 1-9M14 50l-5-6m7 7-5 6m8 12-7-1m8 0-1 8m64-43 7 1m-9 3-1-9m6 22 5-6m-7 7 5 6m-8 12 7-1m-8 0 1 8"/></g><ellipse cx="50" cy="56" rx="29" ry="25" fill="#F7C7D7" stroke="#D88CA7" stroke-width="1.5"/><ellipse cx="34" cy="64" rx="6" ry="3" fill="#EE9EBB"/><ellipse cx="66" cy="64" rx="6" ry="3" fill="#EE9EBB"/><circle cx="40" cy="53" r="3.8" fill="#3E2B1F"/><circle cx="60" cy="53" r="3.8" fill="#3E2B1F"/><path d="M45 65q5 5 10 0" fill="none" stroke="#8D4B66" stroke-width="2" stroke-linecap="round"/></svg>`,
+  capybara:`<svg viewBox="0 0 100 100"><circle cx="29" cy="31" r="9" fill="#AF8058"/><circle cx="71" cy="31" r="9" fill="#AF8058"/><circle cx="29" cy="31" r="4" fill="#DBB18B"/><circle cx="71" cy="31" r="4" fill="#DBB18B"/><rect x="22" y="30" width="56" height="54" rx="23" fill="#C49B72"/><ellipse cx="50" cy="65" rx="21" ry="15" fill="#D9B791"/><circle cx="38" cy="49" r="3.5" fill="#3E2B1F"/><circle cx="62" cy="49" r="3.5" fill="#3E2B1F"/><ellipse cx="50" cy="60" rx="7" ry="4" fill="#6D4933"/><path d="M50 64v6m-7 0q7 5 14 0" fill="none" stroke="#6D4933" stroke-width="2" stroke-linecap="round"/></svg>`,
+  otter:`<svg viewBox="0 0 100 100"><circle cx="26" cy="40" r="10" fill="#986A4B"/><circle cx="74" cy="40" r="10" fill="#986A4B"/><circle cx="26" cy="40" r="5" fill="#D9BDA0"/><circle cx="74" cy="40" r="5" fill="#D9BDA0"/><ellipse cx="50" cy="56" rx="31" ry="28" fill="#A97C57"/><path d="M25 59q10-12 25 1 15-13 25-1-3 25-25 25T25 59" fill="#F0D9B6"/><circle cx="40" cy="50" r="3.8" fill="#3E2B1F"/><circle cx="60" cy="50" r="3.8" fill="#3E2B1F"/><ellipse cx="50" cy="61" rx="6" ry="4" fill="#3E2B1F"/><g stroke="#765039" stroke-width="1.5" stroke-linecap="round"><path d="M35 64 22 61m13 8-13 1m43-6 13-3m-13 8 13 1M50 65v5m-5 0q5 5 10 0" fill="none"/></g></svg>`,
+  raccoon:`<svg viewBox="0 0 100 100"><path d="m26 42-3-21q18 0 20 15m14 0q2-15 20-15l-3 21" fill="#7E8586"/><path d="m29 35-1-8 9 8m26 0 9-8-1 8" fill="#D8C1B8"/><circle cx="50" cy="56" r="30" fill="#A8B1B0"/><path d="M23 47q12-10 27 2 15-12 27-2l-3 14q-12 4-24-3-12 7-24 3Z" fill="#505458"/><path d="M33 64q17-10 34 0-2 20-17 20T33 64" fill="#F3E9D8"/><circle cx="39" cy="52" r="3.5" fill="#3E2B1F"/><circle cx="61" cy="52" r="3.5" fill="#3E2B1F"/><circle cx="38" cy="51" r="1.3" fill="#fff"/><circle cx="60" cy="51" r="1.3" fill="#fff"/><ellipse cx="50" cy="64" rx="5" ry="3.5" fill="#3E2B1F"/></svg>`,
+  turtle:`<svg viewBox="0 0 100 100"><path d="M18 61q0-39 32-39t32 39" fill="#56895E" stroke="#3D6749" stroke-width="2"/><path d="m50 24-12 16 5 18h14l5-18Zm-12 16-15 5m39-5 15 5" fill="none" stroke="#93B37C" stroke-width="2"/><ellipse cx="23" cy="66" rx="10" ry="7" fill="#A4C477"/><ellipse cx="77" cy="66" rx="10" ry="7" fill="#A4C477"/><ellipse cx="50" cy="62" rx="26" ry="23" fill="#B5D28B" stroke="#7FA35D" stroke-width="1.5"/><ellipse cx="35" cy="67" rx="5" ry="3" fill="#D9DF94"/><ellipse cx="65" cy="67" rx="5" ry="3" fill="#D9DF94"/><circle cx="40" cy="57" r="3.8" fill="#3E2B1F"/><circle cx="60" cy="57" r="3.8" fill="#3E2B1F"/><path d="M44 68q6 6 12 0" fill="none" stroke="#5C7942" stroke-width="2" stroke-linecap="round"/></svg>`
 };
 const ANIMALS = Object.keys(ANIMAL_SVG);
 /* Use each animal's original head artwork throughout the game. */
@@ -1022,7 +1153,7 @@ const CHARACTER_VOICE={
   adventurous:{intro:['Another lantern to explore!','Let’s see what’s around this bend.'],success:['One more lantern on our adventure!','We found the way. Onward, friends!'],retry:['Take your time. We’ll find the way.','Let’s try another path through this puzzle.'],hint:['Here’s a clue for our next step.','Let’s take it one step at a time.']},
   gentle:{intro:['Take your time. I’m here with you.','Let’s solve this together.'],success:['Lovely work. We did it together!','You kept going. Our lantern is lit!'],retry:['It’s okay to try again. I’m here with you.','Take your time and try another choice.'],hint:['We can take this one step at a time.','Here’s a little help.']}
 };
-function characterVoice(char){return ({dog:'eager',cat:'curious',mouse:'adventurous',pig:'gentle'})[char.animal]||({lead:'adventurous',help:'gentle',read:'curious',math:'eager',both:'curious'})[char.role]||'gentle';}
+function characterVoice(char){return ({dog:'eager',cat:'curious',mouse:'adventurous',pig:'gentle'})[char.animal]||({lead:'adventurous',guidehelp:'adventurous',help:'gentle',read:'curious',math:'eager',both:'curious'})[char.role]||'gentle';}
 function characterLine(char,event){return pickRand(CHARACTER_VOICE[characterVoice(char)][event]);}
 function paintChallengeMood(q,mood){
   const host=q.hostChar||hostFor(q.kind);
@@ -1038,18 +1169,19 @@ const DEFAULT_ROSTER = [
   {animal:'pig',   name:'Nutmeg',  role:'help'}
 ];
 const RKEY='acorn-trail-roster';
-function validRoster(r){ return Array.isArray(r)&&r.length>=3&&r.length<=20&&r.every(c=>c&&ANIMALS.includes(c.animal)&&['math','read','both','lead','help'].includes(c.role)&&typeof c.name==='string'&&c.name.trim().length>0&&c.name.length<=14)&&r.some(c=>c.role==='lead')&&r.some(c=>c.role==='help')&&r.some(c=>c.role==='math'||c.role==='both')&&r.some(c=>c.role==='read'||c.role==='both'); }
+function validRoster(r){ return Array.isArray(r)&&r.length>=2&&r.length<=20&&r.every(c=>c&&ANIMALS.includes(c.animal)&&['math','read','both','lead','help','guidehelp'].includes(c.role)&&typeof c.name==='string'&&c.name.trim().length>0&&c.name.length<=14)&&r.some(c=>c.role==='lead'||c.role==='guidehelp')&&r.some(c=>c.role==='help'||c.role==='guidehelp')&&r.some(c=>c.role==='math'||c.role==='both')&&r.some(c=>c.role==='read'||c.role==='both'); }
 let ROSTER = (validRoster(store.get(RKEY))?store.get(RKEY):DEFAULT_ROSTER).map(c=>({...c}));
 function saveRoster(){ store.set(RKEY, ROSTER); }
 
-const ROLE_TAG  = { math:'counts it out', read:'reads it out', both:'reads & counts', lead:'leads the way', help:'gives a hint' };
-const ROLE_BADGE= { math:roleIcon('math'), read:roleIcon('read'), both:roleIcon('both'), lead:'', help:roleIcon('help') };
-const ROLE_CAP  = { math:'Counts it out.', read:'Reads it out.', both:'Reads and counts.', lead:'Leads the way.', help:'Always has a hint.' };
+const ROLE_TAG = { math:'Math Buddy', read:'Reading Buddy', both:'Math & Reading Buddy', lead:'Travel Guide', help:'Helper', guidehelp:'Travel Guide & Helper' };
+const ROLE_DESC = {guidehelp:'Shows the way, tells the story, and gives clues when you’re stuck.', lead:'Shows the way and tells the story.', help:'Gives clues when you’re stuck.', math:'Shares number puzzles.', read:'Shares word puzzles.', both:'Shares number and word puzzles.'};
+const ROLE_BADGE= { math:roleIcon('math'), read:roleIcon('read'), both:roleIcon('both'), lead:'', help:roleIcon('help'), guidehelp:roleIcon('help') };
+const ROLE_CAP  = { math:'Counts it out.', read:'Reads it out.', both:'Reads and counts.', lead:'Your Travel Guide.', help:'Your helpful clue giver.', guidehelp:'Your guide with a clue to share.' };
 function pickRand(a){ return a[Math.floor(Math.random()*a.length)]; }
 function mathChars(){ return ROSTER.filter(c=>c.role==='math'||c.role==='both'); }
 function readChars(){ return ROSTER.filter(c=>c.role==='read'||c.role==='both'); }
-function leadChars(){ return ROSTER.filter(c=>c.role==='lead'); }
-function helpChars(){ return ROSTER.filter(c=>c.role==='help'); }
+function leadChars(){ return ROSTER.filter(c=>c.role==='lead'||c.role==='guidehelp'); }
+function helpChars(){ return ROSTER.filter(c=>c.role==='help'||c.role==='guidehelp'); }
 function hostFor(kind){ const pool = kind==='math'?mathChars():readChars(); return pool.length?pickRand(pool):ROSTER[0]; }
 function leadPrimary(){ const l=leadChars(); return l.length?l[0]:ROSTER[0]; }
 function pickHelper(){ const h=helpChars(); return h.length?pickRand(h):null; }
@@ -1063,7 +1195,7 @@ function renderStartParty(){
   const scale = ROSTER.length>8 ? 58 : (ROSTER.length>5 ? 70 : 86);
   document.getElementById('start-party').innerHTML = ROSTER.map(c=>{
     const b=ROLE_BADGE[c.role];
-    const cls = c.role==='help'?'badge-hint':(c.role==='read'?'badge-read':'badge-math');
+    const cls = (c.role==='help'||c.role==='guidehelp')?'badge-hint':(c.role==='read'?'badge-read':'badge-math');
     const badgeHtml = b ? `<div class="badge ${cls}">${b}</div>` : '';
     return `<div class="companion">${badgeHtml}${badge(c,scale)}<span class="name">${esc(c.name)}</span><span class="lead-tag">${ROLE_TAG[c.role]}</span></div>`;
   }).join('');
@@ -1152,7 +1284,7 @@ const SCENERY = {
   </svg>`
 };
 function particlesFor(scene){
-  if(!SETTINGS.motion) return '';
+  if(!SETTINGS.motion&&scene!=='river') return '';
   let html='';
   if(scene==='meadow'){
     const cols=['#C1652E','#E4B23C','#8AA06A'];
@@ -1162,9 +1294,9 @@ function particlesFor(scene){
     const cols=['#F3B4C6','#F7CFD9','#EAD36B'];
     for(let i=0;i<9;i++) html+=`<div class="petal" style="left:${4+i*11}%;background:${cols[i%3]};animation-duration:${9+i*0.7}s;animation-delay:${i*0.6}s;"></div>`;
   } else if(scene==='river'){
-    for(let i=0;i<3;i++) html+=`<div class="mist" style="top:${36+i*13}%;left:0;animation-duration:${18+i*4}s;animation-delay:${i*3}s;"></div>`;
-    if(SETTINGS.rain){ for(let i=0;i<22;i++){ const dur=(0.6+Math.random()*0.6).toFixed(2);
-      html+=`<div class="rain" style="left:${(i*4.5+Math.random()*3).toFixed(1)}%;animation-duration:${dur}s;animation-delay:${(Math.random()*1.2).toFixed(2)}s;"></div>`; } }
+    if(SETTINGS.motion)for(let i=0;i<3;i++) html+=`<div class="mist" style="top:${36+i*13}%;left:0;animation-duration:${18+i*4}s;animation-delay:${i*3}s;"></div>`;
+    for(let i=0;i<22;i++){ const dur=(0.6+Math.random()*0.6).toFixed(2),left=(i*4.5+Math.random()*3).toFixed(1);
+      html+=SETTINGS.motion?`<div class="rain" style="left:${left}%;animation-duration:${dur}s;animation-delay:${(Math.random()*1.2).toFixed(2)}s;"></div>`:`<div class="rain" style="left:${left}%;top:${(Math.random()*90).toFixed(1)}%;"></div>`; }
   } else if(scene==='pumpkin'){
     const cols=['#C1652E','#E4B23C','#D9772C'];
     for(let i=0;i<6;i++) html+=`<div class="leaf" style="left:${5+i*16}%;background:${cols[i%3]};animation-duration:${8+i}s;animation-delay:${i*0.7}s;"></div>`;
@@ -1243,12 +1375,11 @@ function setScene(scene){
 
 /* ================= story ================= */
 function buildStory(){
-  const lead=leadPrimary(), m=hostFor('math'), r=hostFor('read'), h=pickHelper();
+  const lead=leadPrimary(), h=pickHelper();
   const S=[
     {char:lead, text:"Every autumn, the Great Oak at the top of the hill holds the Harvest Gathering — the coziest night of the year."},
     {char:lead, text:characterLine(lead,'intro')+" I found the old trail map! But the autumn winds blew out every lantern that lights the way."},
-    {char:m,    text:"No lanterns, no gathering. So I'll relight them! Each post has a little number puzzle."},
-    {char:r,    text:"And some posts have word puzzles. Those ones are mine — I do love a good word."}
+    {char:lead, text:"Let's relight the lanterns together! Each post has a little number puzzle or word puzzle for us to solve."}
   ];
   if(h) S.push({char:h, text:"And if anyone gets stuck… just call for me! I always have a little hint tucked away."});
   S.push({char:lead, text:"Then it's settled. Follow me, friends — all the way up the trail to the Great Oak. Let's go!"});
@@ -1559,8 +1690,15 @@ function numChoices(ans){
 const NOUNS=['acorns','apples','lanterns','leaves','berries','pebbles'];
 function noun(){ return NOUNS[Math.floor(Math.random()*NOUNS.length)]; }
 function mathOffset(){ return SETTINGS.math==='g1'?-1:SETTINGS.math==='g3'?1:0; }
+function mathOperationAvailable(op,grade=SETTINGS.math){
+  if(op==='mul'&&grade==='g1')return false;
+  if(op==='div'&&grade!=='g3')return false;
+  return true;
+}
 function allowedTypes(level){
-  const ops=SETTINGS.ops;
+  const ops={...SETTINGS.ops};
+  if(!mathOperationAvailable('mul'))ops.mul=false;
+  if(!mathOperationAvailable('div'))ops.div=false;
   const base = level===1?['addsub','mult'] : level<=3?['addsub','mult','word'] : ['addsub','mult','div','word','two'];
   const out=[];
   for(const t of base){
@@ -1706,13 +1844,13 @@ function renderLearning(){
   const row=(label,r)=>`<tr><th scope="row">${label}</th><td>${r.completed}</td><td>${r.independent}</td></tr>`;
   const total=learning.math.completed+learning.read.completed;
   document.getElementById('learning-summary').innerHTML=total?
-    `<p>Completed puzzles since this record began. “On own” means a correct first choice without a hint. These counts describe practice, not a grade.</p><table><thead><tr><th scope="col">Practice</th><th scope="col">Done</th><th scope="col">On own</th></tr></thead><tbody>${row('Math',learning.math)}${row('Reading',learning.read)}</tbody></table><p>With hints: ${learning.math.hinted+learning.read.hinted}. Wrong choices on completed puzzles: ${learning.math.wrong+learning.read.wrong}.</p><details><summary>Skills practiced</summary><table><thead><tr><th scope="col">Skill</th><th scope="col">Done</th><th scope="col">On own</th></tr></thead><tbody>${Object.keys(SKILLS).filter(k=>learning.skills[k]?.completed).map(k=>row(SKILLS[k],learning.skills[k])).join('')}</tbody></table></details><p>Stored only in this browser. Replaying keeps the record.</p>`:
-    '<p>No completed puzzles recorded yet. New practice will appear here. Earlier play is not included.</p>';
+    `<p>Finished math and reading activities on this device. “First try” means the answer was right before using a hint or missing an answer.</p><table><thead><tr><th scope="col">Subject</th><th scope="col">Activities</th><th scope="col">First try</th></tr></thead><tbody>${row('Math',learning.math)}${row('Reading',learning.read)}</tbody></table><p>Hints used: ${learning.math.hinted+learning.read.hinted}. Missed tries: ${learning.math.wrong+learning.read.wrong}.</p><details><summary>See practice by skill</summary><table><thead><tr><th scope="col">Skill</th><th scope="col">Activities</th><th scope="col">First try</th></tr></thead><tbody>${Object.keys(SKILLS).filter(k=>learning.skills[k]?.completed).map(k=>row(SKILLS[k],learning.skills[k])).join('')}</tbody></table></details><p>Saved on this device. Replaying keeps these totals.</p>`:
+    '<p>Finish a math or reading activity and your practice will show here.</p>';
 }
-function clearLearningProgress(){if(confirm('Clear the learning record and adaptive adjustments? Your trail and stickers will stay.')){store.del(LKEY);learning=loadLearning();resetAdaptive();renderLearning();renderAdaptive();}}
+function clearLearningProgress(){if(confirm('Clear practice totals and adaptive adjustments? Your trail and stickers will stay.')){store.del(LKEY);learning=loadLearning();resetAdaptive();renderLearning();renderAdaptive();}}
 
 /* ================= game state + progress ================= */
-let acorns=0, themeIndex=0, stopIndex=0, current=null, answered=false, wrongCount=0, streak=0;
+let acorns=0, themeIndex=0, stopIndex=0, current=null, answered=false, wrongCount=0, streak=0, animateCampTravel=false;
 const REVEAL_AT=2;
 let pendingCompletion=false, rewardTimer=null, trailEpoch=0;
 function cancelReward(){ document.getElementById('answer-review').hidden=true; trailEpoch++; clearTimeout(rewardTimer); rewardTimer=null; pendingUnlocks=[]; unlockNext=null; wrongCount=0; current=null; answered=false; pendingCompletion=false; }
@@ -1896,33 +2034,51 @@ function go(id){
 
 /* Each region is drawn from local vector shapes; no remote assets or map APIs. */
 const CAMP_MAP_PLACES=[
-  {x:66,y:306,icon:'🏕️',short:'Meadow'},
-  {x:190,y:245,icon:'🍎',short:'Orchard'},
-  {x:80,y:182,icon:'🌊',short:'Riverside'},
-  {x:230,y:147,icon:'🎃',short:'Pumpkins'},
-  {x:346,y:210,icon:'🍂',short:'Amber Woods'},
-  {x:433,y:119,icon:'🌉',short:'Starlit Bridge'},
-  {x:362,y:49,icon:'🌳',short:'Great Oak'}
+  {x:66,y:306,icon:'camp',short:'Meadow'},
+  {x:190,y:245,icon:'apple',short:'Orchard'},
+  {x:80,y:182,icon:'river',short:'Riverside'},
+  {x:230,y:147,icon:'pumpkin',short:'Pumpkins'},
+  {x:346,y:210,icon:'leaf',short:'Amber Woods'},
+  {x:433,y:119,icon:'bridge',short:'Starlit Bridge'},
+  {x:362,y:49,icon:'oak',short:'Great Oak'}
 ];
+const CAMP_MAP_ICONS={
+  camp:'<path d="M-15 12L0-14 15 12Z" fill="#e9a64d"/><path d="M-15 12L0-14 15 12M-5 12V4q5-7 10 0v8" fill="none"/>',
+  apple:'<path d="M0-7q-12-8-14 4-1 14 14 17Q15 11 14-3 12-15 0-7Z" fill="#d97650"/><path d="M0-7q1-8 6-11M2-14q8-4 10 1-5 5-10 1" fill="#73915a"/>',
+  river:'<path d="M-15-9q7-7 14 0t14 0M-15 0q7-7 14 0t14 0M-15 9q7-7 14 0t14 0" fill="none" stroke="#579bb0"/>',
+  pumpkin:'<path d="M0-13q-5-5-10 0-10 2-8 13 1 11 10 12 5 4 8 0 7 4 11-1 8-2 8-12 0-11-9-12-5-5-10 0Z" fill="#e58d43"/><path d="M0-13q-5 9 0 25M-10-12q5 9 2 24M10-12Q5-3 8 12M0-13q-2-7 3-9" fill="none"/>',
+  leaf:'<path d="M-15 11Q-16-9 15-15q2 26-30 26Z" fill="#d79a45"/><path d="M-13 10Q0-2 12-12M-3 1l-1-8M4-5l7 1" fill="none"/>',
+  bridge:'<path d="M-16-3h32M-14-3q1-13 14-13T14-3M-12-3v14M12-3v14M-16 11h32" fill="none"/><path d="M-18 14q5-4 10 0t10 0 10 0 10 0" fill="none" stroke="#579bb0"/><path d="m-10-19 1-3 1 3 3 1-3 1-1 3-1-3-3-1Z M9-17l1-2 1 2 2 1-2 1-1 2-1-2-2-1Z" fill="#efc967" stroke="none"/>',
+  oak:'<path d="M0 0v14M-6 14h12" fill="none"/><path d="M0-17q-8-7-12 1-9 1-6 10-2 8 8 8 4 7 10 1 7 6 11-1 9 0 7-9 3-9-6-10-5-8-12 0Z" fill="#71935c"/>'
+};
 function renderAdventureMap(){
   const host=document.getElementById('camp-map-world');
   if(!host)return;
   const pts=CAMP_MAP_PLACES;
   const path=pts.map((p,i)=>(i?'L':'M')+p.x+' '+p.y).join(' ');
+  const progressPoints=pts.slice(0,themeIndex+1);
+  const progressPath=progressPoints.length>1?progressPoints.map((p,i)=>(i?'L':'M')+p.x+' '+p.y).join(' '):'';
+  const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const traveler=animateCampTravel&&SETTINGS.motion&&!reduceMotion&&themeIndex>0
+    ?'<g aria-hidden="true"><circle r="13" fill="#fff8dc" stroke="#c77d35" stroke-width="2"/><text y="6" text-anchor="middle" font-size="16">🌰</text><animateMotion dur="1.6s" calcMode="spline" keyTimes="0;1" keySplines=".35 0 .65 1" path="M'+pts[themeIndex-1].x+' '+pts[themeIndex-1].y+' L'+pts[themeIndex].x+' '+pts[themeIndex].y+'"/></g>'
+    :'';
   const tree=(x,y)=>'<g transform="translate('+x+' '+y+')"><ellipse cy="16" rx="17" ry="5" fill="#487850" opacity=".2"/><path d="M-5 14L0 -18L5 14Z" fill="#548e62"/><path d="M-17 6L0 -26L17 6Z" fill="url(#map-pine)"/><path d="M-11 2L0 -20" stroke="#add3a0" stroke-width="2" opacity=".45"/><rect x="-3" y="8" width="6" height="12" fill="#91643c"/></g>';
   const trees=[[25,55],[85,40],[142,67],[276,55],[456,44],[295,293],[412,289],[466,228],[20,266],[258,330],[144,323],[325,110],[46,116],[402,172]];
   const nodes=pts.map((p,i)=>{
     const state=i<themeIndex?'done':i===themeIndex?'current':'locked';
     const status=i<themeIndex?'completed':i===themeIndex?'current destination':'upcoming';
+    const placeIcon='<g class="place-art" transform="scale(.68)" stroke="#78583c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+CAMP_MAP_ICONS[p.icon]+'</g>';
     return '<g class="camp-node '+state+'" aria-label="'+(i+1)+'. '+THEMES[i].name+', '+status+'" transform="translate('+p.x+' '+p.y+')">'+
       '<ellipse cy="7" rx="27" ry="23" fill="#49653d" opacity=".25"/>'+
+      (i<themeIndex?'<circle class="done-halo" r="29"/>':'')+
+      (i===themeIndex?'<circle class="current-ring" r="35"/>':'')+
       '<circle r="'+(i===themeIndex?26:22)+'"/>'+
-      '<text class="place-icon" y="8">'+p.icon+'</text>'+
+      placeIcon+
       '<text y="43">'+p.short+'</text>'+
-      (i<themeIndex?'<text y="-28">✓</text>':'')+'</g>';
+      (i<themeIndex?'<g class="camp-check" transform="translate(19 -19)"><circle r="10"/><path d="M-4 0l3 3 5-6"/></g>':'')+'</g>';
   }).join('');
   host.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 375" role="img" aria-label="Seven woodland destinations on a winding trail; current destination is '+THEMES[themeIndex].name+'">'+
-    '<defs><linearGradient id="map-ground" x2=".2" y2="1"><stop stop-color="#d8edb8"/><stop offset="1" stop-color="#94c694"/></linearGradient><linearGradient id="map-pine" x2="1" y2="1"><stop stop-color="#679e6e"/><stop offset="1" stop-color="#2f674b"/></linearGradient><radialGradient id="map-node" cx=".3" cy=".2"><stop stop-color="#fff6d8"/><stop offset="1" stop-color="#dfbf82"/></radialGradient><radialGradient id="map-current" cx=".3" cy=".2"><stop stop-color="#ffeeb0"/><stop offset="1" stop-color="#e4a249"/></radialGradient></defs>'+
+    '<defs><linearGradient id="map-ground" x2=".2" y2="1"><stop stop-color="#d8edb8"/><stop offset="1" stop-color="#94c694"/></linearGradient><linearGradient id="map-pine" x2="1" y2="1"><stop stop-color="#679e6e"/><stop offset="1" stop-color="#2f674b"/></linearGradient><radialGradient id="map-node" cx=".3" cy=".2"><stop stop-color="#fff6d8"/><stop offset="1" stop-color="#dfbf82"/></radialGradient><radialGradient id="map-current" cx=".3" cy=".2"><stop stop-color="#fff5b9"/><stop offset="1" stop-color="#efa934"/></radialGradient><radialGradient id="map-done" cx=".3" cy=".2"><stop stop-color="#fff9d8"/><stop offset="1" stop-color="#a9d184"/></radialGradient></defs>'+
     '<rect width="500" height="375" fill="url(#map-ground)"/>'+
     '<path d="M0 100 Q130 50 220 115 T500 105 L500 0H0Z" fill="#d8edb9"/>'+
     '<path d="M0 290Q120 250 215 310T500 260V375H0Z" fill="#9dd3a1"/>'+
@@ -1934,8 +2090,11 @@ function renderAdventureMap(){
     trees.map(t=>tree(t[0],t[1])).join('')+
     '<path d="'+path+'" fill="none" stroke="#668747" stroke-opacity=".2" stroke-width="22" stroke-linecap="round" transform="translate(0 2)"/>'+
     '<path class="trail-path" d="'+path+'"/><path class="trail-dashes" d="'+path+'"/>'+
+    (progressPath?'<path class="trail-progress" d="'+progressPath+'"/><path class="trail-progress-glint" d="'+progressPath+'"/>':'')+
+    traveler+
     nodes+
     '<g transform="translate(300 355)"><text class="map-marker">🌰 '+acorns+' collected</text></g></svg>';
+  animateCampTravel=false;
   const label=document.getElementById('camp-map-caption');
   if(label)label.textContent='Campsite '+(themeIndex+1)+' of '+THEMES.length+' · '+THEMES[themeIndex].name;
 }
@@ -1956,7 +2115,7 @@ function renderMap(){
   document.getElementById('lantern-row').innerHTML = th.stops.map((kind,i)=>{
     const isLit=i<stopIndex, cur=i===stopIndex, locked=i>stopIndex;
     const who=kind==='math'?`${roleIcon('math')} Math`:`${roleIcon('read')} Read`; const kc=kind==='math'?'math':'read';
-    return `<div class="lantern ${isLit?'lit':''} ${cur?'current':''} ${locked?'locked':''}">
+    return `<div class="lantern ${isLit?'lit':''} ${cur?'current':''} ${locked?'locked':''}" ${cur?`role="button" tabindex="0" aria-label="Light lantern ${i+1}, ${kind} question" onclick="startNextStop()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();startNextStop()}"`:''}>
       <div class="glass"><span class="flame">🔥</span></div><span class="kind ${kc}">${who}</span><span class="lbl">${i+1}</span></div>`;
   }).join('');
   updateBasketDot();
@@ -2111,14 +2270,15 @@ function themeComplete(){
   document.getElementById('trans-text').textContent=th.done.text;
   document.getElementById('trans-acorns').textContent=acorns; go('screen-transition');
 }
-function advanceTheme(){ themeIndex++; stopIndex=0; saveProgress(); refreshStickers(); flushUnlocks(()=>go('screen-map')); }
+function advanceTheme(){ themeIndex++; stopIndex=0; animateCampTravel=true; saveProgress(); refreshStickers(); flushUnlocks(()=>go('screen-map')); }
 function finale(){ finished=true; clearProgress(); refreshStickers(); grantBonusStickers(3); flushUnlocks(()=>{ document.getElementById('finale-acorns').textContent=acorns; renderFinaleParty(); go('screen-finale'); }); }
 function restart(){ cancelReward(); acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; answered=false; pendingCompletion=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress(); go('screen-map'); }
 function confirmRestartTrail(){
-  if(confirm('Start the whole trail over from the beginning? Your stickers will be kept.')){
-    document.getElementById('acorn-num').textContent='0'; restart();
-  }
+  document.getElementById('restart-modal').classList.add('show');
+  document.querySelector('#restart-modal button').focus();
 }
+function closeRestartPrompt(){document.getElementById('restart-modal').classList.remove('show');document.querySelector('#screen-map [data-icon="restart"]').focus();}
+function restartFromPrompt(){document.getElementById('restart-modal').classList.remove('show');document.getElementById('acorn-num').textContent='0';restart();}
 
 /* ================= read-aloud ================= */
 function speakable(text){ return String(text)
@@ -2231,8 +2391,31 @@ function renderBasket(){
 
 
 let gateUnlocked=false, gateAnswer=null;
+function showSettingsTab(tab,focus=false){
+  const progress=tab==='progress';
+  document.getElementById('settings-panel-settings').hidden=progress;
+  document.getElementById('settings-panel-progress').hidden=!progress;
+  document.getElementById('settings-tab-settings').setAttribute('aria-selected',String(!progress));
+  document.getElementById('settings-tab-progress').setAttribute('aria-selected',String(progress));
+  document.getElementById('settings-tab-settings').tabIndex=progress?-1:0;
+  document.getElementById('settings-tab-progress').tabIndex=progress?0:-1;
+  if(focus)document.getElementById(`settings-tab-${tab}`).focus();
+}
+function settingsTabKeys(event){
+  const tabs=[...document.querySelectorAll('.settings-tabs [role="tab"]')];
+  const index=tabs.indexOf(event.target);
+  if(index<0)return;
+  let next=index;
+  if(event.key==='ArrowRight')next=(index+1)%tabs.length;
+  else if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;
+  else if(event.key==='Home')next=0;
+  else if(event.key==='End')next=tabs.length-1;
+  else return;
+  event.preventDefault();
+  showSettingsTab(tabs[next].id==='settings-tab-progress'?'progress':'settings',true);
+}
 function openSettings(){
-  if(gateUnlocked){ renderSettings(); document.getElementById('settings-modal').classList.add('show'); return; }
+  if(gateUnlocked){ showSettingsTab('settings'); renderSettings(); document.getElementById('settings-modal').classList.add('show'); return; }
   showGate();
 }
 function showGate(){
@@ -2243,7 +2426,7 @@ function showGate(){
   document.getElementById('gate-modal').classList.add('show');
 }
 function tryGate(v,btn){
-  if(v===gateAnswer){ gateUnlocked=true; closeGate(); renderSettings(); document.getElementById('settings-modal').classList.add('show'); }
+  if(v===gateAnswer){ gateUnlocked=true; closeGate(); showSettingsTab('settings'); renderSettings(); document.getElementById('settings-modal').classList.add('show'); }
   else { btn.classList.add('bad'); setTimeout(()=>btn.classList.remove('bad'),400); }
 }
 function closeGate(){ document.getElementById('gate-modal').classList.remove('show'); }
@@ -2251,13 +2434,22 @@ function closeSettings(){ gateUnlocked=false; document.getElementById('settings-
 function renderSettings(){
   renderLearning();
   renderAdaptive();
+  const hasPractice=learning.math.completed+learning.read.completed>0;
+  const hasStickers=Object.values(stickerCounts).some(count=>count>0);
+  const hasAdaptive=Object.values(adaptive).some(row=>row.offset!==0||row.clean!==0||row.support!==0);
+  document.getElementById('progress-clear-controls').hidden=!(loadProgress()||hasPractice||hasStickers||hasAdaptive);
   document.getElementById('sw-explanations').classList.toggle('on',!!SETTINGS.explanations);
   document.getElementById('sw-explanations').setAttribute('aria-pressed',String(!!SETTINGS.explanations));
   document.querySelectorAll('#seg-math button').forEach(b=>b.classList.toggle('on', b.dataset.v===SETTINGS.math));
   document.querySelectorAll('#seg-read button').forEach(b=>b.classList.toggle('on', b.dataset.v===SETTINGS.reading));
-  document.querySelectorAll('#ops-row .op').forEach(b=>b.classList.toggle('on', !!SETTINGS.ops[b.dataset.k]));
+  document.querySelectorAll('#ops-row .op').forEach(b=>{
+    const available=mathOperationAvailable(b.dataset.k);
+    b.hidden=!available;
+    b.classList.toggle('on', available&&!!SETTINGS.ops[b.dataset.k]);
+    b.setAttribute('aria-pressed',String(available&&!!SETTINGS.ops[b.dataset.k]));
+  });
+  document.getElementById('math-availability').textContent=SETTINGS.math==='g1'?'Multiplication appears with Grade 2; division appears with Grade 3.':SETTINGS.math==='g2'?'Division appears with Grade 3.':'All operations are available; harder ones appear later along the trail.';
   document.getElementById('sw-sound').classList.toggle('on', SETTINGS.sound);
-  document.getElementById('sw-rain').classList.toggle('on', SETTINGS.rain);
   document.getElementById('sw-reveal').classList.toggle('on', SETTINGS.reveal);
   document.getElementById('sw-readaloud').classList.toggle('on', SETTINGS.readAloud);
   document.getElementById('sw-motion').classList.toggle('on', SETTINGS.motion);
@@ -2265,6 +2457,7 @@ function renderSettings(){
 document.querySelectorAll('#seg-math button').forEach(b=> b.onclick=()=>setSubjectGrade('math',b.dataset.v));
 document.querySelectorAll('#seg-read button').forEach(b=> b.onclick=()=>setSubjectGrade('read',b.dataset.v));
 document.querySelectorAll('#ops-row .op').forEach(b=> b.onclick=()=>{
+  if(!mathOperationAvailable(b.dataset.k))return;
   const k=b.dataset.k; const enabled=Object.values(SETTINGS.ops).filter(Boolean).length;
   if(SETTINGS.ops[k] && enabled<=1) return; // keep at least one on
   SETTINGS.ops[k]=!SETTINGS.ops[k]; resetAdaptive('math'); saveSettings(); renderSettings();
@@ -2273,11 +2466,10 @@ function toggleSetting(key){
   SETTINGS[key]=!SETTINGS[key]; if(key==='adaptive')resetAdaptive(); saveSettings(); renderSettings();
   if(key==='sound'){ const a=document.getElementById('sound-btn'), b=document.getElementById('sound-btn2');
     paintSound(); }
-  if(key==='rain' && currentScene==='river'){ document.getElementById('particles').innerHTML=particlesFor(currentScene); }
   if(key==='motion'){ setScene(currentScene); }
 }
 function confirmReset(){
-  if(confirm('Reset all trail progress, stickers and learning records, and start from the beginning?')){
+  if(confirm('Clear all saved progress? This removes your current trail, stickers, practice totals, and adaptive adjustments. Your team and settings will stay.')){
     store.del(LKEY); learning=loadLearning();
     resetAdaptive();resetVariety();
     cancelReward(); clearProgress(); acorns=0; themeIndex=0; stopIndex=0; streak=0; finished=false;
@@ -2288,75 +2480,68 @@ function confirmReset(){
 }
 
 /* ================= character creator ================= */
-let draft=null, editIndex=-1, namePage=0;
-const NAMES_PER_PAGE=24;
-function teamValid(){ return ROSTER.length>=1 && ROSTER.length<=20 && leadChars().length>=1 && helpChars().length>=1 && mathChars().length>=1 && readChars().length>=1; }
+let draft=null, editIndex=-1;
+function teamValid(){ return ROSTER.length>=2 && ROSTER.length<=20 && leadChars().length>=1 && helpChars().length>=1 && mathChars().length>=1 && readChars().length>=1; }
+function missingTeamJobs(){return [['Travel Guide',leadChars().length],['Helper',helpChars().length],['Math Buddy',mathChars().length],['Reading Buddy',readChars().length]].filter(([,count])=>!count).map(([label])=>label);}
+function teamNeedsMessage(){const missing=missingTeamJobs();return missing.length?'Your team still needs: '+missing.join(', ')+'.':'Your team needs 2–20 friends.';}
 function reqText(){
-  const need=[];
-  if(!leadChars().length) need.push(`one to lead ${roleIcon('lead')}`);
-  if(!helpChars().length) need.push(`one to help ${roleIcon('help')}`);
-  if(!mathChars().length) need.push(`someone for math ${roleIcon('math')}`);
-  if(!readChars().length) need.push(`someone for reading ${roleIcon('read')}`);
-  if(ROSTER.length>20) need.push('20 friends or fewer');
-  return need.length ? 'Still need: '+need.join(', ')+'.' : 'Your team is ready — tap Play! 🎉';
+  return [['lead','Travel Guide',leadChars().length],['help','Helper',helpChars().length],['math','Math',mathChars().length],['read','Reading',readChars().length]].map(([role,label,count])=>`<span class="team-job ${count?'covered':'missing'}">${count?'✓':'Missing:'} ${label}</span>`).join('');
 }
-function openCharacters(){ closeEditor(); renderCharacters(); go('screen-characters'); }
+function leaveCharacters(){if(!teamValid())ROSTER=(validRoster(store.get(RKEY))?store.get(RKEY):DEFAULT_ROSTER).map(c=>({...c}));go('screen-start');}
+function openCharacters(){ const saved=store.get('acorn-trail-team-draft');if(Array.isArray(saved)&&saved.length<=20&&saved.every(c=>c&&ANIMALS.includes(c.animal)&&['math','read','both','lead','help','guidehelp'].includes(c.role)&&typeof c.name==='string'&&c.name.trim()&&c.name.length<=14))ROSTER=saved.map(c=>({...c}));closeEditor(); renderCharacters(); go('screen-characters'); }
 function renderCharacters(){
   const req=document.getElementById('cc-req'); req.innerHTML=reqText(); req.classList.toggle('ok', teamValid());
   document.getElementById('party-list').innerHTML = ROSTER.map((c,i)=>
-    `<div class="pc"><button class="pc-x" onclick="removeChar(${i})" aria-label="Remove">✕</button>
-      <div class="pc-emoji" onclick="editChar(${i})" role="button" tabindex="0" aria-label="Edit ${esc(c.name)}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editChar(${i})}">${camperGlyph(c.animal)}</div>
-      <div class="pc-name">${esc(c.name)}</div><div class="pc-role">${ROLE_TAG[c.role]}</div></div>`).join('');
-  const full = ROSTER.length>=20;
+    `<button class="pc" onclick="editChar(${i})" aria-label="Edit ${esc(c.name)}">
+      <span class="pc-emoji">${camperGlyph(c.animal)}</span>
+      <span class="pc-name">${esc(c.name)}</span><span class="pc-role">${esc(ROLE_TAG[c.role])}</span><span class="pc-edit">Edit friend</span></button>`).join('');
   document.getElementById('cc-actions').innerHTML =
-    `<button class="btn small ${full?'outline':'green'}" ${full?'disabled':''} onclick="startAdd()">${ic('plus')} Add friend</button>
-     <button class="btn small outline" onclick="resetTeam()">Default family</button>
-     <button class="btn small" ${teamValid()?'':'disabled'} onclick="playTeam()">Play ${ic('play')}</button>`;
-  renderEditor();
+    `<button class="btn small outline team-add" ${ROSTER.length>=20?'disabled':''} onclick="startAdd()">${ic('plus')} Add friend</button>
+     <div class="team-status ${teamValid()?'':'team-needs'}" id="team-status" role="status" aria-live="polite" tabindex="-1">${teamValid()?'All jobs covered. Your team is ready!':'<strong>'+teamNeedsMessage()+'</strong><span>Tap a friend to change their job, or add a new friend. One friend can guide and help, or do math and reading.</span>'}</div>
+     <button class="btn green team-start" aria-describedby="team-status" onclick="playTeam()">Start ${loadProgress()?'new ':''}adventure ${ic('play')}</button>
+     ${loadProgress()?'<p class="team-note">Starting a new adventure replaces your current trail progress.</p>':''}
+     ${ROSTER.length!==DEFAULT_ROSTER.length||ROSTER.some((c,i)=>['animal','name','role'].some(key=>c[key]!==DEFAULT_ROSTER[i][key]))?'<button class="team-reset" onclick="resetTeam()">Reset to default team</button>':''}`;
 }
-function startAdd(){ if(ROSTER.length>=20) return; draft={animal:pickRand(ANIMALS), role:'math', name:''}; editIndex=-1; namePage=0; renderEditor(); focusEditor(); }
-function focusEditor(){ setTimeout(()=>document.getElementById('editor-holder').scrollIntoView?.({block:'start',behavior:SETTINGS.motion?'smooth':'auto'}),0); }
-function editChar(i){ draft={...ROSTER[i]}; editIndex=i; namePage=0; renderEditor(); focusEditor(); }
-function closeEditor(){ draft=null; editIndex=-1; }
+function suggestedName(){ const used=ROSTER.map(c=>c.name); return pickRand(CUTE_NAMES.filter(n=>!used.includes(n)))||pickRand(CUTE_NAMES); }
+function startAdd(){ if(ROSTER.length>=20)return; draft={animal:pickRand(ANIMALS),role:!leadChars().length?'lead':!helpChars().length?'help':(!mathChars().length||!readChars().length)?'both':'math',name:suggestedName()}; editIndex=-1; showFriendEditor(); }
+function editChar(i){ draft={...ROSTER[i]}; editIndex=i; showFriendEditor(); }
+function showFriendEditor(){ renderEditor(); go('screen-friend'); document.getElementById('screen-friend').scrollTop=0; document.getElementById('friend-title').focus?.(); }
+function closeEditor(){ draft=null; editIndex=-1; document.getElementById('editor-holder').innerHTML=''; }
 function renderEditor(){
   const h=document.getElementById('editor-holder');
-  if(!draft){ h.innerHTML=''; return; }
-  const usedNames=ROSTER.map((c,i)=>i===editIndex?null:c.name);
-  const avail=CUTE_NAMES.filter(n=>!usedNames.includes(n));
-  const start=(namePage*NAMES_PER_PAGE)%Math.max(1,avail.length);
-  let nameChips=avail.slice(start, start+NAMES_PER_PAGE);
-  if(nameChips.length<NAMES_PER_PAGE) nameChips=nameChips.concat(avail.slice(0, NAMES_PER_PAGE-nameChips.length));
+  if(!draft){h.innerHTML='';return;}
   h.innerHTML=`<div class="editor">
-    <h4>Pick an animal</h4>
-    <div class="animal-grid">${ANIMALS.map(a=>`<button class="${a===draft.animal?'on':''}" onclick="setDraft('animal','${a}')">${animalGlyph(a)}</button>`).join('')}</div>
-    <h4>What do they do?</h4>
-    <div class="role-row">
-      <button class="chip ${draft.role==='lead'?'on':''}" onclick="setDraft('role','lead')">${roleIcon('lead')} Lead</button>
-      <button class="chip ${draft.role==='help'?'on':''}" onclick="setDraft('role','help')">${roleIcon('help')} Help</button>
-      <button class="chip ${draft.role==='math'?'on':''}" onclick="setDraft('role','math')">${roleIcon('math')} Math</button>
-      <button class="chip ${draft.role==='read'?'on':''}" onclick="setDraft('role','read')">${roleIcon('read')} Reading</button>
-      <button class="chip ${draft.role==='both'?'on':''}" onclick="setDraft('role','both')">${roleIcon('both')} Both</button>
-    </div>
-    <h4>Name <span style="font-weight:600;font-size:12px;color:var(--sage-dark)">(${avail.length} to choose from)</span></h4>
-    <div class="name-chips">${nameChips.map(n=>`<button class="chip ${draft.name===n?'on':''}" onclick="setDraft('name','${n}')">${esc(n)}</button>`).join('')}</div>
-    <div class="name-row" style="margin-top:8px;">
-      <button class="chip" onclick="moreNames()">${ic('dice')} More names</button>
-      <input class="name-input" id="name-input" placeholder="or type your own" value="${esc(draft.name)}" oninput="typeName(this.value)" maxlength="14">
-    </div>
-    <div class="editor-actions">
-      <button class="btn small green" id="draft-commit" ${draft.name.trim()?'':'disabled'} onclick="commitDraft()">${editIndex>=0?'Save':'Add'}</button>
-      <button class="btn small outline" onclick="cancelEditor()">Cancel</button>
-    </div></div>`;
+    <h2 id="friend-title" tabindex="-1">${editIndex>=0?'Edit friend':'Meet your new friend'}</h2>
+    <div class="friend-preview">${badge(draft,86)}<span id="friend-preview-name">${esc(draft.name)}</span></div>
+    <label class="editor-label" for="name-input">Name</label>
+    <div class="name-row"><input class="name-input" id="name-input" value="${esc(draft.name)}" oninput="typeName(this.value)" maxlength="14" autocomplete="off"><button class="suggest-name" onclick="moreNames()">${ic('dice')} Suggest a name</button></div>
+    <section class="animal-picker" aria-labelledby="animal-picker-title"><h3 id="animal-picker-title">Choose an animal <span id="selected-animal">(${esc(draft.animal)})</span></h3>
+    <div class="animal-grid" role="group" aria-label="Choose an animal" tabindex="0">${ANIMALS.map(a=>`<button class="${a===draft.animal?'on':''}" aria-label="${esc(a)}" aria-pressed="${a===draft.animal}" onclick="setDraft('animal','${a}')">${animalGlyph(a)}<span>${esc(a[0].toUpperCase()+a.slice(1))}</span></button>`).join('')}</div></section>
+    <label class="editor-label" for="friend-role">Their job</label>
+    <div class="job-select"><select id="friend-role" onchange="setDraft('role',this.value)">${['lead','help','guidehelp','math','read','both'].map(role=>`<option value="${role}" ${role===draft.role?'selected':''}>${esc(ROLE_TAG[role])}</option>`).join('')}</select><svg class="job-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    <p class="role-description" id="role-description">${ROLE_DESC[draft.role]}</p>
+    <div class="editor-actions"><button class="btn green" id="draft-commit" ${draft.name.trim()?'':'disabled'} onclick="commitDraft()">Save friend</button><button class="btn outline" onclick="cancelEditor()">Cancel</button></div>
+    ${editIndex>=0?'<button class="remove-friend" onclick="removeChar(editIndex)">Remove from team</button>':''}
+  </div>`;
 }
-function moreNames(){ namePage++; renderEditor(); }
-function setDraft(k,v){ draft[k]=v; renderEditor(); }
-function typeName(v){ draft.name=v; const b=document.getElementById('draft-commit'); if(b){ draft.name.trim()?b.removeAttribute('disabled'):b.setAttribute('disabled',''); } }
-function commitDraft(){ if(!draft.name.trim()) return; const c={animal:draft.animal, role:draft.role, name:draft.name.trim()};
-  if(editIndex>=0) ROSTER[editIndex]=c; else ROSTER.push(c); closeEditor(); renderCharacters(); }
-function cancelEditor(){ closeEditor(); renderCharacters(); }
-function removeChar(i){ ROSTER.splice(i,1); if(editIndex===i) closeEditor(); else if(editIndex>i) editIndex--; renderCharacters(); }
-function resetTeam(){ ROSTER=DEFAULT_ROSTER.map(c=>({...c})); closeEditor(); renderCharacters(); }
-function playTeam(){ if(!teamValid()) return; cancelReward(); saveRoster();
+function moreNames(){ draft.name=suggestedName();document.getElementById('name-input').value=draft.name;typeName(draft.name); }
+function setDraft(k,v){
+  draft[k]=v;
+  if(k==='role'){document.getElementById('role-description').textContent=ROLE_DESC[v];return;}
+  if(k==='animal'){
+    document.querySelector('.friend-preview .cbadge').outerHTML=badge(draft,86);
+    document.getElementById('selected-animal').textContent='('+v+')';
+    document.querySelectorAll('.animal-grid button').forEach(button=>{const selected=button.getAttribute('aria-label')===v;button.classList.toggle('on',selected);button.setAttribute('aria-pressed',String(selected));});
+  }
+}
+function typeName(v){ draft.name=v; document.getElementById('friend-preview-name').textContent=v;const b=document.getElementById('draft-commit');if(b){draft.name.trim()?b.removeAttribute('disabled'):b.setAttribute('disabled','');} }
+function persistTeam(){store.set('acorn-trail-team-draft',ROSTER);if(teamValid())saveRoster();}
+function returnToTeam(){closeEditor();renderCharacters();go('screen-characters');document.querySelector('.team-start').focus?.();}
+function commitDraft(){if(!draft||!draft.name.trim())return;const c={animal:draft.animal,role:draft.role,name:draft.name.trim()};if(editIndex>=0)ROSTER[editIndex]=c;else ROSTER.push(c);persistTeam();returnToTeam();}
+function cancelEditor(){returnToTeam();}
+function removeChar(i){ROSTER.splice(i,1);persistTeam();if(draft&&editIndex!==i){if(editIndex>i)editIndex--;renderEditor();return;}returnToTeam();}
+function resetTeam(){if(!confirm('Replace your team with the four default friends?'))return;ROSTER=DEFAULT_ROSTER.map(c=>({...c}));persistTeam();returnToTeam();}
+function playTeam(){ if(!teamValid()){const status=document.getElementById('team-status');status.classList.add('team-needs-attention');status.setAttribute('role','alert');status.focus?.();status.scrollIntoView?.({block:'center',behavior:SETTINGS.motion?'smooth':'auto'});return;} cancelReward(); saveRoster();
   STICKERS=buildStickers(); pendingUnlocks=[]; basketDot=false;
   acorns=0; themeIndex=0; stopIndex=0; streak=0; current=null; pendingCompletion=false; answered=false; finished=false; for(const k in usedReading) delete usedReading[k]; clearProgress();
   go('screen-story'); }
@@ -2428,7 +2613,7 @@ function applyOfflineUpdate(){
   if(!offlineRegistration?.waiting)return;
   checkpoint();offlineApplyingUpdate=true;offlineRegistration.waiting.postMessage({type:'ACORN_ACTIVATE_UPDATE'});
 }
-window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();offlineInstallPrompt=event;});
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();offlineInstallPrompt=event;const button=document.getElementById('install-game');if(button)button.textContent='Install app';});
 window.addEventListener('online',()=>initOffline());
 window.addEventListener('appinstalled',()=>{offlineInstallPrompt=null;document.getElementById('install-game').textContent='Offline info';});
 if(typeof navigator!=='undefined'&&navigator.serviceWorker){

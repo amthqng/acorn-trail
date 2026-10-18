@@ -47,7 +47,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.getByRole('button',{name:'Edit Biscuit'}).tap();await page.clock.runFor(100);await layout();await capture('team-editor');
     await page.locator('#name-input').fill('Maple');
     await page.locator('#draft-commit').tap();
-    await page.locator('#cc-actions').getByRole('button',{name:'Play',exact:false}).tap();
+    await page.locator('#cc-actions').getByRole('button',{name:/^Start (new )?adventure/}).tap();
     while(await page.evaluate(()=>currentScreenId==='screen-story')){await layout();await page.locator('#story-next').tap();}
     async function capture(stage){
      fs.mkdirSync('artifacts',{recursive:true});
