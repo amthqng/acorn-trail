@@ -1,0 +1,7 @@
+tests/
+artifacts/
+.github/
+QA.md
+.gitignore
+wrangler.jsonc
+.assetsignore
