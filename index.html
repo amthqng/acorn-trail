@@ -1390,22 +1390,22 @@ function stops(first){ return Array.from({length:12},(_,i)=> (i%2===0)?first : (
 const THEMES = [
   { name:'The Sunny Meadow', eyebrow:'Theme 1', scene:'meadow', sub:'Golden grass and sleepy bees.',
     stops:stops('math'), mlevel:1, rtier:0,
-    done:{emoji:'🌼✨', title:'The Meadow is Glowing!', text:'A sweet smell drifts over from rows of apple trees ahead — the Whispering Orchard is next!'} },
+    done:{emoji:'🌼✨', title:'The Meadow is Glowing!', text:'The first lanterns glow, and fireflies follow us toward the Whispering Orchard. The autumn wind has scattered apples along the trail.'} },
   { name:'The Whispering Orchard', eyebrow:'Theme 2', scene:'orchard', sub:'Rows of apple trees whisper hello.',
     stops:stops('read'), mlevel:2, rtier:1,
-    done:{emoji:'🍎✨', title:'The Orchard is Aglow!', text:'Cool mist drifts up ahead. The trail winds down toward the Misty Riverside.'} },
+    done:{emoji:'🍎✨', title:'The Orchard is Aglow!', text:'The orchard lanterns help the friends gather the apples before they roll away. Cool mist curls around the path to the Misty Riverside.'} },
   { name:'The Misty Riverside', eyebrow:'Theme 3', scene:'river', sub:'Rainy mist drifts over the stones.',
     stops:stops('math'), mlevel:2, rtier:2,
-    done:{emoji:'💧✨', title:'The Riverside Shines!', text:'Past the river, orange lights glow between the vines — the Pumpkin Patch awaits!'} },
+    done:{emoji:'💧✨', title:'The Riverside Shines!', text:'The lanterns reveal stepping-stones beneath the mist, and we cross the river together. Warm orange lights flicker ahead at the Pumpkin Patch.'} },
   { name:'The Pumpkin Patch', eyebrow:'Theme 4', scene:'pumpkin', sub:'Carved lanterns glow at dusk.',
     stops:stops('read'), mlevel:3, rtier:3,
-    done:{emoji:'🎃✨', title:'The Patch is Lit!', text:'The path slips into tall amber trees. Deeper woods lie ahead — stay close!'} },
+    done:{emoji:'🎃✨', title:'The Patch is Lit!', text:'The Pumpkin Patch glows again. Beyond the vines, a gust rattles the tall amber trees. We keep our lanterns close as we enter the woods.'} },
   { name:'The Amber Woods', eyebrow:'Theme 5', scene:'woods', sub:'Falling leaves and hooting owls.',
     stops:stops('math'), mlevel:3, rtier:4,
-    done:{emoji:'🍂✨', title:'The Woods are Glowing!', text:'Through the trees, an old stone bridge sparkles under the first stars.'} },
+    done:{emoji:'🍂✨', title:'The Woods are Glowing!', text:'The friends hold their lanterns together against the gusts. Through the trees, an old stone bridge sparkles under the first stars.'} },
   { name:'The Starlit Bridge', eyebrow:'Theme 6', scene:'bridge', sub:'Lanterns sway beneath the moon.',
     stops:stops('read'), mlevel:4, rtier:5,
-    done:{emoji:'🌉✨', title:'The Bridge is Bright!', text:'At the very top of the hill, the Great Oak twinkles. One last climb!'} },
+    done:{emoji:'🌉✨', title:'The Bridge is Bright!', text:'Our lanterns guide everyone safely across the bridge. At the top of the hill, the Great Oak is still dark. One last climb to light the way to the gathering!'} },
   { name:'The Great Oak', eyebrow:'Theme 7 · Finale', scene:'oak', sub:'The Great Oak glows at the hilltop.',
     stops:stops('math'), mlevel:4, rtier:6, done:null }
 ];
@@ -1421,7 +1421,11 @@ const READING = {
     {w:'night',a:'light',o:['now','nest','note']},{w:'frog',a:'log',o:['fish','free','fig']},
     {w:'bell',a:'shell',o:['ball','bird','bump']},{w:'rain',a:'train',o:['run','road','ring']},
     {w:'mouse',a:'house',o:['moss','horse','nest']},{w:'goat',a:'boat',o:['gate','boot','grass']},
-    {w:'sock',a:'rock',o:['soap','stick','sun']},{w:'cup',a:'pup',o:['cap','cop','cat']}
+    {w:'sock',a:'rock',o:['soap','stick','sun']},{w:'cup',a:'pup',o:['cap','cop','cat']},
+    {w:'kite',a:'bite',o:['kit','coat','king']},{w:'hill',a:'still',o:['help','hole','hand']},
+    {w:'play',a:'stay',o:['plane','place','plum']},{w:'green',a:'screen',o:['grain','grown','great']},
+    {w:'hand',a:'sand',o:['hint','head','home']},{w:'light',a:'kite',o:['late','lot','let']},
+    {w:'trail',a:'snail',o:['trial','tree','train']},{w:'bake',a:'shake',o:['back','book','brick']}
   ],
   baby:[
     {q:'What do we call a baby dog?',a:'puppy',o:['kitten','pony','cub']},
@@ -1435,7 +1439,10 @@ const READING = {
     {q:'What do we call a baby duck?',a:'duckling',o:['calf','lamb','piglet']},
     {q:'What do we call a baby goat?',a:'kid',o:['colt','chick','puppy']},
     {q:'What do we call a baby pig?',a:'piglet',o:['foal','fawn','kitten']},
-    {q:'What do we call a baby lion?',a:'cub',o:['duckling','calf','chick']}
+    {q:'What do we call a baby lion?',a:'cub',o:['duckling','calf','chick']},
+    {q:'What do we call a baby rabbit?',a:'kit',o:['foal','lamb','cub']},{q:'What do we call a baby kangaroo?',a:'joey',o:['chick','calf','pup']},
+    {q:'What do we call a baby fox?',a:'kit',o:['lamb','calf','duckling']},{q:'What do we call a baby owl?',a:'owlet',o:['fawn','piglet','foal']},
+    {q:'What do we call a baby frog?',a:'tadpole',o:['kitten','calf','chick']},{q:'What do we call a baby swan?',a:'cygnet',o:['joey','cub','kid']}
   ],
   synonym:[
     {w:'kind',a:'caring',o:['mean','cold','noisy']},{w:'finish',a:'end',o:['begin','build','find']},
@@ -1444,14 +1451,22 @@ const READING = {
     {w:'fast',a:'quick',o:['slow','loud','warm']},{w:'little',a:'small',o:['huge','bright','heavy']},
     {w:'cold',a:'chilly',o:['warm','sunny','loud']},{w:'begin',a:'start',o:['stop','end','close']},
     {w:'glad',a:'cheerful',o:['angry','sleepy','empty']},{w:'shout',a:'yell',o:['whisper','walk','sit']},
-    {w:'pretty',a:'lovely',o:['ugly','dark','sour']},{w:'smart',a:'clever',o:['silly','slow','tired']}
+    {w:'pretty',a:'lovely',o:['ugly','dark','sour']},{w:'smart',a:'clever',o:['silly','slow','tired']},
+    {w:'brave',a:'courageous',o:['scared','sleepy','careless']},{w:'glance',a:'peek',o:['stare','forget','whisper']},
+    {w:'shiny',a:'bright',o:['dusty','dull','quiet']},{w:'huge',a:'enormous',o:['tiny','narrow','gentle']},
+    {w:'reply',a:'answer',o:['ask','hide','leave']},{w:'assist',a:'help',o:['hinder','watch','wait']},
+    {w:'clever',a:'wise',o:['foolish','noisy','slow']},{w:'calm',a:'peaceful',o:['worried','wild','rushed']}
   ],
   plural:[
     {w:'box',a:'boxes',o:['boxs','boxen','box']},{w:'baby',a:'babies',o:['babys','babyes','baby']},
     {w:'leaf',a:'leaves',o:['leafs','leafes','leaf']},{w:'mouse',a:'mice',o:['mouses','mouse','mices']},
     {w:'foot',a:'feet',o:['foots','feets','foot']},{w:'child',a:'children',o:['childs','childes','childrens']},
     {w:'wolf',a:'wolves',o:['wolfs','wolfes','wolf']},{w:'penny',a:'pennies',o:['pennys','penny','pennyes']},
-    {w:'tooth',a:'teeth',o:['tooths','teeths','toothes']},{w:'goose',a:'geese',o:['gooses','goosen','geeses']}
+    {w:'tooth',a:'teeth',o:['tooths','teeths','toothes']},{w:'goose',a:'geese',o:['gooses','goosen','geeses']},
+    {w:'bus',a:'buses',o:['busses','busies','bus']},{w:'dish',a:'dishes',o:['dishs','dishies','dish']},
+    {w:'berry',a:'berries',o:['berrys','berryes','berry']},{w:'shelf',a:'shelves',o:['shelfs','shelfes','shelf']},
+    {w:'person',a:'people',o:['persons','peoples','persones']},{w:'tomato',a:'tomatoes',o:['tomatos','tomatoies','tomato']},
+    {w:'potato',a:'potatoes',o:['potatos','potatoies','potato']},{w:'brush',a:'brushes',o:['brushs','brushies','brush']}
   ],
   antonym:[
     {w:'near',a:'far',o:['close','next','beside']},{w:'early',a:'late',o:['soon','first','quick']},
@@ -1460,14 +1475,22 @@ const READING = {
     {w:'day',a:'night',o:['noon','sun','morning']},{w:'big',a:'small',o:['tall','wide','huge']},
     {w:'happy',a:'sad',o:['glad','merry','silly']},{w:'open',a:'closed',o:['door','wide','empty']},
     {w:'fast',a:'slow',o:['quick','speedy','busy']},{w:'full',a:'empty',o:['heavy','round','deep']},
-    {w:'wet',a:'dry',o:['damp','rain','cool']},{w:'loud',a:'quiet',o:['big','bright','busy']}
+    {w:'wet',a:'dry',o:['damp','rain','cool']},{w:'loud',a:'quiet',o:['big','bright','busy']},
+    {w:'inside',a:'outside',o:['within','indoors','nearby']},{w:'smooth',a:'rough',o:['soft','shiny','flat']},
+    {w:'borrow',a:'lend',o:['keep','take','find']},{w:'arrive',a:'leave',o:['enter','reach','come']},
+    {w:'ancient',a:'modern',o:['old','broken','historic']},{w:'generous',a:'selfish',o:['giving','kind','helpful']},
+    {w:'victory',a:'defeat',o:['success','prize','win']},{w:'remember',a:'forget',o:['recall','notice','learn']}
   ],
   compound:[
     {p:'rain',a:'bow',o:['ball','sun','tree'],word:'rainbow'},{p:'sun',a:'flower',o:['moon','apple','river'],word:'sunflower'},
     {p:'camp',a:'fire',o:['water','leaf','star'],word:'campfire'},{p:'butter',a:'fly',o:['sock','rock','chair'],word:'butterfly'},
     {p:'snow',a:'flake',o:['sock','cup','apple'],word:'snowflake'},{p:'tree',a:'house',o:['sock','cup','spoon'],word:'treehouse'},
     {p:'moon',a:'light',o:['dark','star','sky'],word:'moonlight'},{p:'foot',a:'print',o:['cake','cup','apple'],word:'footprint'},
-    {p:'rain',a:'coat',o:['cake','chair','spoon'],word:'raincoat'},{p:'star',a:'fish',o:['sock','apple','cup'],word:'starfish'}
+    {p:'rain',a:'coat',o:['cake','chair','spoon'],word:'raincoat'},{p:'star',a:'fish',o:['sock','apple','cup'],word:'starfish'},
+    {p:'tooth',a:'brush',o:['broom','paste','soap'],word:'toothbrush'},{p:'mail',a:'box',o:['bag','letter','road'],word:'mailbox'},
+    {p:'bed',a:'room',o:['chair','sleep','lamp'],word:'bedroom'},{p:'play',a:'ground',o:['game','thing','house'],word:'playground'},
+    {p:'cup',a:'cake',o:['bread','plate','bake'],word:'cupcake'},{p:'sea',a:'shell',o:['shore','sand','weed'],word:'seashell'},
+    {p:'hair',a:'brush',o:['comb','cut','soap'],word:'hairbrush'},{p:'day',a:'dream',o:['light','time','sun'],word:'daydream'}
   ],
   homophone:[
     {s:'The wind blew ___ the trees.',a:'through',o:['threw','three','true']},
@@ -1478,7 +1501,11 @@ const READING = {
     {s:'Please sit right ___.',a:'here',o:['hear','hair','heir']},
     {s:'The dog wagged its ___.',a:'tail',o:['tale','trail','pail']},
     {s:'They lost ___ way home.',a:'their',o:['there','then','theyre']},
-    {s:'The knight rode all ___.',a:'night',o:['knight','neat','kite']}
+    {s:'The knight rode all ___.',a:'night',o:['knight','neat','kite']},
+    {s:'We ate ___ by the fire.',a:'steak',o:['stake','stick','stack'],e:'Steak is food; a stake is a pointed piece of wood.'},{s:'The trail led ___ the old oak.',a:'to',o:['too','two','top'],e:'To tells where the trail led; too means also, and two is a number.'},
+    {s:'The ___ is shining in the sky.',a:'sun',o:['son','soon','sand'],e:'The sun is the bright star we see in the daytime.'},{s:'The ___ has bright petals.',a:'flower',o:['flour','floor','flown'],e:'A flower is a plant; flour is used for baking.'},
+    {s:'We can ___ the boats on the lake.',a:'see',o:['sea','say','saw'],e:'See means to look at something; a sea is a large body of water.'},{s:'Please ___ by the gate.',a:'wait',o:['weight','wet','white'],e:'Wait means to stay until it is time; weight tells how heavy something is.'},
+    {s:'The ___ was soft and sandy.',a:'beach',o:['beech','batch','bench'],e:'A beach is sandy land beside water; a beech is a kind of tree.'},{s:'She sat on the ___ to rest.',a:'stair',o:['stare','star','start'],e:'A stair is one step in a set of steps; stare means to look for a long time.'}
   ],
   contraction:[
     {w:'do not',a:"don't",o:["dont'","donot","do'nt"]},
@@ -1499,7 +1526,11 @@ const READING = {
     {w:'rewrite',a:'write again',o:['write first','stop writing','read it']},
     {w:'disappear',a:'go out of sight',o:['appear again','come closer','stay still']},
     {w:'refill',a:'fill again',o:['empty it','fill first','half full']},
-    {w:'untie',a:'undo a knot',o:['tie again','tie tight','a new knot']}
+    {w:'untie',a:'undo a knot',o:['tie again','tie tight','a new knot']},
+    {w:'unpack',a:'take things out',o:['pack again','put things in','carry a bag']},{w:'preview',a:'see before',o:['see again','look behind','look away']},
+    {w:'dislike',a:'not like',o:['like very much','like again','like before']},{w:'return',a:'come back',o:['go away','turn around','leave first']},
+    {w:'unroll',a:'open by rolling out',o:['roll up','fold small','tear apart']},{w:'preschool',a:'school before regular school',o:['school again','school at night','school at home']},
+    {w:'disagree',a:'not have the same idea',o:['agree fully','think alike','ask a question']},{w:'rebuild',a:'build again',o:['build first','knock down','build halfway']}
   ],
   meaning:[
     {s:'The path was so DIM we could barely see.',w:'DIM',a:'dark',o:['bright','loud','wet']},
@@ -1513,7 +1544,15 @@ const READING = {
     {s:'Tansy was PATIENT and waited calmly for her turn.',w:'PATIENT',a:'able to wait calmly',o:['in a hurry','very noisy','ready to sleep']},
     {s:'The tent was TIDY, with everything in its place.',w:'TIDY',a:'neat',o:['messy','dark','crowded']},
     {s:'After the light rain, the grass was DAMP.',w:'DAMP',a:'a little wet',o:['very dry','frozen solid','full of dust']},
-    {s:'Biscuit felt PROUD after finishing his first trail.',w:'PROUD',a:'pleased with what he did',o:['afraid to try','ready to cry','too sleepy to walk']}
+    {s:'Biscuit felt PROUD after finishing his first trail.',w:'PROUD',a:'pleased with what he did',o:['afraid to try','ready to cry','too sleepy to walk']},
+    {s:'The squirrel darted quickly between the trees.',w:'DARTED',a:'moved suddenly and fast',o:['slept for a long time','walked slowly','stood very still']},
+    {s:'A gentle breeze rustled the dry leaves.',w:'RUSTLED',a:'made a soft shuffling sound',o:['made a bright light','grew much taller','felt very warm']},
+    {s:'The friends were eager to see the surprise.',w:'EAGER',a:'excited and ready',o:['too tired to move','afraid of the dark','not sure what to do']},
+    {s:'The path twisted around the old oak.',w:'TWISTED',a:'turned this way and that',o:['went in a straight line','ended suddenly','became very wide']},
+    {s:'Mina tucked the acorn safely into her pocket.',w:'TUCKED',a:'put carefully into a small space',o:['threw high in the air','left out in the rain','painted a bright color']},
+    {s:'The lantern flickered in the strong wind.',w:'FLICKERED',a:'shone unsteadily',o:['made a loud noise','grew roots','fell into the river']},
+    {s:'The friends gathered beneath the tall tree.',w:'GATHERED',a:'came together',o:['ran far away','hid alone','climbed to the top']},
+    {s:'The puppy was cautious near the rushing stream.',w:'CAUTIOUS',a:'careful to avoid danger',o:['eager to jump in','very loud','ready to fall asleep']}
   ],
   fillblank:[
     {s:'It started to rain, so we opened our ___.',a:'umbrella',o:['sandwich','pillow','crayon']},
@@ -1531,7 +1570,11 @@ const READING = {
     {s:'She used a ___ to stir the warm soup.',a:'spoon',o:['sock','stone','leaf'],e:'A spoon is a tool we use to stir soup.'},
     {s:'We checked the ___ to find the path to camp.',a:'map',o:['cup','blanket','apple'],e:'A map shows where paths lead.'},
     {s:'His hands were cold, so he put on his ___.',a:'gloves',o:['boots','hat','scarf'],e:'Gloves cover our hands and help keep them warm.'},
-    {s:'Tiny ___ twinkled in the dark night sky.',a:'stars',o:['chairs','baskets','boots'],e:'Stars look like twinkling lights in the night sky.'}
+    {s:'Please be ___ so the baby can nap.',a:'quiet',o:['purple','square','seven']},
+    {s:'The puppy wagged its tail when it saw its ___.',a:'friend',o:['spoon','cloud','sock'],e:'A friend is someone the puppy knows and likes.'},{s:'We put our picnic lunch in a ___.',a:'basket',o:['puddle','pillow','window'],e:'A basket can hold food for a picnic.'},
+    {s:'The bird sat in its ___ high in the tree.',a:'nest',o:['boot','bowl','coat'],e:'A nest is where a bird can rest and care for its babies.'},{s:'After the rain, we saw a ___ in the sky.',a:'rainbow',o:['sandwich','button','blanket'],e:'A rainbow can appear in the sky after rain.'},
+    {s:'We wear a ___ on our head to stay warm.',a:'hat',o:['mittens','scarf','boots'],e:'A hat covers our head.'},{s:'The friends followed the ___ to find the campsite.',a:'map',o:['spoon','pillow','sock'],e:'A map shows places and paths.'},
+    {s:'At night, the ___ twinkled above the hill.',a:'stars',o:['stones','shoes','leaves'],e:'Stars are bright lights in the night sky.'},{s:'The kitten was sleepy, so it curled up on the ___.',a:'blanket',o:['river','ladder','lantern'],e:'A blanket is soft and cozy to rest on.'}
   ],
   comp:[
     {p:'Clover packed a blanket and a lantern for camp. When the evening turned cold, she wrapped the blanket around her shoulders.',q:'Why did Clover use the blanket?',a:'to keep warm',o:['to catch fish','to carry water','to light the path'],e:'The evening turned cold, so she wrapped the blanket around her shoulders.'},
@@ -1557,7 +1600,15 @@ const READING = {
     {p:'Poppy tied a red ribbon to her bag. When she saw many bags beside the tent, the ribbon helped her find her own.',q:'Why did Poppy tie a ribbon to her bag?',a:'to find her own bag',o:['to carry water','to feed the birds','to warm the tent'],e:'The red ribbon helped Poppy recognize her own bag.'},
     {p:'Tansy saw paw prints in the mud. She followed them along the path and found her friends beside their tent.',q:'What showed Tansy where her friends had walked?',a:'paw prints',o:['a rainbow','a lantern','an apple'],e:'Tansy followed the paw prints in the mud to her friends.'},
     {p:'Nutmeg hung her wet scarf on a sunny branch. After lunch, she came back and found that the scarf was dry.',q:'Where did Nutmeg hang her scarf?',a:'on a sunny branch',o:['under the river','inside a basket','beside the fire'],e:'Nutmeg hung her wet scarf on a sunny branch.'},
-    {p:'A fallen branch blocked the bridge. Maple took the side path around it and reached camp safely.',q:'Why did Maple take the side path?',a:'the bridge was blocked',o:['camp was closed','it was time to sleep','her bag was missing'],e:'A fallen branch blocked the bridge, so Maple used the side path.'}
+    {p:'A fallen branch blocked the bridge. Maple took the side path around it and reached camp safely.',q:'Why did Maple take the side path?',a:'the bridge was blocked',o:['camp was closed','it was time to sleep','her bag was missing'],e:'A fallen branch blocked the bridge, so Maple used the side path.'},
+    {p:'Mochi noticed that dark clouds were moving over the hill. She helped everyone pack the picnic before the rain began.',q:'Why did Mochi help pack the picnic?',a:'rain was coming',o:['the food was gone','the hill was too steep','the picnic was over'],e:'Dark clouds were moving in, so Mochi packed before it rained.'},
+    {p:'Willow heard a faint bell near the old gate. She followed the sound and found a small goat waiting beside the path.',q:'What helped Willow find the goat?',a:'the bell sound',o:['a trail of apples','a bright red hat','a map in the grass'],e:'Willow followed the faint sound of a bell.'},
+    {p:'Hazel had three blue buttons and two yellow buttons. She sewed all five onto the blanket to make a bright pattern.',q:'How many buttons did Hazel sew on?',a:'five',o:['three','two','six'],e:'Hazel used three blue buttons and two yellow buttons: five in all.'},
+    {p:'Rain began to fall while Pip crossed the meadow. He opened his umbrella, but he kept the map tucked safely inside his coat.',q:'Where did Pip keep the map?',a:'inside his coat',o:['under a rock','in the river','on the umbrella'],e:'Pip tucked the map inside his coat to keep it safe.'},
+    {p:'Aster found a narrow path behind the waterfall. She waited for her friends, then led them through one at a time.',q:'How did Aster help everyone pass?',a:'she led them one at a time',o:['she ran ahead alone','she moved the waterfall','she closed the path'],e:'Aster waited and guided the friends through one at a time.'},
+    {p:'The lantern oil was almost gone. Clover shared the last small bottle with the group, so they could light the final post together.',q:'Why did Clover share the oil?',a:'to light the final post together',o:['to wash the bottles','to paint the post','to fill the river'],e:'Sharing the oil let the friends light the last post together.'},
+    {p:'The owl dropped a feather near the bridge. Nutmeg picked it up and returned it when the owl flew back to look for it.',q:'What did Nutmeg do with the feather?',a:'returned it to the owl',o:['put it in her nest','left it by the river','used it as a map'],e:'Nutmeg gave the feather back to the owl who was looking for it.'},
+    {p:'At the top of the hill, the friends saw that the Great Oak was dark. They placed their glowing lanterns around its roots, and the branches began to shine.',q:'What made the Great Oak begin to shine?',a:'the glowing lanterns',o:['the morning sun','a bright river','a flock of birds'],e:'The friends placed glowing lanterns around the roots of the Great Oak.'}
   ]
 };
 /* difficulty tiers 0..6 (0 easiest) */
@@ -1579,7 +1630,7 @@ function loadVariety(){
   for(const key of Object.keys(raw.bags||{}).slice(-48))if(/^(read|math|entry|story|noun):[a-z0-9|_-]{1,150}$/.test(key)&&Array.isArray(raw.bags[key]))out.bags[key]=[...new Set(raw.bags[key].filter(value))].slice(0,32);
   for(const key of Object.keys(raw.last||{}).slice(-48))if(/^(read|math|entry|story|noun):[a-z0-9|_-]{1,150}$/.test(key)&&value(raw.last[key]))out.last[key]=raw.last[key];
   for(const cat of Object.keys(READING))out.reading[cat]=Array.isArray(raw.reading?.[cat])?[...new Set(raw.reading[cat].filter(i=>Number.isInteger(i)&&i>=0&&i<READING[cat].length))]:[];
-  if(Array.isArray(raw.recentMath))out.recentMath=raw.recentMath.filter(x=>typeof x==='string'&&x.length<=180).slice(-20);
+  if(Array.isArray(raw.recentMath))out.recentMath=raw.recentMath.filter(x=>typeof x==='string'&&x.length<=180).slice(-64);
   return out;
 }
 let variety=loadVariety();
@@ -1645,7 +1696,7 @@ function readingExplanation(cat,d){
     return `The beginning “${prefix}-” means ${meaning}. So “${d.w}” means ${d.a}.`;
   }
   if(cat==='homophone'){
-    const meaning={through:'moving from one side to the other',threw:'sent something through the air',two:'the number 2',too:'also',hear:'listen to a sound',here:'in this place',tail:'the part at the back of an animal',their:'belonging to them',night:'the dark part of the day'}[d.a];
+    const meaning=d.e||{through:'moving from one side to the other',threw:'sent something through the air',two:'the number 2',too:'also',hear:'listen to a sound',here:'in this place',tail:'the part at the back of an animal',their:'belonging to them',night:'the dark part of the day'}[d.a]||'the word that makes sense in this sentence';
     return `${d.s.replace('___',d.a)} “${d.a}” means ${meaning}. Words can sound alike but have different meanings.`;
   }
   if(cat==='fillblank'){
@@ -1675,7 +1726,7 @@ function numChoices(ans){
   let k=ans+4; while(set.size<3){ if(k>0&&k!==ans) set.add(k); k++; }
   return shuffle([ans,...set]);
 }
-const NOUNS=['acorns','apples','lanterns','leaves','berries','pebbles'];
+const NOUNS=['acorns','apples','lanterns','leaves','berries','pebbles','pinecones','buttons','shells','flowers','stars','cookies'];
 function noun(){ return NOUNS[Math.floor(Math.random()*NOUNS.length)]; }
 function mathOffset(){ return SETTINGS.math==='g1'?-1:SETTINGS.math==='g3'?1:0; }
 function mathOperationAvailable(op,grade=SETTINGS.math){
@@ -1710,7 +1761,7 @@ function genMath(theme){
     if(age<oldest){oldest=age;selected=candidate;}
   }
   const key=mathQuestionKey(selected);
-  variety.recentMath=variety.recentMath.filter(x=>x!==key);variety.recentMath.push(key);variety.recentMath=variety.recentMath.slice(-20);
+  variety.recentMath=variety.recentMath.filter(x=>x!==key);variety.recentMath.push(key);variety.recentMath=variety.recentMath.slice(-64);
   saveVariety();return selected;
 }
 function mathQuestionKey(q){
@@ -1782,7 +1833,14 @@ function mathStory(name,a,b,n,takeAway){
     `${name} collected ${a} ${n}. After sharing ${b}, how many did ${name} have left?`,
     `There are ${a} ${n} beside the tent. The friends carry ${b} away. How many remain?`,
     `A cart brought ${a} ${n} to camp. The friends used ${b}. How many are still in the cart?`,
-    `${name} had ${a} ${n} in a basket and left ${b} at camp. How many are in the basket now?`
+    `${name} had ${a} ${n} in a basket and left ${b} at camp. How many are in the basket now?`,
+    `There were ${a} ${n} by the river. The wind carried ${b} away. How many stayed?`,
+    `${name} picked ${a} ${n} and shared ${b}. How many were not shared?`,
+    `The basket held ${a} ${n}. The friends used ${b} for lunch. How many remain?`,
+    `A branch had ${a} leaves. The breeze blew off ${b}. How many are still there?`,
+    `There were ${a} ${n} in a basket. The campers packed ${b}. How many were left?`,
+    `The group made ${a} lanterns. They hung ${b} along the trail. How many were not hung?`,
+    `${name} had ${a} trail tokens and gave ${b} to a friend. How many tokens remain?`
   ]:[
     `${name} gathered ${a} ${n}, then found ${b} more. How many ${n} in all?`,
     `One basket has ${a} ${n}, and another has ${b}. How many ${n} are in both baskets?`,
@@ -1791,7 +1849,14 @@ function mathStory(name,a,b,n,takeAway){
     `${name} has ${a} ${n}. A friend gives ${name} ${b} more. How many does ${name} have now?`,
     `The friends put ${a} ${n} into a bag, then add ${b} more. How many are in the bag?`,
     `There are ${a} ${n} on one side of the path and ${b} on the other. How many are there in all?`,
-    `A cart holds ${a} ${n}. The friends load ${b} more. How many ${n} does the cart hold now?`
+    `A cart holds ${a} ${n}. The friends load ${b} more. How many ${n} does the cart hold now?`,
+    `The meadow has ${a} ${n}. The orchard has ${b}. How many ${n} are there altogether?`,
+    `At the picnic, ${a} ${n} were ready. A friend brought ${b} more. How many are ready now?`,
+    `A trail basket held ${a} ${n}. The group added ${b}. How many are in the basket?`,
+    `${name} found ${a} ${n} by the stream and ${b} by the bridge. How many were found?`,
+    `There were ${a} ${n} near the oak. The friends gathered ${b} more. How many now?`,
+    `One camper collected ${a} ${n} and another collected ${b}. How many did they collect together?`,
+    `The friends counted ${a} ${n} before lunch and ${b} after lunch. How many in all?`
   ]);
 }
 function mathExplanation(op,a,b,ans){
@@ -1853,15 +1918,21 @@ const REGION_TASKS={
   bridge:{order:'Arrange the bridge lantern labels.',match:'Match the word cards beneath the stars.'},
   oak:{order:'Arrange the gathering table labels.',match:'Match the word cards for the Great Oak gathering.'}
 };
-const MATCH_INSTRUCTIONS={rhyme:'Match words with the same ending sound.',baby:'Match each animal with its baby name.',synonym:'Match words with similar meanings.',plural:'Match one with more than one.',antonym:'Match each word with its opposite.',contraction:'Match the words with their short form.',prefix:'Match each word with its meaning.'};
+const MATCH_INSTRUCTIONS={rhyme:'Match words with the same ending sound.',baby:'Match each animal with its baby name.',synonym:'Match words with similar meanings.',plural:'Match one with more than one.',antonym:'Match each word with its opposite.',compound:'Match each word part with the part that completes it.',homophone:'Match each sentence with the word that completes it.',contraction:'Match the words with their short form.',prefix:'Match each word with its meaning.',meaning:'Match each word with its meaning.',fillblank:'Match each sentence with the word that completes it.'};
 function matchingGroup(cat,d){
   if(cat==='rhyme')return d.w==='goat'?'boat':d.w;
   if(cat==='synonym'&&['happy','glad'].includes(d.w))return 'happy';
   return d.a;
 }
-function matchingLeft(cat,d){return cat==='baby'?d.q.replace('What do we call a baby ','').replace('?',''):d.w;}
+function matchingLeft(cat,d){
+  if(cat==='baby')return d.q.replace('What do we call a baby ','').replace('?','');
+  if(cat==='compound')return d.p;
+  if(cat==='meaning')return d.w;
+  if(cat==='fillblank'||cat==='homophone')return d.s;
+  return d.w;
+}
 function makeTrailActivity(q,theme,stop){
-  if(stop!==4&&stop!==5)return q;
+  if(![2,5,8,11].includes(stop))return q;
   if(q.kind==='math'){
     const type={addition:'add',subtraction:'sub',multiplication:'mult',division:'div'}[q.skill];
     if(!type)return q;
@@ -1872,7 +1943,7 @@ function makeTrailActivity(q,theme,stop){
     }
     if(cards.length<count)return q;
     for(const card of cards.slice(1)){const key=mathQuestionKey(card);variety.recentMath=variety.recentMath.filter(k=>k!==key);variety.recentMath.push(key);}
-    variety.recentMath=variety.recentMath.slice(-20);saveVariety();
+    variety.recentMath=variety.recentMath.slice(-64);saveVariety();
     const mixed=shuffle(cards),choices=mixed.map(c=>c.prompt),cardValues=mixed.map(c=>c.answer);
     const sequence=mixed.map((_,i)=>i).sort((a,b)=>cardValues[a]-cardValues[b]);
     return {...q,format:'order',prompt:REGION_TASKS[theme.scene].order,sub:'Solve each card. Tap from the smallest answer to the largest.',choices,answer:choices[sequence[0]],cardValues,sequence,activityState:{done:[],selected:null},hint:'Solve each number card, then compare the answers. Start with the smallest.',explanation:cards.sort((a,b)=>a.answer-b.answer).map(c=>c.prompt+' = '+c.answer).join('; ')+'. These answers go from smallest to largest.'};

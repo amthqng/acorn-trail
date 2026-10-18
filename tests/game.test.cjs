@@ -32,6 +32,13 @@ function boot(initial={}){
  return {ctx,data,timers,eval(code){return vm.runInContext(code,ctx,{timeout:10000})}};
 }
 test('embedded script parses and initializes offline',()=>{const b=boot();assert.equal(b.eval('typeof startNextStop'),'function')});
+test('reading banks are substantially expanded while low-tier fill-ins stay child-readable',()=>{
+ const b=boot();
+ const metrics=JSON.parse(b.eval("JSON.stringify({total:Object.values(READING).reduce((n,bank)=>n+bank.length,0),banks:Object.fromEntries(Object.entries(READING).map(([cat,bank])=>[cat,bank.length])),bad:Object.entries(READING).flatMap(([cat,bank])=>bank.map((d,i)=>({cat,i,d}))).filter(x=>(x.cat==='fillblank'||x.cat==='homophone')&&!x.d.s.includes('___'))})"));
+ assert.equal(metrics.total,234,`reading bank should include the expanded grade-level items`);
+ assert.deepEqual(metrics.bad,[]);
+ assert.ok(metrics.banks.comp>=24);assert.ok(metrics.banks.rhyme>=26);assert.ok(metrics.banks.fillblank>=24);
+});
 test('reading banks have distinct choices and correct answers',()=>{
  const b=boot();
  const issues=JSON.parse(b.eval(`JSON.stringify(Object.entries(READING).flatMap(([cat,bank])=>bank.map((d,i)=>({cat,i,q:buildReading(cat,d)}))).filter(x=>!validQuestion(x.q)))`));
@@ -136,24 +143,47 @@ test('both restart paths clear stale answers and used reading history',()=>{
 
 test('all 84 stops advance across seven regions to the finale',()=>{
  const b=boot();
- b.eval("SETTINGS.sound=false;pendingUnlocks=[];acorns=0;themeIndex=0;stopIndex=0");
+ seeded(b,123);b.eval("SETTINGS.sound=false;pendingUnlocks=[];acorns=0;themeIndex=0;stopIndex=0");
+ let activityCount=0;const activitiesPerRegion=[];
  for(let region=0;region<7;region++){
+  let regionActivities=0;
   assert.equal(b.eval('themeIndex'),region);
   for(let stop=0;stop<12;stop++){
    assert.equal(b.eval('stopIndex'),stop);
    b.eval('startNextStop()');
    assert.equal(b.eval('validQuestion(current)'),true);
+   if(b.eval('Boolean(current.format)')){activityCount++;regionActivities++;}
    assert.equal(b.eval('current.kind'),b.eval('THEMES[themeIndex].stops[stopIndex]'));
    b.eval('acorns++;proceed()');
   }
+  activitiesPerRegion.push(regionActivities);
   if(region<6){
    assert.equal(b.eval('currentScreenId'),'screen-transition');
    b.eval('advanceTheme()');
   }
  }
  assert.equal(b.eval('finished'),true);
+ assert.ok(activityCount>=18,`expected regular hands-on activity, got ${activityCount}`);
+ assert.ok(activitiesPerRegion.every(n=>n>=2),`each campsite should have multiple activities: ${activitiesPerRegion}`);
  assert.equal(b.eval('acorns'),84);
  assert.equal(b.eval('loadProgress()'),null);
+});
+test('full trails avoid repeating exact math questions across grades',()=>{
+ for(const [grade,seed] of [['g1',164],['g2',271],['g3',398]]){
+  const b=boot();seeded(b,seed);b.eval(`SETTINGS.math='${grade}';SETTINGS.reading='${grade}';SETTINGS.sound=false;pendingUnlocks=[];acorns=0;themeIndex=0;stopIndex=0`);
+  const seen=new Set();
+  for(let region=0;region<7;region++){
+   for(let stop=0;stop<12;stop++){
+    b.eval('startNextStop()');
+    if(b.eval("current.kind==='math'")){
+     const keys=JSON.parse(b.eval('JSON.stringify(current.format?current.choices.map((prompt,i)=>mathQuestionKey({skill:current.skill,prompt,answer:current.cardValues[i]})):[mathQuestionKey(current)])'));
+     for(const key of keys){assert.equal(seen.has(key),false,`${grade} repeated ${key} in one trail`);seen.add(key);}
+    }
+    b.eval('proceed()');
+   }
+   if(region<6)b.eval('advanceTheme()');
+  }
+ }
 });
 test('resuming a completed answer advances exactly one stop',()=>{
  const b=boot();
@@ -337,7 +367,7 @@ test('math story variations preserve the stated operation and quantities',()=>{
  const b=boot();
  for(const takeAway of [false,true]){
   const prompts=JSON.parse(b.eval('JSON.stringify(Array.from({length:100},()=>mathStory("Clover",24,8,"apples",'+takeAway+')))'));
-  assert.equal(new Set(prompts).size,8);for(const p of prompts){assert.match(p,/24/);assert.match(p,/8/);assert.match(p,/apples/);}
+  assert.equal(new Set(prompts).size,15);for(const p of prompts){assert.match(p,/24/);assert.match(p,/8/);}
  }
 });
 
@@ -554,7 +584,7 @@ test('tap activities stay within scheduled stops, grades and enabled operations'
 });
 function activityBoot(format){
  const b=boot();b.eval("SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.explanations=true;SETTINGS.reveal=false");
- if(format==='order')b.eval("themeIndex=0;stopIndex=4;SETTINGS.ops={add:true,sub:false,mul:false,div:false,word:false};startNextStop()");
+ if(format==='order')b.eval("themeIndex=0;stopIndex=2;SETTINGS.ops={add:true,sub:false,mul:false,div:false,word:false};startNextStop()");
  else b.eval("themeIndex=0;stopIndex=5;const q=buildReading('rhyme',READING.rhyme[0]);q.readingId='rhyme:0';current=makeTrailActivity(q,THEMES[0],5);current.hostChar=ROSTER[1];current.helper=ROSTER[3];loadChallenge(current);saveProgress()");
  return b;
 }
@@ -575,7 +605,7 @@ test('partial ordering saves exact cards, supports undo and awards only once at 
  c.eval('SETTINGS.explanations=true;undoOrder()');assert.equal(c.eval('current.activityState.done.length'),0);
  solveActivity(c);c.eval("answerActivity(document.createElement('button'),0);continueAfterReview()");
  for(let i=0;i<30&&c.eval('currentScreenId')==='screen-sticker-unlock';i++)c.eval('unlockContinue()');
- assert.equal(c.eval('acorns'),1);assert.equal(c.eval('learning.math.completed'),1);assert.equal(c.eval('learning.math.wrong'),1);assert.equal(c.eval('stopIndex'),5);
+ assert.equal(c.eval('acorns'),1);assert.equal(c.eval('learning.math.completed'),1);assert.equal(c.eval('learning.math.wrong'),1);assert.equal(c.eval('stopIndex'),3);
 });
 test('matching requires both cards, retains solved pairs and selection on resume',()=>{
  const b=activityBoot('match');
@@ -618,7 +648,7 @@ test('ordering remembers every displayed equation and bounded retries tolerate c
  const b=activityBoot('order');
  assert.equal(b.eval("current.choices.every((prompt,i)=>variety.recentMath.includes(mathQuestionKey({skill:current.skill,prompt,answer:current.cardValues[i]})))"),true);
  b.eval('const savedRandom=Math.random;Math.random=()=>0.5');
- assert.equal(b.eval("validQuestion(makeTrailActivity(genMath(THEMES[0]),THEMES[0],4))"),true);
+ assert.equal(b.eval("validQuestion(makeTrailActivity(genMath(THEMES[0]),THEMES[0],2))"),true);
  b.eval('Math.random=savedRandom');
 });
 
