@@ -462,7 +462,7 @@ test('question history and shuffled selection survive reload and replay',()=>{
  c.eval('confirmReset()');assert.equal(c.eval('Object.keys(variety.reading).length'),0);assert.equal(c.data.has('acorn-trail-variety'),false);
 });
 test('math skills use shuffled coverage and equivalent recent equations are avoided',()=>{
- const b=boot();seeded(b,19);
+ const b=boot();seeded(b,19);b.eval("SETTINGS.math='g3'");
  const q=JSON.parse(b.eval('JSON.stringify(Array.from({length:120},()=>genMath(THEMES[6])))'));
  for(let i=0;i<q.length;i+=6)assert.equal(new Set(q.slice(i,i+6).map(x=>x.skill)).size,6);
  const keys=q.map(x=>b.eval('mathQuestionKey('+JSON.stringify(x)+')'));
