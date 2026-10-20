@@ -151,8 +151,9 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
         assert.equal(await page.evaluate(k=>adaptive[k].offset,subject),-1);
         await page.locator('#screen-map button[aria-label="Settings"]').tap();
         await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();
-        await page.locator('#adaptive-status').scrollIntoViewIfNeeded();await layout();await capture(`adaptive-gentler-region-${region+1}`);
-        assert.match(await page.locator('#adaptive-status').textContent(),/Math: gentler practice. Reading: gentler practice/);
+        assert.equal(await page.locator('#settings-modal').isVisible(),true,'settings must be open before checking adaptive status');
+        assert.match(await page.locator('#adaptive-status').textContent(),/^On: math is gentler; reading is gentler\\.$/);
+        await page.locator('#adaptive-status').evaluate(el=>el.scrollIntoView({block:'nearest'}));await layout();await capture(`adaptive-gentler-region-${region+1}`);
         await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
        }
        if(stop===10||stop===11)assert.equal(await page.evaluate(k=>adaptive[k].offset,subject),0);
