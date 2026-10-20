@@ -1,0 +1,34 @@
+name: Child experience and education review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  child-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install orchestration tools
+        run: npm install --prefix orchestration --no-audit --no-fund
+      - name: Type-check orchestrator
+        run: npm run --prefix orchestration check
+      - name: Run read-only child research, education, and QA agents
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+        run: npx --prefix orchestration tsx orchestration/child-review.ts
+      - name: Upload review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: child-review
+          path: artifacts/child-review/report.md
+          if-no-files-found: warn
+          retention-days: 7
