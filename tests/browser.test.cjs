@@ -176,6 +176,8 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     assert.equal(await page.evaluate(()=>current),null);
     await page.locator('#screen-map button[aria-label="Settings"]').tap();
     await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();
+    await page.locator('#settings-tab-progress').tap();
+    assert.equal(await page.locator('#learning-summary').isVisible(),true,'learning summary must be visible on the Progress tab');
     await page.locator('#learning-summary').scrollIntoViewIfNeeded();await layout();await capture('learning-summary');
     await page.locator('#learning-summary summary').tap();await layout();
     assert.match(await page.locator('#learning-summary').textContent(),/Math42/);
