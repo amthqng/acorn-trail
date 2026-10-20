@@ -184,7 +184,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.locator('#learning-summary').scrollIntoViewIfNeeded();await layout();await capture('learning-summary');
     await page.locator('#learning-summary summary').tap();await layout();
     assert.match(await page.locator('#learning-summary').textContent(),/Math42/);
-    if(adaptiveMode){await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'false');assert.deepEqual(await page.evaluate(()=>[adaptive.math.offset,adaptive.read.offset]),[0,0]);}
+    if(adaptiveMode){await page.locator('#settings-tab-settings').tap();assert.equal(await page.locator('#sw-adaptive').isVisible(),true,'adaptive toggle must be visible on Settings tab');await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'false');assert.deepEqual(await page.evaluate(()=>[adaptive.math.offset,adaptive.read.offset]),[0,0]);}
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
     await browser.close();
