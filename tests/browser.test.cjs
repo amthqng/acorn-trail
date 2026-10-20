@@ -35,6 +35,9 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.locator('#seg-math button[data-v="g3"]').tap();
     assert.equal(await page.evaluate(()=>SETTINGS.math),'g3');
     await page.locator('#seg-math button[data-v="g2"]').tap();
+    assert.equal(await page.locator('#ops-row button[data-k="div"]').isVisible(),false,'division should be unavailable in Grade 2');
+    await page.locator('#seg-math button[data-v="g3"]').tap();
+    assert.equal(await page.locator('#ops-row button[data-k="div"]').isVisible(),true,'division should be available in Grade 3');
     for(const op of ['sub','mul','div','word'])await page.locator(`#ops-row button[data-k="${op}"]`).tap();
     await page.locator('#ops-row button[data-k="add"]').tap();
     assert.equal(await page.evaluate(()=>SETTINGS.ops.add),true);
@@ -233,7 +236,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
    for(const format of ['order','match']){
     await page.evaluate(f=>{
      restart();SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;SETTINGS.explanations=true;SETTINGS.reveal=true;SETTINGS.math='g3';saveSettings();
-     themeIndex=0;stopIndex=f==='order'?4:5;
+     themeIndex=0;stopIndex=f==='order'?2:5;
      if(f==='order'){SETTINGS.ops={add:true,sub:false,mul:false,div:false,word:false};startNextStop();}
      else{const q=buildReading('rhyme',READING.rhyme[0]);q.readingId='rhyme:0';current=makeTrailActivity(q,THEMES[0],5);current.hostChar=ROSTER[1];current.helper=ROSTER[3];loadChallenge(current);saveProgress();go('screen-challenge');}
     },format);
