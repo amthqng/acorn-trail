@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const reportDir = join(projectRoot, 'artifacts', 'architecture-review');
-const MAX_OUTPUT_TOKENS = 1500;
+const MAX_OUTPUT_TOKENS = 5000;
 const MODEL = process.env.ACORN_AGENT_MODEL || 'gpt-4.1-mini';
 
 function excerpt(source: string, start: number, end: number): string {
@@ -44,10 +44,10 @@ async function main(): Promise<void> {
     modelSettings: { maxTokens: MAX_OUTPUT_TOKENS },
   });
   console.log('Starting architecture analysis (read only)');
-  const analysis = await run(analyst, `Assess whether TypeScript or modular JavaScript is justified for Acorn Trail. This is only a representative source sample, not the entire project. Compare maintaining the current single-file experience with a development-time build that emits a single offline HTML file.\n\n${context}`, { maxTurns: 1 });
+  const analysis = await run(analyst, `Assess whether TypeScript or modular JavaScript is justified for Acorn Trail. This is only a representative source sample, not the entire project. Compare keeping the single-file approach against a development-time build that still emits one offline HTML file. Keep your response under 900 words, with concise citations.\n\n${context}`, { maxTurns: 1 });
   if (typeof analysis.finalOutput !== 'string' || !analysis.finalOutput.trim()) throw Error('Architect returned empty output');
   console.log('Starting independent technical review (read only)');
-  const review = await run(reviewer, `Check this architecture assessment against the supplied code excerpts. Identify unsupported claims, missed risks and a recommended next experiment.\n\nARCHITECT REPORT:\n${analysis.finalOutput}\n\n${context}`, { maxTurns: 1 });
+  const review = await run(reviewer, `Check this architecture assessment against the supplied code excerpts. Identify unsupported claims, missed risks and one practical next experiment. Keep your response under 600 words.\n\nARCHITECT REPORT:\n${analysis.finalOutput}\n\n${context}`, { maxTurns: 1 });
   if (typeof review.finalOutput !== 'string' || !review.finalOutput.trim()) throw Error('Reviewer returned empty output');
   await mkdir(reportDir, { recursive: true });
   const report = `# Acorn Trail architecture pilot\n\nCommit: ${process.env.GITHUB_SHA || 'local'}\nModel: ${MODEL}\nScope: selected snippets from index.html, NOT a full repository audit.\nNo game source changes were made.\n\n## Architecture Analyst\n\n${analysis.finalOutput}\n\n## Independent Technical Reviewer\n\n${review.finalOutput}\n`;
