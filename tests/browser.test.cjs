@@ -44,7 +44,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     for(const op of ['sub','mul','div','word'])await page.locator(`#ops-row button[data-k="${op}"]`).tap();
     await page.locator('#sw-explanations').tap();assert.equal(await page.evaluate(()=>SETTINGS.explanations),true);
     assert.equal(await page.evaluate(()=>SETTINGS.adaptive),false);
-    if(adaptiveMode){await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'true');await layout();await capture('adaptive-settings');}
+    if(adaptiveMode){await page.locator('#settings-tab-settings').tap();assert.equal(await page.locator('#sw-adaptive').isVisible(),true,'adaptive toggle must be visible on Settings tab');await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'true');await layout();await capture('adaptive-settings');}
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     await page.getByRole('button',{name:'Make your team'}).tap();await layout();
     await page.getByRole('button',{name:'Edit Biscuit'}).tap();await page.clock.runFor(100);await layout();await capture('team-editor');
@@ -110,7 +110,10 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       }
       if(adaptiveMode&&((region===0&&(stop===2||stop===3))||(region===1&&stop<4)))await page.locator('.hint-btn:not(#speak-btn)').tap();
       if(adaptiveMode&&region===1&&stop===4)assert.equal(await page.evaluate(()=>READING_TIERS[0].includes(current.skill)),true,'gentler reading must use the preceding tier');
-      if(adaptiveMode&&region===1&&stop===5)assert.equal(await page.evaluate(()=>['addition','subtraction','multiplication'].includes(current.skill)),true,'gentler math must use level one skills');
+      if(adaptiveMode&&region===1&&stop===5){
+        assert.equal(await page.evaluate(()=>mathLevel(THEMES[themeIndex])),2,'adaptive math should lower the effective difficulty by one level');
+        assert.equal(await page.evaluate(()=>['addition','subtraction','multiplication','word'].includes(current.skill)),true,'gentler math must use skills allowed at level two');
+       }
       const readingId=await page.evaluate(()=>current.kind==='read'?current.readingId:null);
       if(readingId){assert.equal(readingSeen.has(readingId),false,'reading entries should vary across this trail');readingSeen.add(readingId);}
       const format=await page.evaluate(()=>current.format||null);
