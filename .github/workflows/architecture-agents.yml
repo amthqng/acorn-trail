@@ -1,0 +1,37 @@
+name: AI architecture review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-review:
+    name: Architecture analyst and reviewer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: orchestration/package-lock.json
+      - name: Install isolated orchestration dependencies
+        run: npm install --prefix orchestration --no-audit --no-fund
+      - name: Type-check orchestrator
+        run: npm run --prefix orchestration check
+      - name: Run analyst and reviewer
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+        run: npm run --prefix orchestration analyze
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-review
+          path: artifacts/architecture-review/report.md
+          if-no-files-found: warn
+          retention-days: 7
