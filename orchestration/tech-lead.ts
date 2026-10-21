@@ -82,12 +82,17 @@ async function main() {
     {maxTurns:1});
   if(!escalation.finalOutput)throw Error('Missing escalation assessment');
   const decision=escalation.finalOutput;
-  // Deterministic guard: technical investigation must never require owner input.
-  const technicalPattern=/codebase|source code|markup|render|function|asset|sprite|svg|css|file.size|complexity|performance|setting|reduced.motion|colorblind|accessibility|dependency|technical|where.*(code|draw)/i;
-  const ownerQuestions=decision.ownerQuestions.filter(q=>!technicalPattern.test(q));
-  const technicalConcerns=[...decision.technicalConcerns,...decision.ownerQuestions.filter(q=>technicalPattern.test(q))];
+  // Questions about presentation details are UX decisions, not owner approval gates.
+  // This explicit classifier prevents a model from inventing a preference blocker.
+  const nonOwnerPattern=/codebase|source code|markup|render|function|asset|sprite|svg|css|file.size|complexity|performance|setting|reduced.motion|colorblind|accessibility|dependency|technical|where.*(code|draw)|location|placement|position|area|theme|season|style|color|palette|shape|species|variet|silhouette|animation|decorat|appearance|visual|design|layout|size|image|illustration/i;
+  const ownerQuestions=decision.ownerQuestions.filter(q=>!nonOwnerPattern.test(q));
+  const uxFollowUps=decision.ownerQuestions.filter(q=>nonOwnerPattern.test(q));
+  const technicalConcerns=[...decision.technicalConcerns,...uxFollowUps];
   const finalVerdict=ownerQuestions.length===0?'READY':'NEEDS_CLARIFICATION';
-  const body=`<!-- acorn-tech-lead-gate -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${decision.rationale}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
+  const escalationSummary=ownerQuestions.length===0
+    ? 'No material product-owner decision remains. UX details are resolved by the design brief; technical verification belongs to Developer/QA.'
+    : decision.rationale;
+  const body=`<!-- acorn-tech-lead-gate -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${escalationSummary}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
   const dir=join(root,'artifacts','development-intake');
   await mkdir(dir,{recursive:true});
   await writeFile(join(dir,'comment.md'),body);
