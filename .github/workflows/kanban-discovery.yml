@@ -39,12 +39,7 @@ jobs:
         run: |
           test -n "$PROJECT_TOKEN" || { echo "::error::PROJECTS_TOKEN missing"; exit 1; }
           test -n "$OPENAI_API_KEY" || { echo "::error::OPENAI_API_KEY missing"; exit 1; }
-          GH_TOKEN="$PROJECT_TOKEN" gh project item-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json --limit 1000 > /tmp/acorn-project-items.json
-          jq -r --arg repo "$GITHUB_REPOSITORY" '
-            .items[] | select(.status == "Discovery") | .content.url // empty |
-            select(startswith("https://github.com/" + $repo + "/issues/")) |
-            split("/")[-1]
-          ' /tmp/acorn-project-items.json | sort -n -u > /tmp/acorn-discovery-ids
+          GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-discovery-issues.sh | sort -n -u > /tmp/acorn-discovery-ids
           if [ ! -s /tmp/acorn-discovery-ids ]; then
             echo "No cards awaiting discovery"
             exit 0
