@@ -55,6 +55,16 @@ jobs:
           fi
           git switch -c "$branch"
           echo "IMPLEMENTATION_BRANCH=$branch" >> "$GITHUB_ENV"
+      - name: Move accepted work to In Development
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: In Development
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          test -n "$GH_TOKEN" || exit 1
+          bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
       - name: Install orchestrator
         run: |
           npm install --prefix orchestration --no-audit --no-fund
