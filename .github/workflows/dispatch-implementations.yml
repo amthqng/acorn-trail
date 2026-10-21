@@ -42,7 +42,7 @@ jobs:
             if grep -Fq '<!-- acorn-implementation-dispatched -->' <<< "$comments"; then continue; fi
             if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" > /dev/null 2>&1; then continue; fi
             # Record dispatch before triggering to prevent duplicate scheduled runs.
-            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched --> Implementation workflow queued for issue #$issue. If it fails, inspect Actions and manually rerun after resolving the blocker."
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
+            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched --> Implementation workflow queued for issue #$issue. If it fails, inspect Actions and manually rerun after resolving the blocker."
             echo "Dispatched issue #$issue"
           done < /tmp/ready
