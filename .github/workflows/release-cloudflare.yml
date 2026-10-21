@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: acorn-cloudflare-production
