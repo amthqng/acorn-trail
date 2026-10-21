@@ -104,6 +104,31 @@ jobs:
           else
             echo "::notice::Issue $ISSUE_NUMBER needs a material product decision"
           fi
+  recover:
+    needs: board
+    if: needs.board.outputs.development != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover abandoned In Development runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          DEVELOPMENT: ${{ needs.board.outputs.development }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+        run: |
+          set -euo pipefail
+          for issue in $(jq -r '.[]' <<< "$DEVELOPMENT"); do
+            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then continue; fi
+            running="$(gh run list --workflow implement-approved.yml --json status --limit 30 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
+            [ "$running" = 0 ] || continue
+            comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
+            if ! grep -Fq '<!-- acorn-implementation-dispatched -->' <<< "$comments"; then continue; fi
+            echo "Recovering #$issue: no active implementation run or branch"
+            PROJECT_STATUS="Ready for Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+            gh issue comment "$issue" --body "Previous implementation attempt did not produce a branch. Returned to Ready for Development for bounded recovery; see Actions for failure details."
+          done
   dispatch:
     needs: [board, intake]
     if: always() && needs.board.result == 'success' && needs.intake.result == 'success' && needs.board.outputs.ready != '[]'
