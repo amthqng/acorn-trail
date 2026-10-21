@@ -1,34 +1,47 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Requires GH_TOKEN with Projects write access. Called only on issues created by the discovery workflow.
 issue_url="${1:?Issue URL required}"
 owner="${PROJECT_OWNER:-amthqng}"
 number="${PROJECT_NUMBER:-2}"
 desired="${PROJECT_STATUS:-Awaiting Approval}"
-echo "Synchronizing project $owner/$number status '$desired' for $issue_url"
-project_json="$(gh project view "$number" --owner "$owner" --format json)"
-project_id="$(jq -r '.id // empty' <<< "$project_json")"
-echo "Project metadata retrieved"
-test -n "$project_id" || { echo "Could not locate project id"; exit 1; }
-fields="$(gh project field-list "$number" --owner "$owner" --format json)"
-status_field="$(jq -c '.fields[] | select(.name == "Status")' <<< "$fields" | head -n 1)"
-test -n "$status_field" || { echo "Project Status field missing"; exit 1; }
-field_id="$(jq -r '.id' <<< "$status_field")"
-echo "Status options detected:"; jq -r '.options[]?.name' <<< "$status_field"
-option_id="$(jq -r --arg desired "$desired" '.options[]? | select((.name|ascii_downcase) == ($desired|ascii_downcase)) | .id' <<< "$status_field" | head -n 1)"
-test -n "$option_id" || { echo "Status '$desired' missing from board options. Available:"; jq -r '.options[]?.name' <<< "$status_field"; exit 1; }
-# GitHub Projects may auto-add a new issue as Ideas before this script runs.
-# Locate an existing project item first; item-add is not necessarily idempotent.
-items="$(gh project item-list "$number" --owner "$owner" --format json --limit 1000)"
-item_id="$(jq -r --arg url "$issue_url" '.items[]? | select(.content.url == $url) | .id' <<< "$items" | head -n 1)"
+echo "Synchronizing user project $owner/$number status '$desired' for $issue_url"
+
+# Explicit user lookup avoids gh CLI's 'unknown owner type' resolution failure.
+project="$(gh api graphql -f query='query($login:String!,$number:Int!){user(login:$login){projectV2(number:$number){id}}}' -f login="$owner" -F number="$number")"
+project_id="$(jq -r '.data.user.projectV2.id // empty' <<< "$project")"
+test -n "$project_id" || { echo "Could not retrieve personal Project ID"; exit 1; }
+
+fields="$(gh api graphql -f query='query($id:ID!){node(id:$id){... on ProjectV2{fields(first:100){nodes{... on ProjectV2SingleSelectField{id name options{id name}}}}}}}' -f id="$project_id")"
+field="$(jq -c '.data.node.fields.nodes[] | select(.name == "Status")' <<< "$fields" | head -n 1)"
+test -n "$field" || { echo "Status field not found"; exit 1; }
+field_id="$(jq -r '.id' <<< "$field")"
+option_id="$(jq -r --arg v "$desired" '.options[]? | select((.name|ascii_downcase)==($v|ascii_downcase)) | .id' <<< "$field" | head -n 1)"
+if [ -z "$option_id" ]; then echo "Status '$desired' not found. Options:"; jq -r '.options[]?.name' <<< "$field"; exit 1; fi
+
+# Query existing cards using the project node ID (rather than resolving owner type).
+cursor=""
+item_id=""
+while :; do
+  if [ -n "$cursor" ]; then
+    page="$(gh api graphql -f query='query($id:ID!,$after:String){node(id:$id){... on ProjectV2{items(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{id content{... on Issue{url}}}}}}}' -f id="$project_id" -f after="$cursor")"
+  else
+    page="$(gh api graphql -f query='query($id:ID!){node(id:$id){... on ProjectV2{items(first:100){pageInfo{hasNextPage endCursor} nodes{id content{... on Issue{url}}}}}}}' -f id="$project_id")"
+  fi
+  item_id="$(jq -r --arg u "$issue_url" '.data.node.items.nodes[]? | select(.content.url == $u) | .id' <<< "$page" | head -n 1)"
+  [ -z "$item_id" ] || break
+  has_next="$(jq -r '.data.node.items.pageInfo.hasNextPage // false' <<< "$page")"
+  [ "$has_next" = "true" ] || break
+  cursor="$(jq -r '.data.node.items.pageInfo.endCursor' <<< "$page")"
+done
 if [ -z "$item_id" ]; then
-  echo "Project card not yet found; adding it."
-  item_json="$(gh project item-add "$number" --owner "$owner" --url "$issue_url" --format json)"
-  item_id="$(jq -r '.id // empty' <<< "$item_json")"
-else
-  echo "Project card already exists; updating its status."
+  issue_number="${issue_url##*/}"
+  issue_repo="${issue_url#https://github.com/}"
+  issue_repo="${issue_repo%/issues/*}"
+  [[ "$issue_number" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid issue URL"; exit 1; }
+  content_id="$(gh api "repos/$issue_repo/issues/$issue_number" --jq '.node_id')"
+  created="$(gh api graphql -f query='mutation($project:ID!,$content:ID!){addProjectV2ItemById(input:{projectId:$project,contentId:$content}){item{id}}}' -f project="$project_id" -f content="$content_id")"
+  item_id="$(jq -r '.data.addProjectV2ItemById.item.id // empty' <<< "$created")"
 fi
-test -n "$item_id" || { echo "Project item not found or added"; exit 1; }
-echo "Updating project item status..."
-gh project item-edit --id "$item_id" --project-id "$project_id" --field-id "$field_id" --single-select-option-id "$option_id"
-echo "Moved $issue_url to $desired on $owner project $number"
+test -n "$item_id" || { echo "Failed to locate/create project item"; exit 1; }
+gh api graphql -f query='mutation($project:ID!,$item:ID!,$field:ID!,$option:String!){updateProjectV2ItemFieldValue(input:{projectId:$project,itemId:$item,fieldId:$field,value:{singleSelectOptionId:$option}}){projectV2Item{id}}}' -f project="$project_id" -f item="$item_id" -f field="$field_id" -f option="$option_id" > /dev/null
+echo "Moved $issue_url to $desired on personal project $owner/$number"
