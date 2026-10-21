@@ -1,0 +1,42 @@
+name: Proactive feature discovery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install orchestrator
+        run: npm install --prefix orchestration --no-audit --no-fund
+      - name: Type-check
+        run: npm run --prefix orchestration check
+      - name: Run proactive User Research and Education agents
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+        run: npx --prefix orchestration tsx orchestration/opportunity-discovery.ts
+      - name: Create discovery issue for product owner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "AI discovery candidates from run $GITHUB_RUN_NUMBER" \
+            --body-file artifacts/opportunity-discovery/issue.md
+      - name: Upload opportunity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opportunity-discovery
+          path: artifacts/opportunity-discovery/report.md
+          if-no-files-found: warn
+          retention-days: 7
