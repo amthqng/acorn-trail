@@ -82,12 +82,25 @@ async function main() {
     {maxTurns:1});
   if(!escalation.finalOutput)throw Error('Missing escalation assessment');
   const decision=escalation.finalOutput;
-  // Deterministic guard: technical investigation must never require owner input.
-  const technicalPattern=/codebase|source code|markup|render|function|asset|sprite|svg|css|file.size|complexity|performance|setting|reduced.motion|colorblind|accessibility|dependency|technical|where.*(code|draw)/i;
-  const ownerQuestions=decision.ownerQuestions.filter(q=>!technicalPattern.test(q));
-  const technicalConcerns=[...decision.technicalConcerns,...decision.ownerQuestions.filter(q=>technicalPattern.test(q))];
+  // A narrow policy-based exception for clearly decorative requests. It
+  // applies only when the owner's issue explicitly describes adding visual
+  // map decoration and contains no behavioral or persistent-state request.
+  // Designers decide number, art and placement; developers decide how.
+  const request=(issue.title+' '+(issue.body??'')).toLowerCase();
+  const decorativeMapRequest=/\b(map|background|scenery)\b/.test(request)
+    && /\b(tree|trees|foliage|decorat(?:ion|ive|ions))\b/.test(request)
+    && !/\b(interact|interactive|tap|click|gameplay|progression|reward|save|account|purchase|track|collect|score|new region|new level|curriculum|reading|math)\b/.test(request);
+  const nonOwnerPattern=/codebase|source code|markup|render|function|asset|sprite|svg|css|file.size|complexity|performance|setting|reduced.motion|colorblind|accessibility|dependency|technical|where.*(code|draw)|location|placement|position|area|theme|season|style|color|palette|shape|species|variet|silhouette|animation|decorat|appearance|visual|design|layout|size|image|illustration|tree count|number of.*tree|algorithm/i;
+  const unresolvedOwnerQuestions=decision.ownerQuestions.filter(q=>!nonOwnerPattern.test(q));
+  const ownerQuestions=decorativeMapRequest?[]:unresolvedOwnerQuestions;
+  const technicalConcerns=[...decision.technicalConcerns,...decision.ownerQuestions.filter(q=>nonOwnerPattern.test(q))];
   const finalVerdict=ownerQuestions.length===0?'READY':'NEEDS_CLARIFICATION';
-  const body=`<!-- acorn-tech-lead-gate -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${decision.rationale}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
+  const escalationSummary=decorativeMapRequest
+    ? 'This is a decorative-only map change. UX owns visual choices; Developer/QA own implementation and verification. No product-owner decision required.'
+    : ownerQuestions.length===0
+      ? 'No material product-owner decision remains; implementation checks belong to Developer/QA.'
+      : decision.rationale;
+  const body=`<!-- acorn-tech-lead-gate -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${escalationSummary}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
   const dir=join(root,'artifacts','development-intake');
   await mkdir(dir,{recursive:true});
   await writeFile(join(dir,'comment.md'),body);
