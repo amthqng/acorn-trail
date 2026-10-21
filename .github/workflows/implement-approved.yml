@@ -146,7 +146,7 @@ jobs:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
           bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
-      - name: Record failed stage and reset for bounded retry
+      - name: Record failed stage and retain In Development
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -156,7 +156,7 @@ jobs:
           PROJECT_NUMBER: '2'
         run: |
           gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-stage-failure --> Implementation or QA failed. See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Not ready for UAT."
-          PROJECT_STATUS="Ready for Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+          PROJECT_STATUS="In Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
       - name: Upload UAT and reviewer output
         if: always()
         uses: actions/upload-artifact@v4
