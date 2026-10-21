@@ -1,14 +1,12 @@
 name: Release accepted UAT to Cloudflare
 
 on:
-  schedule:
-    - cron: '19,49 * * * *'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: acorn-cloudflare-production
@@ -45,12 +43,23 @@ jobs:
             [[ "$issue" =~ ^[1-9][0-9]*$ ]] || continue
             if gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -Fq '<!-- acorn-cloudflare-published -->'; then continue; fi
             branch="agents/issue-$issue"
-            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "$branch" --json number,mergeCommit --jq '.[0] // empty')"
-            if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no merged implementation PR from $branch"; continue; fi
-            merged_sha="$(jq -r '.mergeCommit.oid // empty' <<< "$pr")"
+            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$branch" --json number,state,mergeCommit --jq '.[0] // empty')"
+            if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no implementation PR"; continue; fi
+            pr_number="$(jq -r '.number' <<< "$pr")"
+            approvals="$(gh pr view "$pr_number" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
+            if [ "$approvals" -lt 1 ]; then echo "::warning::Issue #$issue needs an independent GitHub PR approval"; continue; fi
+            state="$(jq -r '.state' <<< "$pr")"
+            if [ "$state" = "OPEN" ]; then
+              gh pr merge "$pr_number" --merge --repo "$GITHUB_REPOSITORY"
+            elif [ "$state" != "MERGED" ]; then
+              echo "::warning::Issue #$issue PR is not mergeable"; continue
+            fi
+            git fetch origin main
+            git checkout --detach origin/main
+            merged_sha="$(gh pr view "$pr_number" --json mergeCommit --jq '.mergeCommit.oid')"
             if [ "$merged_sha" != "$(git rev-parse HEAD)" ]; then
-              echo "::warning::Issue #$issue: HEAD differs from accepted merge commit; skipping to prevent publishing unrelated changes"
-              continue
+              echo "::error::HEAD differs from accepted merge commit; refusing to publish unintended changes"
+              exit 1
             fi
             # Never deploy the repository root: it contains automation and developer files.
             mkdir -p .cloudflare-release/public

@@ -80,7 +80,7 @@ jobs:
           test "$(cat artifacts/implementation/status.txt)" = "IMPLEMENTED" || { cat artifacts/implementation/notes.md; exit 1; }
           ! git diff --quiet -- index.html || { echo "Developer produced no changes"; exit 1; }
           if [ "$(git diff --name-only | wc -l)" -ne 1 ]; then echo "Unexpected modified files"; exit 1; fi
-      - name: Move implementation to QA & Review
+      - name: Mark QA & Review
         env:
           GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
           PROJECT_OWNER: amthqng
@@ -93,7 +93,7 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium webkit
       - name: Run browser regression tests
-        run: node --test tests/browser.test.cjs
+        run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
       - name: Independent reviewer and UAT document
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -112,15 +112,51 @@ jobs:
           git add index.html
           git commit -m "feat: implement approved issue #$ISSUE_NUMBER"
           git push origin "$IMPLEMENTATION_BRANCH"
-          gh pr create --draft --base main --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
-          gh issue comment "$ISSUE_NUMBER" --body "Implementation PR opened as draft after regression tests and reviewer passed. This has **not** been merged or released. See pull requests for the UAT summary."
-      - name: Record failed implementation for board-driven triage
+          gh pr create --base main --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
+          gh issue comment "$ISSUE_NUMBER" --body "Implementation PR submitted for independent GitHub approval after regression tests and AI reviewer passed. It has **not** been merged or released. See the PR for UAT notes."
+      - name: Independent GitHub reviewer approval
+        env:
+          GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN" || { echo "::error::Configure REVIEWER_GITHUB_TOKEN for a separate GitHub reviewer identity"; exit 1; }
+          pr="$(gh pr list --head "agents/issue-$ISSUE_NUMBER" --state open --json number --jq '.[0].number')"
+          test -n "$pr"
+          gh pr review "$pr" --approve --body "Independent code review completed after automated browser regression tests passed. See the PR's UAT checklist."
+      - name: Upload tested UAT candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-issue-${{ inputs.issue_number }}
+          path: |
+            index.html
+            sw.js
+            manifest.webmanifest
+            icon-192.png
+            icon-512.png
+            icon-maskable-512.png
+          if-no-files-found: error
+          retention-days: 30
+      - name: Mark Ready for UAT
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: Ready for UAT
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+      - name: Record failed stage and reset for bounded retry
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
         run: |
-          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "<!-- acorn-implementation-failed --> Development or QA did not complete for #$ISSUE_NUMBER. Check [failed Actions run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) for the exact failing step. This issue has NOT passed QA and is NOT ready for UAT. The dispatcher currently requires an explicit retry/recovery policy; do not assume it will auto-retry."
+          gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-stage-failure --> Implementation or QA failed. See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Not ready for UAT."
+          PROJECT_STATUS="Ready for Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
       - name: Upload UAT and reviewer output
         if: always()
         uses: actions/upload-artifact@v4
