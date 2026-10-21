@@ -80,6 +80,14 @@ jobs:
           test "$(cat artifacts/implementation/status.txt)" = "IMPLEMENTED" || { cat artifacts/implementation/notes.md; exit 1; }
           ! git diff --quiet -- index.html || { echo "Developer produced no changes"; exit 1; }
           if [ "$(git diff --name-only | wc -l)" -ne 1 ]; then echo "Unexpected modified files"; exit 1; fi
+      - name: Move implementation to QA & Review
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: QA & Review
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
       - name: Set up Playwright browser tests
         run: |
           npm install --no-save playwright
@@ -106,6 +114,13 @@ jobs:
           git push origin "$IMPLEMENTATION_BRANCH"
           gh pr create --draft --base main --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
           gh issue comment "$ISSUE_NUMBER" --body "Implementation PR opened as draft after regression tests and reviewer passed. This has **not** been merged or released. See pull requests for the UAT summary."
+      - name: Record failed implementation for board-driven triage
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "<!-- acorn-implementation-failed --> Development or QA did not complete for #$ISSUE_NUMBER. Check [failed Actions run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) for the exact failing step. This issue has NOT passed QA and is NOT ready for UAT. The dispatcher currently requires an explicit retry/recovery policy; do not assume it will auto-retry."
       - name: Upload UAT and reviewer output
         if: always()
         uses: actions/upload-artifact@v4
