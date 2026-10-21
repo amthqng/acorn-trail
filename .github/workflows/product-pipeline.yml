@@ -171,8 +171,10 @@ jobs:
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
             if ! grep -Fq '<!-- acorn-implementation-dispatched-v2 -->' <<< "$comments"; then continue; fi
             echo "Recovering #$issue: no active implementation run or branch"
-            PROJECT_STATUS="Ready for Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
-            gh issue comment "$issue" --body "Previous implementation attempt did not produce a branch. Returned to Ready for Development for bounded recovery; see Actions for failure details."
+            echo "::warning::Issue #$issue is stalled in In Development; status preserved for technical recovery."
+            if ! grep -Fq "<!-- acorn-stalled-development -->" <<< "$comments"; then
+              gh issue comment "$issue" --body "<!-- acorn-stalled-development --> Development appears stalled with no implementation branch or active run. Card remains In Development pending technical recovery."
+            fi
           done
   dispatch:
     needs: [board, intake]
