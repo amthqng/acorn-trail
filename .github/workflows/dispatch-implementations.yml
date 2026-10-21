@@ -1,0 +1,47 @@
+name: Dispatch approved implementations
+
+on:
+  schedule:
+    - cron: '11,26,41,56 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+concurrency:
+  group: acorn-implementation-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find technically ready, unstarted issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: Ready for Development
+        run: |
+          test -n "$PROJECT_TOKEN" || exit 1
+          GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-project-status-issues.sh | sort -nu > /tmp/ready
+          while IFS= read -r issue; do
+            [[ "$issue" =~ ^[1-9][0-9]*$ ]] || continue
+            if ! gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq '.state' | grep -qx open; then continue; fi
+            comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
+            if ! grep -Fq '## Tech Lead intake: READY' <<< "$comments"; then
+              echo "Issue #$issue requires Tech Lead READY decision"
+              continue
+            fi
+            if grep -Fq '<!-- acorn-implementation-dispatched -->' <<< "$comments"; then continue; fi
+            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" > /dev/null 2>&1; then continue; fi
+            # Record dispatch before triggering to prevent duplicate scheduled runs.
+            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched --> Implementation workflow queued for issue #$issue. If it fails, inspect Actions and manually rerun after resolving the blocker."
+            gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
+            echo "Dispatched issue #$issue"
+          done < /tmp/ready
