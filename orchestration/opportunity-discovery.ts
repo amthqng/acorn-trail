@@ -54,8 +54,26 @@ async function main():Promise<void>{
   const ideas=await agent('Proactive User Research',policy+research,
     `Independently propose up to three valuable child-facing features, not just bug fixes. For each give problem, source evidence, experience, safety, validation, and possible educational benefit. Separate observed source evidence from hypotheses. Under 650 words.\n\n${context}`);
   const curriculum=await agent('Proactive Education Review',policy+education,
-    `Evaluate and refine the research ideas. Return ONLY one JSON object, no markdown, no fences, with key "candidates" containing 1-3 independent feature proposals. Each candidate MUST have string fields "title", "problem", "feature", "grades", "educationalValue", "evidence", "risks", "validation", and an array of 2-4 strings named "acceptanceCriteria". Focus each candidate on ONE feature; no duplicates. Verify grade appropriateness and note hypotheses and educator validation needs. Reject inappropriate ideas. Keep each field concise (1-3 sentences). The report is for individual product owner decisions, NOT development authorization.\n\nUSER RESEARCH IDEAS:\n${ideas}\n\nSOURCE:\n${context}`);
-  const candidates=parseCandidates(curriculum);
+    `Evaluate and refine the research ideas. Return ONLY one JSON object, no markdown, no fences, with key "candidates" containing 1-3 independent feature proposals. Each candidate MUST have string fields "title", "problem", "feature", "grades", "educationalValue", "evidence", "risks", "validation", and an array of 2-4 strings named "acceptanceCriteria". Focus each candidate on ONE feature; no duplicates. Verify grade appropriateness and note hypotheses and educator validation needs. Reject inappropriate ideas. Keep each field VERY short (under 200 characters) and output compact JSON to avoid truncation. The report is for individual product owner decisions, NOT development authorization.\n\nUSER RESEARCH IDEAS:\n${ideas}\n\nSOURCE:\n${context}`);
+  // Treat model prose as untrusted data. If its JSON is malformed, request a
+  // focused repair rather than discarding an otherwise completed discovery run.
+  let candidates: Candidate[];
+  try {
+    candidates = parseCandidates(curriculum);
+  } catch (error) {
+    console.warn('Education candidate JSON was invalid; asking a formatter to repair it.');
+    const repaired = await agent('Discovery JSON Formatter',
+      'You convert supplied candidate content to syntactically valid JSON. Do not add new proposals or claim evidence not present. Return JSON only, no markdown.',
+      `Repair the JSON below into exactly one compact object with "candidates" (1-3 items). Each item needs string fields title, problem, feature, grades, educationalValue, evidence, risks, validation and string-array acceptanceCriteria. Preserve meaning, fill any absent information with "Needs investigation" and never fabricate findings. Return ONLY valid JSON. Keep each field under 300 characters.\n\nINPUT:\n${curriculum.slice(0,18000)}`);
+    try {
+      candidates = parseCandidates(repaired);
+    } catch (repairError) {
+      await mkdir(output,{recursive:true});
+      await writeFile(join(output,'unparsed-education-output.txt'),curriculum,'utf8');
+      await writeFile(join(output,'failed-json-repair.txt'),repaired,'utf8');
+      throw new Error('Could not parse education candidates after one repair attempt: '+(repairError instanceof Error?repairError.message:String(repairError)));
+    }
+  }
   await mkdir(join(output,'issues'),{recursive:true});
   const index: {title:string;file:string}[]=[];
   for(const [i,c] of candidates.entries()){
