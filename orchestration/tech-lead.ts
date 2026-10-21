@@ -13,6 +13,12 @@ const designSchema = z.object({
   assumptions: z.array(z.string()),
   genuinelyBlockingQuestions: z.array(z.string()),
 });
+const blockerGate = z.object({
+  verdict: z.enum(['READY','NEEDS_CLARIFICATION']),
+  ownerQuestions: z.array(z.string()),
+  technicalConcerns: z.array(z.string()),
+  rationale: z.string(),
+});
 const gate = z.object({
   verdict: z.enum(['READY','NEEDS_CLARIFICATION']),
   reason: z.string(),
@@ -56,11 +62,11 @@ async function main() {
   const result=await run(lead,`UX designer brief (advisory, verify implementation feasibility):\\n${JSON.stringify(design)}\\n\\nIssue #${number}: ${issue.title}\n${(issue.body??'').slice(0,14000)}\n\nRepresentative source:\n${context}\n\nOwner follow-up comments (if any):\\n${feedback}\\n\\nProvide verdict, bounded scope, reasonable explicit design assumptions, testable criteria, and only genuinely blocking questions.`,{maxTurns:1});
   if(!result.finalOutput)throw Error('Missing Tech Lead assessment');
   const v=result.finalOutput;
-  const body=`<!-- acorn-tech-lead-gate -->\n## Tech Lead intake: ${v.verdict}\n\n${v.reason}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions / blockers\n${v.questions.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
+  const body=`<!-- acorn-tech-lead-gate -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${decision.rationale}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
   const dir=join(root,'artifacts','development-intake');
   await mkdir(dir,{recursive:true});
   await writeFile(join(dir,'comment.md'),body);
-  await writeFile(join(dir,'verdict.txt'),v.verdict);
-  console.log('Tech Lead verdict: '+v.verdict);
+  await writeFile(join(dir,'verdict.txt'),finalVerdict);
+  console.log('Tech Lead verdict after escalation review: '+finalVerdict);
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
