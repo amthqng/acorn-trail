@@ -25,18 +25,21 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ACORN_AGENT_MODEL: gpt-4.1-mini
         run: npx --prefix orchestration tsx orchestration/opportunity-discovery.ts
-      - name: Create discovery issue for product owner
+      - name: Create one GitHub issue per feature
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh issue create --repo "$GITHUB_REPOSITORY" \
-            --title "AI discovery candidates from run $GITHUB_RUN_NUMBER" \
-            --body-file artifacts/opportunity-discovery/issue.md
-      - name: Upload opportunity report
+          node -e "const fs=require('fs');const entries=JSON.parse(fs.readFileSync('artifacts/opportunity-discovery/manifest.json')); for (const e of entries) {if(!/^issues\/candidate-[1-3]\.md$/.test(e.file)||!e.title)process.exit(1)}"
+          node -e "const fs=require('fs');const e=JSON.parse(fs.readFileSync('artifacts/opportunity-discovery/manifest.json'));fs.writeFileSync('artifacts/opportunity-discovery/manifest.tsv',e.map(x=>x.title.replace(/[\t\n]/g,' ')+'\t'+'artifacts/opportunity-discovery/'+x.file).join('\n')+'\n')"
+          while IFS=$'\t' read -r title file; do
+            test -n "$title" || continue
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "[Discovery] $title" --body-file "$file"
+          done < artifacts/opportunity-discovery/manifest.tsv
+      - name: Upload discovery report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: opportunity-discovery
-          path: artifacts/opportunity-discovery/report.md
+          path: artifacts/opportunity-discovery/
           if-no-files-found: warn
           retention-days: 7
