@@ -14,13 +14,16 @@ while :; do
   args=(-f query="$query" -f login="$owner" -F number="$number")
   [ -z "$cursor" ] || args+=(-f cursor="$cursor")
   page="$(GH_TOKEN="$PROJECT_TOKEN" gh api graphql "${args[@]}")"
+  if [ "$(jq -r '.data.user.projectV2 == null' <<< "$page")" = true ]; then
+    echo "::error::GitHub Project #$number could not be read by PROJECTS_TOKEN"; exit 1
+  fi
   batch="$(jq -c --arg r "$GITHUB_REPOSITORY" '[.data.user.projectV2.items.nodes[]? | select(.content.repository.nameWithOwner==$r and .content.state=="OPEN") | {number:.content.number,status:.fieldValueByName.name}]' <<< "$page")"
   records="$(jq -cn --argjson a "$records" --argjson b "$batch" '$a+$b')"
   [ "$(jq -r '.data.user.projectV2.items.pageInfo.hasNextPage // false' <<< "$page")" = true ] || break
   cursor="$(jq -r '.data.user.projectV2.items.pageInfo.endCursor' <<< "$page")"
   test -n "$cursor"
 done
-echo "Board status: $records"
+echo "Board status: $records"\n  echo "::notice::Board contains $(jq length <<< "$records") open repository issues"
 for stage in 'Discovery' 'Ready for Development' 'In Development' 'QA & Review' 'Ready for UAT' 'Done'; do
   ids="$(jq -cr --arg s "$stage" '[.[]|select(.status==$s)|.number]|unique' <<< "$records")"
   case "$stage" in
