@@ -31,6 +31,7 @@ jobs:
           test -n "$PROJECT_TOKEN" || exit 1
           GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-project-status-issues.sh | sort -nu > /tmp/ready
           while IFS= read -r issue; do
+            echo "Inspecting development candidate #$issue"
             [[ "$issue" =~ ^[1-9][0-9]*$ ]] || continue
             if ! gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq '.state' | grep -qx open; then continue; fi
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
@@ -39,10 +40,20 @@ jobs:
               echo "Issue #$issue requires Tech Lead READY decision"
               continue
             fi
-            if grep -Fq '<!-- acorn-implementation-dispatched -->' <<< "$comments"; then continue; fi
-            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" > /dev/null 2>&1; then continue; fi
+            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" > /dev/null 2>&1; then
+              echo "Issue #$issue has an implementation branch"
+              continue
+            fi
+            # Markers alone are not reliable: a failed previous run can leave one.
+            # Only redrive if there is no live implementation run.
+            current="$(gh run list --workflow implement-approved.yml --repo "$GITHUB_REPOSITORY" --limit 30 --json status,displayTitle,createdAt --jq '[.[] | select(.status=="queued" or .status=="in_progress")]|length' || echo 0)"
+            if [ "$current" != "0" ]; then echo "Another implementation may be running; postponing #$issue"; continue; fi
             # Record dispatch before triggering to prevent duplicate scheduled runs.
-            gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
-            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched --> Implementation workflow queued for issue #$issue. If it fails, inspect Actions and manually rerun after resolving the blocker."
+            if gh workflow run implement-approved.yml --repo "$GITHUB_REPOSITORY" --ref main -f issue_number="$issue"; then
+              gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched --> Queued implementation for issue #$issue at $(date -u +%FT%TZ). Check Actions for outcome; failed attempts can be retried."
+            else
+              echo "::error::Cannot dispatch implementation for issue #$issue"
+              exit 1
+            fi
             echo "Dispatched issue #$issue"
           done < /tmp/ready
