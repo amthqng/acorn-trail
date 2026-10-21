@@ -2,7 +2,8 @@ name: Acorn Trail product pipeline
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    # Offset polling away from busy quarter-hour boundaries; GitHub schedules are best-effort.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 permissions:
