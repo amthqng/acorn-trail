@@ -1,0 +1,72 @@
+name: Release accepted UAT to Cloudflare
+
+on:
+  schedule:
+    - cron: '19,49 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: acorn-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Publish UAT-accepted implementation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: Done
+        run: |
+          set -euo pipefail
+          test -n "$PROJECT_TOKEN" || { echo "::error::PROJECTS_TOKEN is missing"; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is missing"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is missing"; exit 1; }
+          GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-project-status-issues.sh | sort -nu > /tmp/accepted
+          while IFS= read -r issue; do
+            [[ "$issue" =~ ^[1-9][0-9]*$ ]] || continue
+            if [ "$(gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq .state)" != "open" ]; then continue; fi
+            if gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -Fq '<!-- acorn-cloudflare-published -->'; then continue; fi
+            branch="agents/issue-$issue"
+            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "$branch" --json number,mergeCommit --jq '.[0] // empty')"
+            if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no merged implementation PR from $branch"; continue; fi
+            merged_sha="$(jq -r '.mergeCommit.oid // empty' <<< "$pr")"
+            if [ "$merged_sha" != "$(git rev-parse HEAD)" ]; then
+              echo "::warning::Issue #$issue: HEAD differs from accepted merge commit; skipping to prevent publishing unrelated changes"
+              continue
+            fi
+            # Never deploy the repository root: it contains automation and developer files.
+            mkdir -p .cloudflare-release/public
+            for file in index.html sw.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png; do
+              test -s "$file" || { echo "::error::Missing public asset $file"; exit 1; }
+              cp "$file" .cloudflare-release/public/
+            done
+            node - <<'NODE'
+          const fs=require('fs');
+          const source=fs.readFileSync('wrangler.jsonc','utf8');
+          const changed=source.replace('"directory": "./"','"directory": "./.cloudflare-release/public"');
+          if(changed===source)throw Error('Expected directory in wrangler.jsonc not found');
+          fs.writeFileSync('wrangler.release.jsonc',changed);
+          NODE
+            npx --yes wrangler@4 deploy --config wrangler.release.jsonc
+            gh issue comment "$issue" --body "<!-- acorn-cloudflare-published --> Published the UAT-accepted implementation to Cloudflare from commit $(git rev-parse HEAD). GitHub Actions run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            echo "Published accepted issue #$issue"
+          done < /tmp/accepted
