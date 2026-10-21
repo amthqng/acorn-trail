@@ -1,0 +1,57 @@
+name: Developer proposal handoff
+
+on:
+  workflow_dispatch:
+    inputs:
+      child_review_run_id:
+        description: 'Successful child review Actions run ID (from its URL)'
+        required: true
+        type: string
+      approved_finding:
+        description: 'One specific finding you authorize for proposal and independent review (not code modification)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  proposal-and-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Retrieve selected child-review report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.child_review_run_id }}
+        run: |
+          if ! [[ "$RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo 'Run ID must be numeric'; exit 1
+          fi
+          mkdir -p inputs/child-review
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name child-review --dir inputs/child-review
+          test -s inputs/child-review/report.md
+      - name: Install isolated agent dependencies
+        run: npm install --prefix orchestration --no-audit --no-fund
+      - name: Type-check orchestration code
+        run: npm run --prefix orchestration check
+      - name: Developer proposal and independent technical review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+          CHILD_REVIEW_RUN_ID: ${{ inputs.child_review_run_id }}
+          APPROVED_FINDING: ${{ inputs.approved_finding }}
+        run: npx --prefix orchestration tsx orchestration/developer-handoff.ts
+      - name: Upload proposal and review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: developer-handoff
+          path: artifacts/developer-handoff/handoff.md
+          if-no-files-found: warn
+          retention-days: 7
