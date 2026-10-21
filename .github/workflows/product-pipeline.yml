@@ -127,3 +127,12 @@ jobs:
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
             gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched --> Implementation attempt $((attempts+1))/2 queued for #$issue."
           done
+  publish:
+    needs: board
+    if: needs.board.outputs.done != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch production publisher for accepted Done cards
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release-cloudflare.yml --ref main
