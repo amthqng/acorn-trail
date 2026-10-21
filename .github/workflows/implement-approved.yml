@@ -113,7 +113,7 @@ jobs:
           git commit -m "feat: implement approved issue #$ISSUE_NUMBER"
           git push origin "$IMPLEMENTATION_BRANCH"
           gh pr create --base main --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
-          gh issue comment "$ISSUE_NUMBER" --body "Implementation PR opened as draft after regression tests and reviewer passed. This has **not** been merged or released. See pull requests for the UAT summary."
+          gh issue comment "$ISSUE_NUMBER" --body "Implementation PR submitted for independent GitHub approval after regression tests and AI reviewer passed. It has **not** been merged or released. See the PR for UAT notes."
       - name: Independent GitHub reviewer approval
         env:
           GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
