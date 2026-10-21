@@ -48,6 +48,19 @@ jobs:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file artifacts/feature-discovery/comment.md
+      - name: Move reviewed issue to Awaiting Approval
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: "2"
+          PROJECT_STATUS: Awaiting Approval
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::PROJECTS_TOKEN is missing; issue remains in its current column"
+          else
+            bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+          fi
       - name: Upload discovery report
         if: always()
         uses: actions/upload-artifact@v4
