@@ -93,7 +93,7 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium webkit
       - name: Run browser regression tests
-        run: node --test tests/browser.test.cjs
+        run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
       - name: Independent reviewer and UAT document
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
