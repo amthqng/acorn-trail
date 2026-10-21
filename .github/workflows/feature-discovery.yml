@@ -1,0 +1,58 @@
+name: Feature discovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Existing GitHub feature-request issue number'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read feature issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          if ! [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Issue number must be numeric"; exit 1
+          fi
+          mkdir -p inputs
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > inputs/feature-issue.json
+          node -e "const i=require('./inputs/feature-issue.json');if(i.pull_request||i.state!=='open')process.exit(1)"
+      - name: Install agent tools
+        run: npm install --prefix orchestration --no-audit --no-fund
+      - name: Type-check
+        run: npm run --prefix orchestration check
+      - name: Run User Research then Education
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+          FEATURE_ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: npx --prefix orchestration tsx orchestration/discover-issue.ts
+      - name: Post discovery findings to issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file artifacts/feature-discovery/comment.md
+      - name: Upload discovery report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-discovery
+          path: artifacts/feature-discovery/report.md
+          if-no-files-found: warn
+          retention-days: 7
