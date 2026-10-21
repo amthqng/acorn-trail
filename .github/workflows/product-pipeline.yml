@@ -67,6 +67,13 @@ jobs:
             gh issue comment "$issue" --body-file artifacts/feature-discovery/comment.md
           fi
           PROJECT_STATUS="Awaiting Approval" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+      - name: Explain discovery failure on issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Discovery automation failed during this run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. The card remains in Discovery; the controller will retry on its next scheduled run. The pipeline owner should investigate the linked failure; no product-owner intervention is required."
   intake:
     needs: board
     if: needs.board.outputs.ready != '[]'
