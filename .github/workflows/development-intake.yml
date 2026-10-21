@@ -42,14 +42,18 @@ jobs:
             [[ "$issue" =~ ^[1-9][0-9]*$ ]] || continue
             gh api "repos/$GITHUB_REPOSITORY/issues/$issue" > /tmp/issue.json
             if ! jq -e '.state=="open" and (has("pull_request")|not)' /tmp/issue.json >/dev/null; then continue; fi
-            if gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -Fq '<!-- acorn-tech-lead-gate -->'; then
-              echo "Issue #$issue already assessed"
-              continue
-            fi
             mkdir -p inputs
             cp /tmp/issue.json inputs/dev-issue.json
+            gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" > inputs/issue-comments.json
             ISSUE_NUMBER="$issue" npx --prefix orchestration tsx orchestration/tech-lead.ts
-            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body-file artifacts/development-intake/comment.md
+            # Assess every run but avoid posting an identical report repeatedly.
+            previous="$(jq -r '[.[]|select(.body|contains("<!-- acorn-tech-lead-gate -->"))]|last|.body // ""' inputs/issue-comments.json)"
+            current="$(cat artifacts/development-intake/comment.md)"
+            if [ "$previous" != "$current" ]; then
+              gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body-file artifacts/development-intake/comment.md
+            else
+              echo "Assessment unchanged for issue #$issue"
+            fi
             if [ "$(cat artifacts/development-intake/verdict.txt)" = "NEEDS_CLARIFICATION" ]; then
               echo "::warning::Issue #$issue requires clarification; leaving it in Ready for Development"
             else

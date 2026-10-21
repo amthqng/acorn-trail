@@ -34,7 +34,8 @@ jobs:
             [[ "$issue" =~ ^[1-9][0-9]*$ ]] || continue
             if ! gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq '.state' | grep -qx open; then continue; fi
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
-            if ! grep -Fq '## Tech Lead intake: READY' <<< "$comments"; then
+            latest="$(printf '%s\\n' "$comments" | grep '## Tech Lead intake:' | tail -n 1 || true)"
+            if [ "$latest" != "## Tech Lead intake: READY" ]; then
               echo "Issue #$issue requires Tech Lead READY decision"
               continue
             fi
