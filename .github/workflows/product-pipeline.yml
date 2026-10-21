@@ -169,7 +169,7 @@ jobs:
             running="$(gh run list --workflow implement-approved.yml --json status --limit 30 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
             [ "$running" = 0 ] || continue
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
-            if ! grep -Fq '<!-- acorn-implementation-dispatched -->' <<< "$comments"; then continue; fi
+            if ! grep -Fq '<!-- acorn-implementation-dispatched-v2 -->' <<< "$comments"; then continue; fi
             echo "Recovering #$issue: no active implementation run or branch"
             PROJECT_STATUS="Ready for Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
             gh issue comment "$issue" --body "Previous implementation attempt did not produce a branch. Returned to Ready for Development for bounded recovery; see Actions for failure details."
@@ -192,16 +192,16 @@ jobs:
             latest="$(printf '%s\n' "$comments" | grep '## Tech Lead intake:' | tail -n 1 || true)"
             [ "$latest" = "## Tech Lead intake: READY" ] || continue
             if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then continue; fi
-            attempts="$(grep -Fc '<!-- acorn-implementation-dispatched -->' <<< "$comments" || true)"
+            attempts="$(grep -Fc '<!-- acorn-implementation-dispatched-v2 -->' <<< "$comments" || true)"
             if [ "$attempts" -ge 2 ]; then
-              echo "::warning::Issue #$issue exhausted two dispatch attempts; requires technical recovery"
+              echo "::warning::Issue #$issue exhausted two attempts under the corrected patch engine; requires technical recovery"
               continue
             fi
             # Prevent duplicate starts when earlier workflow is still active.
             active="$(gh run list --workflow implement-approved.yml --json status --limit 30 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
             [ "$active" = 0 ] || continue
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
-            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched --> Implementation attempt $((attempts+1))/2 queued for #$issue."
+            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched-v2 --> Implementation attempt $((attempts+1))/2 queued for #$issue."
           done
   publish:
     needs: board
