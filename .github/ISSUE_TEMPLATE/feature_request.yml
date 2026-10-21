@@ -1,0 +1,40 @@
+name: Product feature request
+description: Propose a new child experience or learning feature for discovery
+title: "[Idea] "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Child or parent problem
+      description: What needs to improve? Avoid collecting children's identifying information.
+      placeholder: Children may struggle to...
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed feature
+      description: What experience should be explored? It is okay to leave solution details open.
+    validations:
+      required: true
+  - type: dropdown
+    id: grade
+    attributes:
+      label: Target grade
+      options:
+        - Grade 1
+        - Grade 2
+        - Grade 3
+        - All grades
+        - Unsure
+  - type: textarea
+    id: success
+    attributes:
+      label: What would success look like?
+      description: Observable acceptance criteria for a parent or child UAT session
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints or concerns
+      description: Offline, iPhone/touch, learning, accessibility, safety, etc.
