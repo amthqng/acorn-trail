@@ -58,7 +58,8 @@ jobs:
               test -s "$file" || { echo "::error::Missing public asset $file"; exit 1; }
               cp "$file" .cloudflare-release/public/
             done
-            node -e 'const fs=require("fs");const source=fs.readFileSync("wrangler.jsonc","utf8");const changed=source.replace("\\"directory\\": \\"./\\"","\\"directory\\": \\"./.cloudflare-release/public\\"");if(changed===source)throw Error("Unexpected Wrangler assets configuration");fs.writeFileSync("wrangler.release.jsonc",changed);'
+            sed 's#"directory": "./"#"directory": "./.cloudflare-release/public"#' wrangler.jsonc > wrangler.release.jsonc
+            grep -Fq '"directory": "./.cloudflare-release/public"' wrangler.release.jsonc
             npx --yes wrangler@4 deploy --config wrangler.release.jsonc
             gh issue comment "$issue" --body "<!-- acorn-cloudflare-published --> Published the UAT-accepted implementation to Cloudflare from commit $(git rev-parse HEAD). GitHub Actions run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
             echo "Published accepted issue #$issue"
