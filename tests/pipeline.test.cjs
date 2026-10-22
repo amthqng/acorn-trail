@@ -45,7 +45,7 @@ test('Controller synchronizes main to UAT without force pushes before reading th
   assert.match(controller,/  sync-uat:/);
   assert.match(controller,/git merge --no-edit origin\/main/);
   assert.match(controller,/git push origin HEAD:uat/);
-  assert.match(controller,/  board:\\n    needs: sync-uat/);
+  assert.match(controller,/  board:\n    needs: sync-uat/);
   assert.doesNotMatch(controller,/git push --force/);
 });
 test('Only the release workflow may deploy the production worker',()=>{
