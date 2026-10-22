@@ -188,6 +188,65 @@ jobs:
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
             gh issue comment "$issue" --body "<!-- acorn-development-recovery-v3 --> Development recovery attempt $((attempts+1))/2 dispatched while card remains In Development."
           done
+  qa-handoff:
+    needs: board
+    if: needs.board.outputs.qa != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        issue: ${{ fromJSON(needs.board.outputs.qa) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PR and independent GitHub approval
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: |
+          set -euo pipefail
+          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no open implementation PR"; exit 0; fi
+          approved="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json reviews --jq '[.reviews[] | select(.state=="APPROVED" and .author.login!="github-actions[bot]")] | length')"
+          if [ "$approved" -lt 1 ]; then
+            echo "::warning::PR #$pr needs an independent GitHub approval before UAT"
+            exit 0
+          fi
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.approved == 'true'
+        with:
+          ref: agents/issue-${{ matrix.issue }}
+      - name: Re-run tested browser and offline QA on PR candidate
+        if: steps.gate.outputs.approved == 'true'
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium webkit
+          node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+      - name: Upload approved UAT candidate
+        if: steps.gate.outputs.approved == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-issue-${{ matrix.issue }}-pr-${{ steps.gate.outputs.pr }}
+          path: |
+            index.html
+            sw.js
+            manifest.webmanifest
+            icon-192.png
+            icon-512.png
+            icon-maskable-512.png
+          if-no-files-found: error
+          retention-days: 30
+      - name: Move reviewed and tested change to Ready for UAT
+        if: steps.gate.outputs.approved == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: Ready for UAT
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
   dispatch:
     needs: [board, intake]
     if: always() && needs.board.result == 'success' && needs.intake.result == 'success' && needs.board.outputs.ready != '[]'
