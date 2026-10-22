@@ -24,8 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: uat
           persist-credentials: true
-          fetch-depth: 1
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -114,9 +115,9 @@ jobs:
           git add index.html
           git commit -m "feat: implement approved issue #$ISSUE_NUMBER"
           git push origin "$IMPLEMENTATION_BRANCH"
-          gh pr create --base main --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
+          gh pr create --base uat --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
           gh issue comment "$ISSUE_NUMBER" --body "Implementation PR submitted for independent GitHub approval after regression tests and AI reviewer passed. It has **not** been merged or released. See the PR for UAT notes."
-      - name: Merge technically reviewed PR into main
+      - name: Merge technically reviewed PR into uat
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
