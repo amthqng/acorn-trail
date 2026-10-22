@@ -15,7 +15,7 @@ jobs:
       - name: Syntax and gameplay regression tests
         run: |
           node --check sw.js
-          node --test tests/game.test.cjs
+          node --test tests/game.test.cjs tests/pipeline.test.cjs
 
   browser-tests:
     if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'agents/issue-')
