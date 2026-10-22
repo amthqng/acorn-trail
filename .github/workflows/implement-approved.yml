@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'Issue already in Ready for Development on Acorn Trail board'
+        description: 'Approved issue in Ready for Development or retry in In Development'
         required: true
         type: string
 
@@ -39,7 +39,9 @@ jobs:
         run: |
           [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]] || exit 1
           test -n "$GH_TOKEN" || { echo 'PROJECTS_TOKEN not available'; exit 1; }
-          bash scripts/list-project-status-issues.sh | grep -Fx "$ISSUE_NUMBER" || { echo 'Issue is not currently approved in Ready for Development'; exit 1; }
+          if ! bash scripts/list-project-status-issues.sh | grep -Fx "$ISSUE_NUMBER"; then
+            PROJECT_STATUS="In Development" bash scripts/list-project-status-issues.sh | grep -Fx "$ISSUE_NUMBER" || { echo "Issue is not in approved or development status"; exit 1; }
+          fi
       - name: Fetch approved issue and prepare branch
         env:
           GH_TOKEN: ${{ github.token }}
