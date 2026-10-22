@@ -35,6 +35,12 @@ test('Production requires owner acceptance of precise candidate and isolated ass
   assert.match(release,/UAT game asset change/);
   assert.match(release,/git merge --ff-only origin\/uat/);
 });
+test('QA browser container installs the GitHub CLI it needs',()=>{
+  const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
+  assert.match(qa,/container:[\\s\\S]*?mcr\\.microsoft\\.com\\/playwright/);
+  assert.match(qa,/apt-get install[^\\n]* gh jq/);
+  assert.ok(qa.indexOf('apt-get install')<qa.indexOf('gh pr list'),'CLI must install before PR lookup');
+});
 test('Only the release workflow may deploy the production worker',()=>{
   assert.doesNotMatch(implement,/wrangler[^\n]*deploy/);
   assert.doesNotMatch(controller,/wrangler[^\n]*deploy --config wrangler\.release/);
