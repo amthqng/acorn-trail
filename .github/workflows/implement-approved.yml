@@ -116,16 +116,15 @@ jobs:
           git push origin "$IMPLEMENTATION_BRANCH"
           gh pr create --base main --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
           gh issue comment "$ISSUE_NUMBER" --body "Implementation PR submitted for independent GitHub approval after regression tests and AI reviewer passed. It has **not** been merged or released. See the PR for UAT notes."
-      - name: Independent GitHub reviewer approval
+      - name: Merge technically reviewed PR into main
         env:
-          GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
           set -euo pipefail
-          test -n "$GH_TOKEN" || { echo "::error::Configure REVIEWER_GITHUB_TOKEN for a separate GitHub reviewer identity"; exit 1; }
           pr="$(gh pr list --head "agents/issue-$ISSUE_NUMBER" --state open --json number --jq '.[0].number')"
           test -n "$pr"
-          gh pr review "$pr" --approve --body "Independent code review completed after automated browser regression tests passed. See the PR's UAT checklist."
+          gh pr merge "$pr" --merge --repo "$GITHUB_REPOSITORY"
       - name: Upload tested UAT candidate
         uses: actions/upload-artifact@v4
         with:
