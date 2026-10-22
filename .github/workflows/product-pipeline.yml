@@ -1,9 +1,6 @@
 name: Acorn Trail product pipeline
 
 on:
-  schedule:
-    # Offset polling away from busy quarter-hour boundaries; GitHub schedules are best-effort.
-    - cron: '9,24,39,54 * * * *'
   workflow_dispatch:
     inputs:
       deploy_cloudflare_trigger:
@@ -13,9 +10,10 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   actions: write
+  pull-requests: write
 
 concurrency:
   group: acorn-product-controller
@@ -164,36 +162,33 @@ jobs:
           set -euo pipefail
           for issue in $(jq -r '.[]' <<< "$DEVELOPMENT"); do
             [ "$(gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq '.state')" = open ] || continue
-            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then
-              # A failed PR handoff can leave finished and tested code marked In Development.
-              # Reconcile its state without re-running development or treating it as UAT-approved.
-              pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state open --json number --jq '.[0].number // empty')"
-              if [ -n "$pr" ]; then
-                echo "Issue #$issue has implementation PR #$pr; moving to QA & Review pending independent GitHub approval"
+            # A previous merged candidate may have been rejected at UAT.
+            # Re-entering In Development authorizes an issue-specific correction.
+            open_pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,headRefName | jq -r --arg prefix "agents/issue-$issue" '[.[] | select(.headRefName==$prefix or (.headRefName | startswith($prefix + "-correction-")))] | sort_by(.number) | last | .number // empty')"
+            if [ -n "$open_pr" ]; then
+              echo "Issue #$issue has open implementation PR #$open_pr; returning to QA & Review"
+              PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+              continue
+            fi
+            original="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state all --json number,state --jq '.[0].state // empty')"
+            if [ "$original" = "MERGED" ]; then
+              echo "Issue #$issue has merged UAT candidate and was returned to development; dispatching corrective implementation"
+            elif gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then
+              # A partially pushed original branch without PR must be recovered
+              # before attempting more code changes.
+              if gh pr create --repo "$GITHUB_REPOSITORY" --base uat --head "agents/issue-$issue" --title "Implement issue #$issue" --body "Recovered pushed branch for issue #$issue; full QA and UAT still required."; then
                 PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
               else
-                echo "::warning::Issue #$issue has an implementation branch but no open PR; manual technical recovery required"
+                echo "::warning::Issue #$issue pushed branch has no mergeable PR; preserving In Development"
               fi
               continue
             fi
-            # UAT rejections may be fixed by a correction PR rather than the original
-            # Developer run. A merged correction is completed work, not an exhausted retry.
-            corrected="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 100 --json number,title,body,mergedAt --jq '[.[] | select(.title | test("(^|[^0-9])#'"$issue"'([^0-9]|$)")) ] | sort_by(.mergedAt) | last | .number // empty')"
-            prior_correction="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -F '<!-- acorn-uat-correction-processed -->' | tail -n 1 || true)"
-            if [ -n "$corrected" ] && ! grep -Fq "PR #$corrected" <<< "$prior_correction"; then
-              # Re-entry to QA is safe: QA reruns regression and feature acceptance
-              # before issuing a new UAT candidate. Never move directly to Done.
-              echo "Issue #$issue has merged correction PR #$corrected; moving to QA & Review"
-              PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
-              gh issue comment "$issue" --body "<!-- acorn-uat-correction-processed --> Corrective PR #$corrected accepted for a fresh QA cycle; requires renewed UAT."
-              continue
-            fi
-            active="$(gh run list --workflow implement-approved.yml --json status --limit 50 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
+            active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
-            attempts="$(grep -Fc '<!-- acorn-development-recovery-v3 -->' <<< "$comments" || true)"
+            attempts="$(gh run list --workflow implement-approved.yml --json displayTitle,headSha,conclusion --limit 200 | jq --arg title "Implement issue #$issue" --arg sha "$(git rev-parse HEAD)" '[.[] | select(.displayTitle==$title and .headSha==$sha and .conclusion=="failure")] | length')"
             if [ "$attempts" -ge 2 ]; then
-              echo "::warning::Issue #$issue exhausted automatic development recovery; left In Development"
+              echo "::warning::Issue #$issue has two failed attempts on the current implementation revision; left In Development for technical repair"
               continue
             fi
             # Preserve failure state on the board; only the worker's QA gate may advance it.
@@ -204,6 +199,7 @@ jobs:
     needs: board
     if: needs.board.outputs.qa != '[]'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -217,24 +213,68 @@ jobs:
           ISSUE_NUMBER: ${{ matrix.issue }}
         run: |
           set -euo pipefail
-          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state all --json number,state --jq '.[0].number // empty')"
-          if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no implementation PR"; exit 0; fi
+          pr_entry="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --limit 200 --json number,state,headRefName | jq -c --arg prefix "agents/issue-$ISSUE_NUMBER" '[.[] | select(.headRefName==$prefix or (.headRefName | startswith($prefix + "-correction-")))] | sort_by(.number) | last // empty')"
+          pr="$(jq -r '.number // empty' <<< "$pr_entry")"
+          head="$(jq -r '.headRefName // empty' <<< "$pr_entry")"
+          if [ -z "$pr" ]; then
+            # The Developer can have pushed its change before PR creation
+            # failed. Recover the PR here because the card has already
+            # entered QA & Review, not In Development.
+            candidate="$(gh api --paginate "repos/$GITHUB_REPOSITORY/branches?per_page=100" --jq '.[].name' | grep -E "^agents/issue-$ISSUE_NUMBER(-correction-[0-9]+)?$" | sort -V | tail -n 1 || true)"
+            if [ -z "$candidate" ]; then
+              echo "::warning::Issue #$ISSUE_NUMBER has no pushed implementation branch"; exit 0
+            fi
+            gh pr create --repo "$GITHUB_REPOSITORY" --base uat --head "$candidate" --title "Implement issue #$ISSUE_NUMBER" --body "Recovered pushed candidate for issue #$ISSUE_NUMBER; independent QA and UAT approval still required."
+            pr_entry="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$candidate" --state open --json number,state,headRefName --jq '.[0] // empty')"
+            pr="$(jq -r '.number // empty' <<< "$pr_entry")"
+            head="$candidate"
+            [ -n "$pr" ] || { echo "::error::PR recovery failed for issue #$ISSUE_NUMBER"; exit 1; }
+          fi
           # A separate authorized reviewer identity may approve the already AI-reviewed
           # candidate. Never let the repository's Actions identity approve itself.
           state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')"
+          if [ "$state" != "OPEN" ] && [ "$state" != "MERGED" ]; then
+            echo "::warning::PR #$pr was closed without merge; QA cannot promote it"; exit 0
+          fi
+          if [ "$state" = "MERGED" ]; then
+            sha="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq '.mergeCommit.oid')"
+            comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" --jq '.[].body')"
+            if grep -Fq "UAT-CANDIDATE: #$ISSUE_NUMBER $sha PR #$pr" <<< "$comments" && grep -Fq "acorn-trail-uat-$ISSUE_NUMBER-${sha:0:12}" <<< "$comments"; then
+              echo "completed=true" >> "$GITHUB_OUTPUT"
+              echo "QA receipt already exists for exact build $sha; restoring Ready for UAT without rebuilding"
+              exit 0
+            fi
+          fi
+          echo "head=$head" >> "$GITHUB_OUTPUT"
           echo "pr_state=$state" >> "$GITHUB_OUTPUT"
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
           echo "found=true" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.gate.outputs.found == 'true'
         with:
-          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'uat' || format('agents/issue-{0}', matrix.issue) }}
+          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'uat' || steps.gate.outputs.head }}
+      - name: Cache Playwright browser downloads
+        if: steps.gate.outputs.found == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-linux-1.56.1
       - name: Re-run tested browser and offline QA on PR candidate
         if: steps.gate.outputs.found == 'true'
         run: |
-          npm install --no-save playwright
+          npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install --with-deps chromium webkit
           node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+      - name: Independent reviewer approval of tested PR
+        if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
+        env:
+          GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN" || { echo "::error::Independent REVIEWER_GITHUB_TOKEN is not configured"; exit 1; }
+          state="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
+          if [ "$state" -eq 0 ]; then gh pr review "$PR_NUMBER" --approve --body "QA browser and offline regression passed; independent reviewer approval."; fi
       - name: Merge QA-passed PR into uat
         if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
@@ -244,7 +284,26 @@ jobs:
           set -euo pipefail
           base="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq '.baseRefName')"
           [ "$base" = "uat" ] || { echo "::error::Refusing to auto-merge PR targeting $base instead of uat"; exit 1; }
+          approvals="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
+          [ "$approvals" -ge 1 ] || { echo "::error::Missing reviewer approval"; exit 1; }
           gh pr merge "$PR_NUMBER" --merge --repo "$GITHUB_REPOSITORY"
+      - name: Verify merged candidate and record immutable UAT SHA
+        if: steps.gate.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+          PR_NUMBER: ${{ steps.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          base="$(gh pr view "$PR_NUMBER" --json baseRefName --jq '.baseRefName')"
+          [ "$base" = "uat" ] || { echo "::error::PR is not targeting uat"; exit 1; }
+          approvals="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[] | select(.state=="APPROVED" and .author.login!="github-actions[bot]")] | length')"
+          [ "$approvals" -ge 1 ] || { echo "::error::Missing independent PR approval before UAT"; exit 1; }
+          sha="$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')"
+          [ -n "$sha" ] && [ "$sha" != null ]
+          git fetch origin uat
+          [ "$(git rev-parse origin/uat)" = "$sha" ] || { echo "::error::UAT moved; refusing stale acceptance"; exit 1; }
+          echo "<!-- acorn-uat-candidate --> UAT-CANDIDATE: #$ISSUE_NUMBER $sha PR #$PR_NUMBER" | gh issue comment "$ISSUE_NUMBER" --body-file -
       - name: Upload tested UAT candidate
         if: steps.gate.outputs.found == 'true'
         uses: actions/upload-artifact@v4
@@ -259,8 +318,32 @@ jobs:
             icon-maskable-512.png
           if-no-files-found: error
           retention-days: 30
-      - name: Move reviewed and tested change to Ready for UAT
+      - name: Deploy tested build to isolated Cloudflare UAT preview
         if: steps.gate.outputs.found == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          mkdir -p .cloudflare-uat/public
+          for file in index.html sw.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png; do
+            test -s "$file"
+            cp "$file" .cloudflare-uat/public/
+          done
+          sha="$(gh pr view "${{ steps.gate.outputs.pr }}" --json mergeCommit --jq '.mergeCommit.oid')"
+          short_sha="${sha:0:12}"
+          # Immutable worker name per tested candidate: another issue cannot
+          # overwrite the build the owner is currently testing.
+          jq --arg name "acorn-trail-uat-$ISSUE_NUMBER-$short_sha" '.name=$name' wrangler.uat.jsonc > wrangler.uat.candidate.json
+          npx --yes wrangler@4 deploy --config wrangler.uat.candidate.json | tee /tmp/uat-deploy.log
+          url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/uat-deploy.log | tail -n 1 || true)"
+          [ -n "$url" ] || { echo "::error::No public preview URL returned by Cloudflare"; exit 1; }
+          gh issue comment "$ISSUE_NUMBER" --body "UAT-PREVIEW: $url (test the candidate in the latest UAT-CANDIDATE receipt before accepting)"
+      - name: Move reviewed and tested change to Ready for UAT
+        if: steps.gate.outputs.found == 'true' || steps.gate.outputs.completed == 'true'
         env:
           GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
           PROJECT_OWNER: amthqng
@@ -286,13 +369,13 @@ jobs:
             latest="$(printf '%s\n' "$comments" | grep '## Tech Lead intake:' | tail -n 1 || true)"
             [ "$latest" = "## Tech Lead intake: READY" ] || continue
             if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then continue; fi
-            attempts="$(grep -Fc '<!-- acorn-implementation-dispatched-v2 -->' <<< "$comments" || true)"
+            attempts="$(gh run list --workflow implement-approved.yml --json displayTitle,headSha,conclusion --limit 200 | jq --arg title "Implement issue #$issue" --arg sha "$(git rev-parse HEAD)" '[.[] | select(.displayTitle==$title and .headSha==$sha and .conclusion=="failure")] | length')"
             if [ "$attempts" -ge 2 ]; then
-              echo "::warning::Issue #$issue exhausted two attempts under the corrected patch engine; requires technical recovery"
+              echo "::warning::Issue #$issue has two failed attempts on this implementation revision; requires technical repair"
               continue
             fi
             # Prevent duplicate starts when earlier workflow is still active.
-            active="$(gh run list --workflow implement-approved.yml --json status --limit 30 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
+            active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || continue
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
             gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched-v2 --> Implementation attempt $((attempts+1))/2 queued for #$issue."
