@@ -206,7 +206,7 @@ jobs:
         run: |
           set -euo pipefail
           pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state all --json number,state --jq '.[0].number // empty')"
-          if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no open implementation PR"; exit 0; fi
+          if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no implementation PR"; exit 0; fi
           # A separate authorized reviewer identity may approve the already AI-reviewed
           # candidate. Never let the repository's Actions identity approve itself.
           state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')"
@@ -216,7 +216,7 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.gate.outputs.found == 'true'
         with:
-          ref: agents/issue-${{ matrix.issue }}
+          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'main' || format('agents/issue-{0}', matrix.issue) }}
       - name: Re-run tested browser and offline QA on PR candidate
         if: steps.gate.outputs.found == 'true'
         run: |
