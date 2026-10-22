@@ -303,7 +303,12 @@ jobs:
             test -s "$file"
             cp "$file" .cloudflare-uat/public/
           done
-          npx --yes wrangler@4 deploy --config wrangler.uat.jsonc | tee /tmp/uat-deploy.log
+          sha="$(gh pr view "${{ steps.gate.outputs.pr }}" --json mergeCommit --jq '.mergeCommit.oid')"
+          short_sha="${sha:0:12}"
+          # Immutable worker name per tested candidate: another issue cannot
+          # overwrite the build the owner is currently testing.
+          jq --arg name "acorn-trail-uat-$ISSUE_NUMBER-$short_sha" '.name=$name' wrangler.uat.jsonc > wrangler.uat.candidate.json
+          npx --yes wrangler@4 deploy --config wrangler.uat.candidate.json | tee /tmp/uat-deploy.log
           url="$(grep -Eo 'https://[^[:space:]]+\\.workers\\.dev' /tmp/uat-deploy.log | tail -n 1 || true)"
           [ -n "$url" ] || { echo "::error::No public preview URL returned by Cloudflare"; exit 1; }
           gh issue comment "$ISSUE_NUMBER" --body "UAT-PREVIEW: $url (test the candidate in the latest UAT-CANDIDATE receipt before accepting)"
