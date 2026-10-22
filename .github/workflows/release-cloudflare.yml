@@ -58,16 +58,31 @@ jobs:
             pr_number="$(jq -r '.number' <<< "$pr")"
             state="$(jq -r '.state' <<< "$pr")"
             if [ "$state" != "MERGED" ]; then
-              echo "::warning::Issue #$issue is Done without a merged implementation PR"
+              echo "::warning::Issue #$issue has no merged UAT implementation PR"
               continue
             fi
-            git fetch origin main
-            git checkout --detach origin/main
-            merged_sha="$(gh pr view "$pr_number" --json mergeCommit --jq '.mergeCommit.oid')"
-            if [ "$merged_sha" != "$(git rev-parse HEAD)" ]; then
-              echo "::error::HEAD differs from accepted merge commit; refusing to publish unintended changes"
-              exit 1
+            base="$(gh pr view "$pr_number" --json baseRefName --jq '.baseRefName')"
+            if [ "$base" != "uat" ]; then
+              echo "::warning::Issue #$issue belongs to a legacy main PR; not eligible for new UAT promotion"
+              continue
             fi
+            # Fail closed: merge the UAT candidate only when it is the exact,
+            # sole unreleased change from main. Never include another feature
+            # that has not received its own UAT acceptance.
+            git fetch origin main uat
+            git checkout -B production-candidate origin/main
+            merged_sha="$(gh pr view "$pr_number" --json mergeCommit --jq '.mergeCommit.oid')"
+            uat_sha="$(git rev-parse origin/uat)"
+            main_sha="$(git rev-parse origin/main)"
+            if [ "$merged_sha" != "$uat_sha" ] || [ "$(git rev-parse "$merged_sha^1")" != "$main_sha" ]; then
+              echo "::warning::UAT contains additional changes or diverges from main; cannot safely release issue #$issue alone"
+              continue
+            fi
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git merge --no-ff origin/uat -m "release: UAT accepted issue #$issue"
+            # Publish only the exact production merge commit we are deploying.
+            git push origin HEAD:main
             # Never deploy the repository root: it contains automation and developer files.
             mkdir -p .cloudflare-release/public
             for file in index.html sw.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png; do
@@ -77,6 +92,6 @@ jobs:
             sed 's#"directory": "./"#"directory": "./.cloudflare-release/public"#' wrangler.jsonc > wrangler.release.jsonc
             grep -Fq '"directory": "./.cloudflare-release/public"' wrangler.release.jsonc
             npx --yes wrangler@4 deploy --config wrangler.release.jsonc
-            gh issue comment "$issue" --body "<!-- acorn-cloudflare-published --> Published the UAT-accepted implementation to Cloudflare from commit $(git rev-parse HEAD). GitHub Actions run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            gh issue comment "$issue" --body "<!-- acorn-cloudflare-published --> Promoted accepted UAT into main and published to Cloudflare from commit $(git rev-parse HEAD). GitHub Actions run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
             echo "Published accepted issue #$issue"
           done < /tmp/accepted

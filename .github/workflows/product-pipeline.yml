@@ -228,20 +228,22 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.gate.outputs.found == 'true'
         with:
-          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'main' || format('agents/issue-{0}', matrix.issue) }}
+          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'uat' || format('agents/issue-{0}', matrix.issue) }}
       - name: Re-run tested browser and offline QA on PR candidate
         if: steps.gate.outputs.found == 'true'
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium webkit
           node --test tests/browser.test.cjs tests/offline.browser.test.cjs
-      - name: Merge QA-passed PR into main
+      - name: Merge QA-passed PR into uat
         if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.gate.outputs.pr }}
         run: |
           set -euo pipefail
+          base="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq '.baseRefName')"
+          [ "$base" = "uat" ] || { echo "::error::Refusing to auto-merge PR targeting $base instead of uat"; exit 1; }
           gh pr merge "$PR_NUMBER" --merge --repo "$GITHUB_REPOSITORY"
       - name: Upload tested UAT candidate
         if: steps.gate.outputs.found == 'true'
