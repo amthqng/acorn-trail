@@ -35,11 +35,11 @@ test('Production requires owner acceptance of precise candidate and isolated ass
   assert.match(release,/UAT game asset change/);
   assert.match(release,/git merge --ff-only origin\/uat/);
 });
-test('QA browser container installs the GitHub CLI it needs',()=>{
+test('QA uses native runner for reliable WebKit offline behavior',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
-  assert.match(qa,/container:[\\s\\S]*?mcr\\.microsoft\\.com\\/playwright/);
-  assert.match(qa,/apt-get install[^\\n]* gh jq/);
-  assert.ok(qa.indexOf('apt-get install')<qa.indexOf('gh pr list'),'CLI must install before PR lookup');
+  assert.doesNotMatch(qa,/container:/);
+  assert.match(qa,/npx playwright install --with-deps chromium webkit/);
+  assert.match(qa,/actions\\/cache@v4/);
 });
 test('Controller synchronizes main to UAT without force pushes before reading the board',()=>{
   assert.match(controller,/  sync-uat:/);
