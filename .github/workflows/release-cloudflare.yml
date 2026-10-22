@@ -48,7 +48,7 @@ jobs:
             # not necessarily owner UAT acceptance. Do not trust it alone.
             issue_comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100")"
             branch="agents/issue-$issue"
-            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "$branch" --json number,mergeCommit --jq '.[0] // empty')"
+            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "$branch" --json number,state,mergeCommit --jq '.[0] // empty')"
             if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no merged implementation PR"; continue; fi
             pr_number="$(jq -r '.number' <<< "$pr")"
             merged_sha="$(jq -r '.mergeCommit.oid' <<< "$pr")"
