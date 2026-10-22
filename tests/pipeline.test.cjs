@@ -35,6 +35,19 @@ test('Production requires owner acceptance of precise candidate and isolated ass
   assert.match(release,/UAT game asset change/);
   assert.match(release,/git merge --ff-only origin\/uat/);
 });
+test('QA uses native runner for reliable WebKit offline behavior',()=>{
+  const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
+  assert.doesNotMatch(qa,/container:/);
+  assert.match(qa,/npx playwright install --with-deps chromium webkit/);
+  assert.match(qa,/actions\/cache@v4/);
+});
+test('Controller synchronizes main to UAT without force pushes before reading the board',()=>{
+  assert.match(controller,/  sync-uat:/);
+  assert.match(controller,/git merge --no-edit origin\/main/);
+  assert.match(controller,/git push origin HEAD:uat/);
+  assert.match(controller,/  board:\n    needs: sync-uat/);
+  assert.doesNotMatch(controller,/git push --force/);
+});
 test('Only the release workflow may deploy the production worker',()=>{
   assert.doesNotMatch(implement,/wrangler[^\n]*deploy/);
   assert.doesNotMatch(controller,/wrangler[^\n]*deploy --config wrangler\.release/);
