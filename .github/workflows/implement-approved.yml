@@ -117,15 +117,8 @@ jobs:
           git push origin "$IMPLEMENTATION_BRANCH"
           gh pr create --base uat --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
           gh issue comment "$ISSUE_NUMBER" --body "Implementation PR submitted for independent GitHub approval after regression tests and AI reviewer passed. It has **not** been merged or released. See the PR for UAT notes."
-      - name: Merge technically reviewed PR into uat
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ inputs.issue_number }}
-        run: |
-          set -euo pipefail
-          pr="$(gh pr list --head "agents/issue-$ISSUE_NUMBER" --state open --json number --jq '.[0].number')"
-          test -n "$pr"
-          gh pr merge "$pr" --merge --repo "$GITHUB_REPOSITORY"
+      - name: Leave PR for central QA approval and UAT handoff
+        run: echo "Implementation tested; central QA job verifies and merges into uat."
       - name: Upload tested UAT candidate
         uses: actions/upload-artifact@v4
         with:
@@ -139,15 +132,6 @@ jobs:
             icon-maskable-512.png
           if-no-files-found: error
           retention-days: 30
-      - name: Mark Ready for UAT
-        env:
-          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
-          PROJECT_OWNER: amthqng
-          PROJECT_NUMBER: '2'
-          PROJECT_STATUS: Ready for UAT
-          ISSUE_NUMBER: ${{ inputs.issue_number }}
-        run: |
-          bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
       - name: Record failed stage and retain In Development
         if: failure()
         env:
