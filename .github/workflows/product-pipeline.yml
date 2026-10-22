@@ -198,9 +198,9 @@ jobs:
             active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
-            attempts="$(grep -Fc '<!-- acorn-development-recovery-v3 -->' <<< "$comments" || true)"
+            attempts="$(gh run list --workflow implement-approved.yml --json displayTitle,headSha,conclusion --limit 200 | jq --arg title "Implement issue #$issue" --arg sha "$(git rev-parse HEAD)" '[.[] | select(.displayTitle==$title and .headSha==$sha and .conclusion=="failure")] | length')"
             if [ "$attempts" -ge 2 ]; then
-              echo "::warning::Issue #$issue exhausted automatic development recovery; left In Development"
+              echo "::warning::Issue #$issue has two failed attempts on the current implementation revision; left In Development for technical repair"
               continue
             fi
             # Preserve failure state on the board; only the worker's QA gate may advance it.
@@ -355,9 +355,9 @@ jobs:
             latest="$(printf '%s\n' "$comments" | grep '## Tech Lead intake:' | tail -n 1 || true)"
             [ "$latest" = "## Tech Lead intake: READY" ] || continue
             if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then continue; fi
-            attempts="$(grep -Fc '<!-- acorn-implementation-dispatched-v2 -->' <<< "$comments" || true)"
+            attempts="$(gh run list --workflow implement-approved.yml --json displayTitle,headSha,conclusion --limit 200 | jq --arg title "Implement issue #$issue" --arg sha "$(git rev-parse HEAD)" '[.[] | select(.displayTitle==$title and .headSha==$sha and .conclusion=="failure")] | length')"
             if [ "$attempts" -ge 2 ]; then
-              echo "::warning::Issue #$issue exhausted two attempts under the corrected patch engine; requires technical recovery"
+              echo "::warning::Issue #$issue has two failed attempts on this implementation revision; requires technical repair"
               continue
             fi
             # Prevent duplicate starts when earlier workflow is still active.
