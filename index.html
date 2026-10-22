@@ -1726,7 +1726,7 @@ function numChoices(ans){
   let k=ans+4; while(set.size<3){ if(k>0&&k!==ans) set.add(k); k++; }
   return shuffle([ans,...set]);
 }
-const NOUNS=['acorns','apples','lanterns','leaves','berries','pebbles','pinecones','buttons','shells','flowers','stars','cookies'];
+const NOUNS=['acorns','apples','lanterns','leaves','berries','pebbles','pinecones','buttons','shells','flowers','stars','cookies','oaks','maples','birches'];
 function noun(){ return NOUNS[Math.floor(Math.random()*NOUNS.length)]; }
 function mathOffset(){ return SETTINGS.math==='g1'?-1:SETTINGS.math==='g3'?1:0; }
 function mathOperationAvailable(op,grade=SETTINGS.math){
