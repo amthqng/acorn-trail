@@ -204,6 +204,9 @@ jobs:
     needs: board
     if: needs.board.outputs.qa != '[]'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
     strategy:
       fail-fast: false
       matrix:
@@ -232,9 +235,18 @@ jobs:
       - name: Re-run tested browser and offline QA on PR candidate
         if: steps.gate.outputs.found == 'true'
         run: |
-          npm install --no-save playwright
-          npx playwright install --with-deps chromium webkit
+          npm install --no-save --package-lock=false playwright@1.56.1
           node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+      - name: Independent reviewer approval of tested PR
+        if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
+        env:
+          GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN" || { echo "::error::Independent REVIEWER_GITHUB_TOKEN is not configured"; exit 1; }
+          state="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
+          if [ "$state" -eq 0 ]; then gh pr review "$PR_NUMBER" --approve --body "QA browser and offline regression passed; independent reviewer approval."; fi
       - name: Merge QA-passed PR into uat
         if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
@@ -244,7 +256,24 @@ jobs:
           set -euo pipefail
           base="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq '.baseRefName')"
           [ "$base" = "uat" ] || { echo "::error::Refusing to auto-merge PR targeting $base instead of uat"; exit 1; }
+          approvals="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
+          [ "$approvals" -ge 1 ] || { echo "::error::Missing reviewer approval"; exit 1; }
           gh pr merge "$PR_NUMBER" --merge --repo "$GITHUB_REPOSITORY"
+      - name: Verify merged candidate and record immutable UAT SHA
+        if: steps.gate.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+          PR_NUMBER: ${{ steps.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          base="$(gh pr view "$PR_NUMBER" --json baseRefName --jq '.baseRefName')"
+          [ "$base" = "uat" ] || { echo "::error::PR is not targeting uat"; exit 1; }
+          sha="$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')"
+          [ -n "$sha" ] && [ "$sha" != null ]
+          git fetch origin uat
+          [ "$(git rev-parse origin/uat)" = "$sha" ] || { echo "::error::UAT moved; refusing stale acceptance"; exit 1; }
+          echo "<!-- acorn-uat-candidate --> UAT-CANDIDATE: #$ISSUE_NUMBER $sha PR #$PR_NUMBER" | gh issue comment "$ISSUE_NUMBER" --body-file -
       - name: Upload tested UAT candidate
         if: steps.gate.outputs.found == 'true'
         uses: actions/upload-artifact@v4
