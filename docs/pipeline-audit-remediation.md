@@ -18,8 +18,8 @@ Owner approves discovery and UAT. Automation handles the rest. Never use Done al
 - Per-issue run names let separate issues develop concurrently; one busy issue no longer blocks unrelated work.
 - Recovery uses GitHub Actions failed runs for the current workflow commit, rather than permanent v2/v3 markers embedded in issue comments.
 - The Developer failure handler preserves QA & Review when a failure occurs after entering QA.
-- A pushed implementation branch with no PR gets an automated PR recovery attempt.
-- QA can reuse a completed exact-SHA candidate and immutable preview receipt without rerunning its expensive test suite.
+- A pushed implementation branch with no PR gets an automated PR recovery attempt. An issue rejected from UAT can receive a distinct correction PR without rewriting its previous candidate.
+- QA can reuse a completed exact-SHA candidate and immutable preview receipt without rerunning its expensive test suite. Both QA and the publisher verify independent approval, even on previously merged candidates.
 - The Developer and agent PR checks avoid duplicated comprehensive browser tests; QA is the full feature gate.
 - Static lifecycle/release tests run on PRs to prevent regression.
 
@@ -28,7 +28,7 @@ Owner approves discovery and UAT. Automation handles the rest. Never use Done al
 2. **Real UAT preview:** A candidate-specific Cloudflare worker deployment is configured, but its first production-equivalent preview has not run successfully, so domain provisioning and offline usability are unverified.
 3. **Separate reviewer identity:** REVIEWER_GITHUB_TOKEN has to belong to a second authorized GitHub identity. Its presence and functional permissions have not been verified. Without it, the system fails closed.
 4. **Acceptance UX:** The owner must comment `UAT-ACCEPTED: #<issue> <exact-40-character-merge-SHA>` and move the card to Done. Owner-specific board transition audit is not available from the current workflow; this extra receipt is an intentional safety gate, not yet the ideal board-only interaction.
-5. **UAT correction flow:** The historical title-based correction PR detection can misidentify work and doesn't fully orchestrate a fresh correction branch. Must replace with issue-linked metadata and a coherent rejected-UAT stage before claiming that recovery path works automatically.
+5. **UAT correction flow:** Rejected work returned to In Development now uses per-issue corrective implementation branches and PR matching by branch prefix, with QA and release verification for the corresponding issue. This remains unverified by a live rejection-and-correction trial.
 6. **Project built-in automations:** They can close issues or move cards to Done; project automation settings are not verifiable from repo contents. Production is protected by exact-SHA owner acceptance but board status still needs governance validation.
 7. **End-to-end proof:** No successful first run with the new changes. PR #78 must pass checks before merge, and first UAT preview and accepted production promotion must be witnessed.
 
