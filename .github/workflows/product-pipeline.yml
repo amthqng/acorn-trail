@@ -178,7 +178,7 @@ jobs:
             fi
             # UAT rejections may be fixed by a correction PR rather than the original
             # Developer run. A merged correction is completed work, not an exhausted retry.
-            corrected="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 100 --json number,title,body,mergedAt --jq '[.[] | select((.title | test("(^|[^0-9])#'"$issue"'([^0-9]|$)")) or (.body // "" | test("(^|[^0-9])#'"$issue"'([^0-9]|$)"))) ] | sort_by(.mergedAt) | last | .number // empty')"
+            corrected="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 100 --json number,title,body,mergedAt --jq '[.[] | select(.title | test("(^|[^0-9])#'"$issue"'([^0-9]|$)")) ] | sort_by(.mergedAt) | last | .number // empty')"
             prior_correction="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -F '<!-- acorn-uat-correction-processed -->' | tail -n 1 || true)"
             if [ -n "$corrected" ] && ! grep -Fq "PR #$corrected" <<< "$prior_correction"; then
               # Re-entry to QA is safe: QA reruns regression and feature acceptance
