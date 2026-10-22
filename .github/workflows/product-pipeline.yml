@@ -165,7 +165,16 @@ jobs:
           for issue in $(jq -r '.[]' <<< "$DEVELOPMENT"); do
             [ "$(gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq '.state')" = open ] || continue
             if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then
-              echo "Issue #$issue already has a branch; review existing PR instead of overwriting"; continue
+              # A failed PR handoff can leave finished and tested code marked In Development.
+              # Reconcile its state without re-running development or treating it as UAT-approved.
+              pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state open --json number --jq '.[0].number // empty')"
+              if [ -n "$pr" ]; then
+                echo "Issue #$issue has implementation PR #$pr; moving to QA & Review pending independent GitHub approval"
+                PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+              else
+                echo "::warning::Issue #$issue has an implementation branch but no open PR; manual technical recovery required"
+              fi
+              continue
             fi
             active="$(gh run list --workflow implement-approved.yml --json status --limit 50 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
             [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
