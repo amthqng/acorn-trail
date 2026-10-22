@@ -13,15 +13,24 @@ Owner approves discovery and UAT. Automation handles the rest. Never use Done al
 - Removed temporary OpenAI connection smoke test and manual discovery-card synchronization.
 - Retained proactive discovery as optional; retaining it does not affect normal pipeline operation.
 
+## Operational fixes included
+- Controller has one production scheduler (the Cloudflare Worker) plus manual workflow dispatch, rather than overlapping GitHub cron and Worker polling.
+- Per-issue run names let separate issues develop concurrently; one busy issue no longer blocks unrelated work.
+- Recovery uses GitHub Actions failed runs for the current workflow commit, rather than permanent v2/v3 markers embedded in issue comments.
+- The Developer failure handler preserves QA & Review when a failure occurs after entering QA.
+- A pushed implementation branch with no PR gets an automated PR recovery attempt.
+- QA can reuse a completed exact-SHA candidate and immutable preview receipt without rerunning its expensive test suite.
+- The Developer and agent PR checks avoid duplicated comprehensive browser tests; QA is the full feature gate.
+- Static lifecycle/release tests run on PRs to prevent regression.
+
 ## Unresolved blockers — do not treat the system as validated
-1. **Git history:** uat was 174 commits behind main and one ahead (GitHub compare on 2026-10-22). The UAT-only commit modifies .github/workflows/tests.yml. The baseline-preserving synchronization PR #79 (main → uat) is open; it must be verified and merged after this remediation PR. Never force-push uat.
-2. **UAT preview:** Per-issue and per-commit immutable Cloudflare worker preview config is added, but successful workers.dev provisioning, URL extraction, service-worker behavior, and availability have not been verified. The workflow fails closed if it cannot obtain a URL.
-3. **Reviewer token:** REVIEWER_GITHUB_TOKEN must belong to an authorized separate identity and its permissions must actually work. Unverified.
-4. **Real acceptance:** The owner must comment `UAT-ACCEPTED: #<issue> <exact-40-character-merge-SHA>` and put the card in Done. The comment is an interim fail-closed release authorization; this is not yet the desired single board action.
-5. **Test deduplication:** For agent implementation PRs, the comprehensive browser suite now runs only in QA; Developer runs fast unit checks and tests.yml skips its browser job for agent PRs. General-purpose PRs continue using tests.yml. Confirm timing and required branch-protection contexts.
-6. **Retries:** The recovery controller now creates a missing PR for a pushed implementation branch. Bounded Developer retries can still exhaust without an automatic code-repair escalation, and board exceptions are not yet a reliable self-healing loop.
-7. **Proactive discovery:** opportunity-discovery.yml intentionally retained as a manually invoked optional feature generator; decide separately whether this feature is wanted.
-8. **No live end-to-end validation completed.** Do not merge as if production safety and usability have already been proved.
+1. **Git history:** uat was 174 commits behind main and one ahead. Its sole extra commit changes tests.yml. Synchronization PR #79 (main → uat) is open and must be refreshed after PR #78 is merged. Never force-push uat.
+2. **Real UAT preview:** A candidate-specific Cloudflare worker deployment is configured, but its first production-equivalent preview has not run successfully, so domain provisioning and offline usability are unverified.
+3. **Separate reviewer identity:** REVIEWER_GITHUB_TOKEN has to belong to a second authorized GitHub identity. Its presence and functional permissions have not been verified. Without it, the system fails closed.
+4. **Acceptance UX:** The owner must comment `UAT-ACCEPTED: #<issue> <exact-40-character-merge-SHA>` and move the card to Done. Owner-specific board transition audit is not available from the current workflow; this extra receipt is an intentional safety gate, not yet the ideal board-only interaction.
+5. **UAT correction flow:** The historical title-based correction PR detection can misidentify work and doesn't fully orchestrate a fresh correction branch. Must replace with issue-linked metadata and a coherent rejected-UAT stage before claiming that recovery path works automatically.
+6. **Project built-in automations:** They can close issues or move cards to Done; project automation settings are not verifiable from repo contents. Production is protected by exact-SHA owner acceptance but board status still needs governance validation.
+7. **End-to-end proof:** No successful first run with the new changes. PR #78 must pass checks before merge, and first UAT preview and accepted production promotion must be witnessed.
 
 ## Safety invariants to validate before end-to-end test
 - A PR targeting main is never auto-merged by Developer or QA.
