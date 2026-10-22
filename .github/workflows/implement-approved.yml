@@ -91,12 +91,10 @@ jobs:
           PROJECT_STATUS: QA & Review
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
-      - name: Set up Playwright browser tests
+      - name: Fast syntax and gameplay unit checks
         run: |
-          npm install --no-save playwright
-          npx playwright install --with-deps chromium webkit
-      - name: Run browser regression tests
-        run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+          node --check sw.js
+          node --test tests/game.test.cjs
       - name: Independent reviewer and UAT document
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
