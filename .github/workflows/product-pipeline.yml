@@ -183,18 +183,9 @@ jobs:
               fi
               continue
             fi
-            # UAT rejections may be fixed by a correction PR rather than the original
-            # Developer run. A merged correction is completed work, not an exhausted retry.
-            corrected="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 100 --json number,title,body,mergedAt --jq '[.[] | select(.title | test("(^|[^0-9])#'"$issue"'([^0-9]|$)")) ] | sort_by(.mergedAt) | last | .number // empty')"
-            prior_correction="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -F '<!-- acorn-uat-correction-processed -->' | tail -n 1 || true)"
-            if [ -n "$corrected" ] && ! grep -Fq "PR #$corrected" <<< "$prior_correction"; then
-              # Re-entry to QA is safe: QA reruns regression and feature acceptance
-              # before issuing a new UAT candidate. Never move directly to Done.
-              echo "Issue #$issue has merged correction PR #$corrected; moving to QA & Review"
-              PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
-              gh issue comment "$issue" --body "<!-- acorn-uat-correction-processed --> Corrective PR #$corrected accepted for a fresh QA cycle; requires renewed UAT."
-              continue
-            fi
+            # A rejected UAT item returns to In Development. Do not guess a
+            # corrective PR from its title; an issue-specific recovery branch
+            # must go through the same development and QA gates.
             active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
@@ -220,6 +211,10 @@ jobs:
         issue: ${{ fromJSON(needs.board.outputs.qa) }}
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure GitHub CLI is available in browser container
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq gh jq
       - name: Locate existing PR for QA reconciliation
         id: gate
         env:
