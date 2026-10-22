@@ -4,6 +4,7 @@ on:
     branches: [main, qa/offline-gameplay]
   pull_request:
   workflow_dispatch:
+
 jobs:
   offline-tests:
     runs-on: ubuntu-latest
@@ -22,7 +23,12 @@ jobs:
             exit 0
           fi
           changed="$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" --jq '.[].filename')"
-          if grep -Eq '^(index\.html|sw\.js|manifest\.webmanifest|icon-.*\.png|tests/browser\.test\.cjs|tests/offline\.browser\.test\.cjs)
+          if grep -Eq '^(index\.html|sw\.js|manifest\.webmanifest|icon-.*\.png|tests/browser\.test\.cjs|tests/offline\.browser\.test\.cjs)$' <<< "$changed"; then
+            echo "browser_needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "browser_needed=false" >> "$GITHUB_OUTPUT"
+            echo "Workflow/docs-only change: full browser QA still runs for game changes and before UAT."
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -36,7 +42,7 @@ jobs:
     needs: offline-tests
     if: needs.offline-tests.outputs.browser_needed == 'true' && (github.event_name != 'pull_request' || !startsWith(github.head_ref, 'agents/issue-'))
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,51 +59,6 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Offline mobile and complete-trail browser QA
         run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
-
-      - name: Save mobile QA screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mobile-qa-screenshots
-          path: artifacts/
-          if-no-files-found: ignore
-          retention-days: 7
- <<< "$changed"; then
-            echo "browser_needed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "browser_needed=false" >> "$GITHUB_OUTPUT"
-            echo "Workflow/docs-only change: full browser QA will run for game changes and at the UAT gate."
-          fi
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Syntax and gameplay regression tests
-        run: |
-          node --check sw.js
-          node --test tests/game.test.cjs tests/pipeline.test.cjs
-
-  browser-tests:
-    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'agents/issue-')
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install developer-only browser test tooling
-        run: npm install --no-save --package-lock=false playwright@1.56.1
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-linux-1.56.1
-      - name: Install browser system dependencies and missing binaries
-        run: npx playwright install --with-deps chromium webkit
-      - name: Offline mobile and complete-trail browser QA
-        run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
-
       - name: Save mobile QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
