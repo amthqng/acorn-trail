@@ -55,7 +55,14 @@ jobs:
           cp index.html inputs/original-index.html
           branch="agents/issue-$ISSUE_NUMBER"
           if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
-            echo "Existing branch: $branch; refusing duplicate implementation"; exit 1
+            # The original candidate may already be merged into uat. When its
+            # UAT was rejected and the board returned to In Development,
+            # create a distinct correction branch; never overwrite a review.
+            prior="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state all --json state --jq '.[0].state // empty')"
+            if [ "$prior" != "MERGED" ]; then
+              echo "Existing active or abandoned implementation branch $branch; refusing overwrite"; exit 1
+            fi
+            branch="agents/issue-$ISSUE_NUMBER-correction-$GITHUB_RUN_ID"
           fi
           git switch -c "$branch"
           echo "IMPLEMENTATION_BRANCH=$branch" >> "$GITHUB_ENV"
@@ -114,7 +121,7 @@ jobs:
           git add index.html
           git commit -m "feat: implement approved issue #$ISSUE_NUMBER"
           git push origin "$IMPLEMENTATION_BRANCH"
-          gh pr create --base uat --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
+          gh pr create --base uat --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body "$(cat artifacts/implementation/uat.md)"
           gh issue comment "$ISSUE_NUMBER" --body "Implementation PR submitted for independent GitHub approval after regression tests and AI reviewer passed. It has **not** been merged or released. See the PR for UAT notes."
       - name: Leave PR for central QA approval and UAT handoff
         run: echo "Implementation tested; central QA job verifies and merges into uat."
