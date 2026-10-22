@@ -207,6 +207,8 @@ jobs:
           set -euo pipefail
           pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state open --json number --jq '.[0].number // empty')"
           if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no open implementation PR"; exit 0; fi
+          # A separate authorized reviewer identity may approve the already AI-reviewed
+          # candidate. Never let the repository's Actions identity approve itself.
           approved="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json reviews --jq '[.reviews[] | select(.state=="APPROVED" and .author.login!="github-actions[bot]")] | length')"
           if [ "$approved" -lt 1 ]; then
             echo "::warning::PR #$pr needs an independent GitHub approval before UAT"
