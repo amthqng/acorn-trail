@@ -44,6 +44,14 @@ jobs:
             if gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -Fq '<!-- acorn-cloudflare-published -->'; then continue; fi
             # Done is the product owner's UAT acceptance on the project board.
             # A verified merged implementation PR is required before deployment.
+            # Emergency safety gate: a Done card can result from project automation,
+            # not necessarily owner UAT acceptance. Do not trust it alone.
+            issue_comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100")"
+            accepted="$(jq -r --arg issue "$issue" '[.[] | select(.user.login == "amthqng") | select(.body | contains("UAT-ACCEPTED: #" + $issue))] | length' <<< "$issue_comments")"
+            if [ "$accepted" -eq 0 ]; then
+              echo "::warning::Issue #$issue is Done without explicit owner UAT acceptance; refusing to deploy"
+              continue
+            fi
             branch="agents/issue-$issue"
             pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$branch" --json number,state,mergeCommit --jq '.[0] // empty')"
             if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no implementation PR"; continue; fi
