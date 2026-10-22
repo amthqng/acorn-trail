@@ -232,6 +232,15 @@ jobs:
           # A separate authorized reviewer identity may approve the already AI-reviewed
           # candidate. Never let the repository's Actions identity approve itself.
           state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')"
+          if [ "$state" = "MERGED" ]; then
+            sha="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq '.mergeCommit.oid')"
+            comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" --jq '.[].body')"
+            if grep -Fq "UAT-CANDIDATE: #$ISSUE_NUMBER $sha PR #$pr" <<< "$comments" && grep -Fq "acorn-trail-uat-$ISSUE_NUMBER-${sha:0:12}" <<< "$comments"; then
+              echo "completed=true" >> "$GITHUB_OUTPUT"
+              echo "QA receipt already exists for exact build $sha; restoring Ready for UAT without rebuilding"
+              exit 0
+            fi
+          fi
           echo "pr_state=$state" >> "$GITHUB_OUTPUT"
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
           echo "found=true" >> "$GITHUB_OUTPUT"
@@ -320,7 +329,7 @@ jobs:
           [ -n "$url" ] || { echo "::error::No public preview URL returned by Cloudflare"; exit 1; }
           gh issue comment "$ISSUE_NUMBER" --body "UAT-PREVIEW: $url (test the candidate in the latest UAT-CANDIDATE receipt before accepting)"
       - name: Move reviewed and tested change to Ready for UAT
-        if: steps.gate.outputs.found == 'true'
+        if: steps.gate.outputs.found == 'true' || steps.gate.outputs.completed == 'true'
         env:
           GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
           PROJECT_OWNER: amthqng
