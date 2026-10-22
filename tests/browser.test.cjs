@@ -286,3 +286,17 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
   }finally{await browser.close()}
  });
 }
+
+test('issue #60: adventure map visibly renders four distinct tree species',async()=>{
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await page.goto(fileUrl);
+  await page.evaluate(()=>renderAdventureMap());
+  const kinds=await page.locator('#camp-map-world svg .map-tree').evaluateAll(els=>els.map(el=>Array.from(el.classList).find(c=>c.startsWith('map-tree-'))));
+  assert.equal(kinds.length,14,'map must have 14 decorative trees');
+  assert.deepEqual([...new Set(kinds)].sort(),['map-tree-birch','map-tree-maple','map-tree-oak','map-tree-pine'],'map artwork must include pine, oak, maple and birch (not just vocabulary)');
+  const species=await page.locator('#camp-map-world svg .map-tree').evaluateAll(els=>Object.fromEntries(['pine','oak','maple','birch'].map(kind=>[kind,els.find(el=>el.classList.contains('map-tree-'+kind))?.innerHTML])));
+  assert.equal(new Set(Object.values(species)).size,4,'each species must use visibly distinct SVG artwork');
+ }finally{await browser.close()}
+});
