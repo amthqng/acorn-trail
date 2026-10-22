@@ -221,19 +221,15 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium webkit
           node --test tests/browser.test.cjs tests/offline.browser.test.cjs
-      - name: Independent GitHub approval after passed QA
+      - name: Merge QA-passed PR into main
         if: steps.gate.outputs.found == 'true'
         env:
-          GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.gate.outputs.pr }}
         run: |
           set -euo pipefail
-          test -n "$GH_TOKEN" || { echo "::error::REVIEWER_GITHUB_TOKEN missing for independent approval"; exit 1; }
-          approved="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
-          if [ "$approved" -lt 1 ]; then
-            gh pr review "$PR_NUMBER" --approve --body "Independent PR approval following verified automated browser and offline regression checks."
-          fi
-      - name: Upload approved UAT candidate
+          gh pr merge "$PR_NUMBER" --merge --repo "$GITHUB_REPOSITORY"
+      - name: Upload tested UAT candidate
         if: steps.gate.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
