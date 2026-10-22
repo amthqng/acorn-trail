@@ -47,15 +47,19 @@ jobs:
             # Emergency safety gate: a Done card can result from project automation,
             # not necessarily owner UAT acceptance. Do not trust it alone.
             issue_comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100")"
-            accepted="$(jq -r --arg issue "$issue" '[.[] | select(.user.login == "amthqng") | select(.body | contains("UAT-ACCEPTED: #" + $issue))] | length' <<< "$issue_comments")"
-            if [ "$accepted" -eq 0 ]; then
-              echo "::warning::Issue #$issue is Done without explicit owner UAT acceptance; refusing to deploy"
-              continue
-            fi
             branch="agents/issue-$issue"
-            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$branch" --json number,state,mergeCommit --jq '.[0] // empty')"
-            if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no implementation PR"; continue; fi
+            pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "$branch" --json number,mergeCommit --jq '.[0] // empty')"
+            if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no merged implementation PR"; continue; fi
             pr_number="$(jq -r '.number' <<< "$pr")"
+            merged_sha="$(jq -r '.mergeCommit.oid' <<< "$pr")"
+            candidate="$(jq -r --arg issue "$issue" '[.[] | select(.body | contains("UAT-CANDIDATE: #" + $issue + " ")) | .body] | last // ""' <<< "$issue_comments")"
+            if ! grep -Fq "UAT-CANDIDATE: #$issue $merged_sha PR #$pr_number" <<< "$candidate"; then
+              echo "::warning::Issue #$issue lacks candidate receipt for exact PR merge SHA"; continue
+            fi
+            accepted="$(jq -r --arg issue "$issue" --arg sha "$merged_sha" '[.[] | select(.user.login == "amthqng") | select(.body | contains("UAT-ACCEPTED: #" + $issue + " " + $sha))] | length' <<< "$issue_comments")"
+            if [ "$accepted" -eq 0 ]; then
+              echo "::warning::Issue #$issue requires owner acceptance for the exact UAT SHA $merged_sha"; continue
+            fi
             state="$(jq -r '.state' <<< "$pr")"
             if [ "$state" != "MERGED" ]; then
               echo "::warning::Issue #$issue has no merged UAT implementation PR"
@@ -71,7 +75,6 @@ jobs:
             # that has not received its own UAT acceptance.
             git fetch origin main uat
             git checkout -B production-candidate origin/main
-            merged_sha="$(gh pr view "$pr_number" --json mergeCommit --jq '.mergeCommit.oid')"
             uat_sha="$(git rev-parse origin/uat)"
             main_sha="$(git rev-parse origin/main)"
             if [ "$merged_sha" != "$uat_sha" ] || [ "$(git rev-parse "$merged_sha^1")" != "$main_sha" ]; then
