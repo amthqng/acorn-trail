@@ -39,11 +39,11 @@ test('QA uses native runner for reliable WebKit offline behavior',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
   assert.doesNotMatch(qa,/container:/);
   assert.match(qa,/npx playwright install --with-deps chromium webkit/);
-  assert.match(qa,/actions\\/cache@v4/);
+  assert.match(qa,/actions\/cache@v4/);
 });
 test('Controller synchronizes main to UAT without force pushes before reading the board',()=>{
   assert.match(controller,/  sync-uat:/);
-  assert.match(controller,/git merge --no-edit origin\\/main/);
+  assert.match(controller,/git merge --no-edit origin\/main/);
   assert.match(controller,/git push origin HEAD:uat/);
   assert.match(controller,/  board:\\n    needs: sync-uat/);
   assert.doesNotMatch(controller,/git push --force/);
