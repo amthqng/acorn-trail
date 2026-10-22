@@ -172,7 +172,16 @@ jobs:
                 echo "Issue #$issue has implementation PR #$pr; moving to QA & Review pending independent GitHub approval"
                 PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
               else
-                echo "::warning::Issue #$issue has an implementation branch but no open PR; manual technical recovery required"
+                # The code may have pushed successfully just before PR creation failed.
+                # Recover that handoff automatically, but never fabricate a PR for an empty branch.
+                existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state all --json number --jq '.[0].number // empty')"
+                if [ -n "$existing" ]; then
+                  echo "Issue #$issue already has a closed/merged PR #$existing; leaving for reconciliation"
+                elif gh pr create --repo "$GITHUB_REPOSITORY" --base uat --head "agents/issue-$issue" --title "Implement issue #$issue" --body "Recovered implementation branch for issue #$issue. Requires normal independent QA and UAT approval."; then
+                  PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+                else
+                  echo "::warning::Issue #$issue branch has no valid PR diff; staying In Development for technical recovery"
+                fi
               fi
               continue
             fi
