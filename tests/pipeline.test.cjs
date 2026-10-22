@@ -41,6 +41,13 @@ test('QA browser container installs the GitHub CLI it needs',()=>{
   assert.match(qa,/apt-get install[^\\n]* gh jq/);
   assert.ok(qa.indexOf('apt-get install')<qa.indexOf('gh pr list'),'CLI must install before PR lookup');
 });
+test('Controller synchronizes main to UAT without force pushes before reading the board',()=>{
+  assert.match(controller,/  sync-uat:/);
+  assert.match(controller,/git merge --no-edit origin\\/main/);
+  assert.match(controller,/git push origin HEAD:uat/);
+  assert.match(controller,/  board:\\n    needs: sync-uat/);
+  assert.doesNotMatch(controller,/git push --force/);
+});
 test('Only the release workflow may deploy the production worker',()=>{
   assert.doesNotMatch(implement,/wrangler[^\n]*deploy/);
   assert.doesNotMatch(controller,/wrangler[^\n]*deploy --config wrangler\.release/);
