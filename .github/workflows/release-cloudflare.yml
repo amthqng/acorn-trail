@@ -42,6 +42,14 @@ jobs:
           while IFS= read -r issue; do
             [[ "$issue" =~ ^[1-9][0-9]*$ ]] || continue
             if gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -Fq '<!-- acorn-cloudflare-published -->'; then continue; fi
+            # Board status is not authentication: a bot or user can move an item by mistake.
+            # Require an explicit approval recorded by a human actor after UAT.
+            issue_comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100")"
+            accepted="$(jq -r --arg issue "$issue" '[.[] | select(.body | contains("UAT-ACCEPTED: #" + $issue)) | select(.user.type == "User") | select(.user.login != "github-actions[bot]")] | length' <<< "$issue_comments")"
+            if [ "$accepted" -lt 1 ]; then
+              echo "::warning::Issue #$issue is Done but has no human UAT-ACCEPTED: #$issue confirmation; refusing to publish"
+              continue
+            fi
             branch="agents/issue-$issue"
             pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --head "$branch" --json number,state,mergeCommit --jq '.[0] // empty')"
             if [ -z "$pr" ]; then echo "::warning::Issue #$issue has no implementation PR"; continue; fi
