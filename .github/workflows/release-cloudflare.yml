@@ -65,6 +65,11 @@ jobs:
               echo "::warning::Issue #$issue has no merged UAT implementation PR"
               continue
             fi
+            approved="$(gh pr view "$pr_number" --json reviews --jq '[.reviews[] | select(.state=="APPROVED" and .author.login!="github-actions[bot]")] | length')"
+            if [ "$approved" -lt 1 ]; then
+              echo "::warning::Issue #$issue candidate PR #$pr_number lacks independent GitHub approval"
+              continue
+            fi
             base="$(gh pr view "$pr_number" --json baseRefName --jq '.baseRefName')"
             if [ "$base" != "uat" ]; then
               echo "::warning::Issue #$issue belongs to a legacy main PR; not eligible for new UAT promotion"
