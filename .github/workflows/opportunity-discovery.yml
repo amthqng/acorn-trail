@@ -1,0 +1,55 @@
+name: Proactive feature discovery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install orchestrator
+        run: npm install --prefix orchestration --no-audit --no-fund
+      - name: Type-check
+        run: npm run --prefix orchestration check
+      - name: Run proactive User Research and Education agents
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+        run: npx --prefix orchestration tsx orchestration/opportunity-discovery.ts
+      - name: Create one GitHub issue per feature
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: "2"
+          PROJECT_STATUS: Awaiting Approval
+        run: |
+          node -e "const fs=require('fs');const entries=JSON.parse(fs.readFileSync('artifacts/opportunity-discovery/manifest.json')); for (const e of entries) {if(!/^issues\/candidate-[1-3]\.md$/.test(e.file)||!e.title)process.exit(1)}"
+          node -e "const fs=require('fs');const e=JSON.parse(fs.readFileSync('artifacts/opportunity-discovery/manifest.json'));fs.writeFileSync('artifacts/opportunity-discovery/manifest.tsv',e.map(x=>x.title.replace(/[\t\n]/g,' ')+'\t'+'artifacts/opportunity-discovery/'+x.file).join('\n')+'\n')"
+          while IFS=$'\t' read -r title file; do
+            test -n "$title" || continue
+            created_url="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "[Discovery] $title" --body-file "$file")"
+            echo "Created $created_url"
+            if [ -n "$PROJECT_TOKEN" ]; then
+              GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "$created_url" || echo "::warning::Could not update board status for $created_url"
+            else
+              echo "::warning::PROJECTS_TOKEN missing; issue created but board status not updated"
+            fi
+          done < artifacts/opportunity-discovery/manifest.tsv
+      - name: Upload discovery report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opportunity-discovery
+          path: artifacts/opportunity-discovery/
+          if-no-files-found: warn
+          retention-days: 7

@@ -19,6 +19,9 @@ jobs:
 
   browser-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,8 +29,6 @@ jobs:
           node-version: '22'
       - name: Install developer-only browser test tooling
         run: npm install --no-save --package-lock=false playwright@1.56.1
-      - name: Install Chromium and WebKit
-        run: npx playwright install --with-deps chromium webkit
       - name: Offline mobile and complete-trail browser QA
         run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
 

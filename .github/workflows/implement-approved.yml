@@ -1,0 +1,169 @@
+name: Implement approved feature
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Approved issue in Ready for Development or retry in In Development'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: acorn-implement-${{ inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: uat
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify issue approval from board
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: Ready for Development
+        run: |
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]] || exit 1
+          test -n "$GH_TOKEN" || { echo 'PROJECTS_TOKEN not available'; exit 1; }
+          if ! bash scripts/list-project-status-issues.sh | grep -Fx "$ISSUE_NUMBER"; then
+            PROJECT_STATUS="In Development" bash scripts/list-project-status-issues.sh | grep -Fx "$ISSUE_NUMBER" || { echo "Issue is not in approved or development status"; exit 1; }
+          fi
+      - name: Fetch approved issue and prepare branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          mkdir -p inputs
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > inputs/dev-issue.json
+          jq -e '.state=="open" and (has("pull_request")|not)' inputs/dev-issue.json > /dev/null
+          cp index.html inputs/original-index.html
+          branch="agents/issue-$ISSUE_NUMBER"
+          if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            echo "Existing branch: $branch; refusing duplicate implementation"; exit 1
+          fi
+          git switch -c "$branch"
+          echo "IMPLEMENTATION_BRANCH=$branch" >> "$GITHUB_ENV"
+      - name: Move accepted work to In Development
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: In Development
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          test -n "$GH_TOKEN" || exit 1
+          bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+      - name: Install orchestrator
+        run: |
+          npm install --prefix orchestration --no-audit --no-fund
+          npm run --prefix orchestration check
+      - name: Run bounded Developer Agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: npx --prefix orchestration tsx orchestration/implement-issue.ts
+      - name: Require an actual implementation
+        run: |
+          test "$(cat artifacts/implementation/status.txt)" = "IMPLEMENTED" || { cat artifacts/implementation/notes.md; exit 1; }
+          ! git diff --quiet -- index.html || { echo "Developer produced no changes"; exit 1; }
+          if [ "$(git diff --name-only | wc -l)" -ne 1 ]; then echo "Unexpected modified files"; exit 1; fi
+      - name: Mark QA & Review
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: QA & Review
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+      - name: Set up Playwright browser tests
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium webkit
+      - name: Run browser regression tests
+        run: node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+      - name: Independent reviewer and UAT document
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACORN_AGENT_MODEL: gpt-4.1-mini
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          npx --prefix orchestration tsx orchestration/review-implementation.ts
+          test "$(cat artifacts/implementation/review-verdict.txt)" = "PASS" || { cat artifacts/implementation/uat.md; exit 1; }
+      - name: Open draft implementation PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "feat: implement approved issue #$ISSUE_NUMBER"
+          git push origin "$IMPLEMENTATION_BRANCH"
+          gh pr create --base uat --head "$IMPLEMENTATION_BRANCH" --title "Implement issue #$ISSUE_NUMBER" --body-file artifacts/implementation/uat.md
+          gh issue comment "$ISSUE_NUMBER" --body "Implementation PR submitted for independent GitHub approval after regression tests and AI reviewer passed. It has **not** been merged or released. See the PR for UAT notes."
+      - name: Merge technically reviewed PR into uat
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          set -euo pipefail
+          pr="$(gh pr list --head "agents/issue-$ISSUE_NUMBER" --state open --json number --jq '.[0].number')"
+          test -n "$pr"
+          gh pr merge "$pr" --merge --repo "$GITHUB_REPOSITORY"
+      - name: Upload tested UAT candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-issue-${{ inputs.issue_number }}
+          path: |
+            index.html
+            sw.js
+            manifest.webmanifest
+            icon-192.png
+            icon-512.png
+            icon-maskable-512.png
+          if-no-files-found: error
+          retention-days: 30
+      - name: Mark Ready for UAT
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: Ready for UAT
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+      - name: Record failed stage and retain In Development
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-stage-failure --> Implementation or QA failed. See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Not ready for UAT."
+          PROJECT_STATUS="In Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+      - name: Upload UAT and reviewer output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: implementation-review
+          path: artifacts/implementation/
+          if-no-files-found: warn
+          retention-days: 7

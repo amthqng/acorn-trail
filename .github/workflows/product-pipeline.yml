@@ -1,0 +1,308 @@
+name: Acorn Trail product pipeline
+
+on:
+  schedule:
+    # Offset polling away from busy quarter-hour boundaries; GitHub schedules are best-effort.
+    - cron: '9,24,39,54 * * * *'
+  workflow_dispatch:
+    inputs:
+      deploy_cloudflare_trigger:
+        description: 'One-time deployment of the Cloudflare polling trigger'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+concurrency:
+  group: acorn-product-controller
+  cancel-in-progress: false
+
+jobs:
+  deploy-trigger:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_cloudflare_trigger == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Cloudflare and dispatch credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          test -n "$DISPATCH_TOKEN" || { echo "::error::Missing GH_DISPATCH_TOKEN"; exit 1; }
+      - name: Install Cloudflare deployment CLI
+        run: npm install --no-save wrangler@4
+      - name: Provision scheduled worker secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
+        run: printf '%s' "$DISPATCH_TOKEN" | npx wrangler secret put GITHUB_DISPATCH_TOKEN --config wrangler.controller.jsonc
+      - name: Deploy scheduled controller trigger
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.controller.jsonc
+  board:
+    if: github.event_name != 'workflow_dispatch' || inputs.deploy_cloudflare_trigger != true
+    runs-on: ubuntu-latest
+    outputs:
+      discovery: ${{ steps.snapshot.outputs.discovery }}
+      ready: ${{ steps.snapshot.outputs.ready }}
+      development: ${{ steps.snapshot.outputs.development }}
+      qa: ${{ steps.snapshot.outputs.qa }}
+      uat: ${{ steps.snapshot.outputs.uat }}
+      done: ${{ steps.snapshot.outputs.done }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read authoritative board state
+        id: snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+        run: bash scripts/pipeline-board-snapshot.sh
+  discovery:
+    needs: board
+    if: needs.board.outputs.discovery != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        issue: ${{ fromJSON(needs.board.outputs.discovery) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --prefix orchestration --no-audit --no-fund && npm run --prefix orchestration check
+      - name: Research and move issue to Awaiting Approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FEATURE_ISSUE_NUMBER: ${{ matrix.issue }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+        run: |
+          set -euo pipefail
+          issue="$FEATURE_ISSUE_NUMBER"
+          mkdir -p inputs
+          gh api "repos/$GITHUB_REPOSITORY/issues/$issue" > inputs/feature-issue.json
+          comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
+          if ! grep -Fq '<!-- acorn-feature-discovery -->' <<< "$comments"; then
+            npx --prefix orchestration tsx orchestration/discover-issue.ts
+            gh issue comment "$issue" --body-file artifacts/feature-discovery/comment.md
+          fi
+          PROJECT_STATUS="Awaiting Approval" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+      - name: Explain discovery failure on issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "Discovery automation failed during this run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. The card remains in Discovery; the controller will retry on its next scheduled run. The pipeline owner should investigate the linked failure; no product-owner intervention is required."
+  intake:
+    needs: board
+    if: needs.board.outputs.ready != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        issue: ${{ fromJSON(needs.board.outputs.ready) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --prefix orchestration --no-audit --no-fund && npm run --prefix orchestration check
+      - name: UX, Tech Lead and owned decision gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: |
+          set -euo pipefail
+          mkdir -p inputs
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > inputs/dev-issue.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" > inputs/issue-comments.json
+          # Reassess only new/updated requirements; avoid repeated AI calls and report spam.
+          latest="$(jq -r '[.[]|select(.body|contains("<!-- acorn-tech-lead-gate -->"))]|last|.created_at // ""' inputs/issue-comments.json)"
+          if [ -n "$latest" ]; then
+            changed="$(jq -r --arg last "$latest" '[.[]|select(.user.login!="github-actions[bot]" and .created_at > $last)]|length' inputs/issue-comments.json)"
+            if [ "$changed" -eq 0 ]; then echo "Existing Tech Lead assessment is current for #$ISSUE_NUMBER"; exit 0; fi
+          fi
+          npx --prefix orchestration tsx orchestration/tech-lead.ts
+          gh issue comment "$ISSUE_NUMBER" --body-file artifacts/development-intake/comment.md
+          if [ "$(cat artifacts/development-intake/verdict.txt)" = READY ]; then
+            echo "Issue $ISSUE_NUMBER approved for implementation"
+          else
+            echo "::notice::Issue $ISSUE_NUMBER needs a material product decision"
+          fi
+  recover:
+    needs: board
+    if: needs.board.outputs.development != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resume failed development without resetting approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          DEVELOPMENT: ${{ needs.board.outputs.development }}
+        run: |
+          set -euo pipefail
+          for issue in $(jq -r '.[]' <<< "$DEVELOPMENT"); do
+            [ "$(gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq '.state')" = open ] || continue
+            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then
+              # A failed PR handoff can leave finished and tested code marked In Development.
+              # Reconcile its state without re-running development or treating it as UAT-approved.
+              pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state open --json number --jq '.[0].number // empty')"
+              if [ -n "$pr" ]; then
+                echo "Issue #$issue has implementation PR #$pr; moving to QA & Review pending independent GitHub approval"
+                PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+              else
+                echo "::warning::Issue #$issue has an implementation branch but no open PR; manual technical recovery required"
+              fi
+              continue
+            fi
+            # UAT rejections may be fixed by a correction PR rather than the original
+            # Developer run. A merged correction is completed work, not an exhausted retry.
+            corrected="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 100 --json number,title,body,mergedAt --jq '[.[] | select(.title | test("(^|[^0-9])#'"$issue"'([^0-9]|$)")) ] | sort_by(.mergedAt) | last | .number // empty')"
+            prior_correction="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body' | grep -F '<!-- acorn-uat-correction-processed -->' | tail -n 1 || true)"
+            if [ -n "$corrected" ] && ! grep -Fq "PR #$corrected" <<< "$prior_correction"; then
+              # Re-entry to QA is safe: QA reruns regression and feature acceptance
+              # before issuing a new UAT candidate. Never move directly to Done.
+              echo "Issue #$issue has merged correction PR #$corrected; moving to QA & Review"
+              PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+              gh issue comment "$issue" --body "<!-- acorn-uat-correction-processed --> Corrective PR #$corrected accepted for a fresh QA cycle; requires renewed UAT."
+              continue
+            fi
+            active="$(gh run list --workflow implement-approved.yml --json status --limit 50 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
+            [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
+            comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
+            attempts="$(grep -Fc '<!-- acorn-development-recovery-v3 -->' <<< "$comments" || true)"
+            if [ "$attempts" -ge 2 ]; then
+              echo "::warning::Issue #$issue exhausted automatic development recovery; left In Development"
+              continue
+            fi
+            # Preserve failure state on the board; only the worker's QA gate may advance it.
+            gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
+            gh issue comment "$issue" --body "<!-- acorn-development-recovery-v3 --> Development recovery attempt $((attempts+1))/2 dispatched while card remains In Development."
+          done
+  qa-handoff:
+    needs: board
+    if: needs.board.outputs.qa != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        issue: ${{ fromJSON(needs.board.outputs.qa) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate existing PR for QA reconciliation
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: |
+          set -euo pipefail
+          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state all --json number,state --jq '.[0].number // empty')"
+          if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no implementation PR"; exit 0; fi
+          # A separate authorized reviewer identity may approve the already AI-reviewed
+          # candidate. Never let the repository's Actions identity approve itself.
+          state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')"
+          echo "pr_state=$state" >> "$GITHUB_OUTPUT"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.found == 'true'
+        with:
+          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'uat' || format('agents/issue-{0}', matrix.issue) }}
+      - name: Re-run tested browser and offline QA on PR candidate
+        if: steps.gate.outputs.found == 'true'
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium webkit
+          node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+      - name: Merge QA-passed PR into uat
+        if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          base="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq '.baseRefName')"
+          [ "$base" = "uat" ] || { echo "::error::Refusing to auto-merge PR targeting $base instead of uat"; exit 1; }
+          gh pr merge "$PR_NUMBER" --merge --repo "$GITHUB_REPOSITORY"
+      - name: Upload tested UAT candidate
+        if: steps.gate.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-issue-${{ matrix.issue }}-pr-${{ steps.gate.outputs.pr }}
+          path: |
+            index.html
+            sw.js
+            manifest.webmanifest
+            icon-192.png
+            icon-512.png
+            icon-maskable-512.png
+          if-no-files-found: error
+          retention-days: 30
+      - name: Move reviewed and tested change to Ready for UAT
+        if: steps.gate.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: '2'
+          PROJECT_STATUS: Ready for UAT
+          ISSUE_NUMBER: ${{ matrix.issue }}
+        run: bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+  dispatch:
+    needs: [board, intake]
+    if: always() && needs.board.result == 'success' && needs.intake.result == 'success' && needs.board.outputs.ready != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dispatch approved work with bounded attempts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          READY: ${{ needs.board.outputs.ready }}
+        run: |
+          set -euo pipefail
+          for issue in $(jq -r '.[]' <<< "$READY"); do
+            comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
+            latest="$(printf '%s\n' "$comments" | grep '## Tech Lead intake:' | tail -n 1 || true)"
+            [ "$latest" = "## Tech Lead intake: READY" ] || continue
+            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then continue; fi
+            attempts="$(grep -Fc '<!-- acorn-implementation-dispatched-v2 -->' <<< "$comments" || true)"
+            if [ "$attempts" -ge 2 ]; then
+              echo "::warning::Issue #$issue exhausted two attempts under the corrected patch engine; requires technical recovery"
+              continue
+            fi
+            # Prevent duplicate starts when earlier workflow is still active.
+            active="$(gh run list --workflow implement-approved.yml --json status --limit 30 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
+            [ "$active" = 0 ] || continue
+            gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
+            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched-v2 --> Implementation attempt $((attempts+1))/2 queued for #$issue."
+          done
+  publish:
+    needs: board
+    if: needs.board.outputs.done != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch production publisher for accepted Done cards
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release-cloudflare.yml --ref main

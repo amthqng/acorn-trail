@@ -35,13 +35,16 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     await page.locator('#seg-math button[data-v="g3"]').tap();
     assert.equal(await page.evaluate(()=>SETTINGS.math),'g3');
     await page.locator('#seg-math button[data-v="g2"]').tap();
+    assert.equal(await page.locator('#ops-row button[data-k="div"]').isVisible(),false,'division should be unavailable in Grade 2');
+    await page.locator('#seg-math button[data-v="g3"]').tap();
+    assert.equal(await page.locator('#ops-row button[data-k="div"]').isVisible(),true,'division should be available in Grade 3');
     for(const op of ['sub','mul','div','word'])await page.locator(`#ops-row button[data-k="${op}"]`).tap();
     await page.locator('#ops-row button[data-k="add"]').tap();
     assert.equal(await page.evaluate(()=>SETTINGS.ops.add),true);
     for(const op of ['sub','mul','div','word'])await page.locator(`#ops-row button[data-k="${op}"]`).tap();
     await page.locator('#sw-explanations').tap();assert.equal(await page.evaluate(()=>SETTINGS.explanations),true);
     assert.equal(await page.evaluate(()=>SETTINGS.adaptive),false);
-    if(adaptiveMode){await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'true');await layout();await capture('adaptive-settings');}
+    if(adaptiveMode){await page.locator('#settings-tab-settings').tap();assert.equal(await page.locator('#sw-adaptive').isVisible(),true,'adaptive toggle must be visible on Settings tab');await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'true');await layout();await capture('adaptive-settings');}
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     await page.getByRole('button',{name:'Make your team'}).tap();await layout();
     await page.getByRole('button',{name:'Edit Biscuit'}).tap();await page.clock.runFor(100);await layout();await capture('team-editor');
@@ -107,7 +110,10 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
       }
       if(adaptiveMode&&((region===0&&(stop===2||stop===3))||(region===1&&stop<4)))await page.locator('.hint-btn:not(#speak-btn)').tap();
       if(adaptiveMode&&region===1&&stop===4)assert.equal(await page.evaluate(()=>READING_TIERS[0].includes(current.skill)),true,'gentler reading must use the preceding tier');
-      if(adaptiveMode&&region===1&&stop===5)assert.equal(await page.evaluate(()=>['addition','subtraction','multiplication'].includes(current.skill)),true,'gentler math must use level one skills');
+      if(adaptiveMode&&region===1&&stop===5){
+        assert.equal(await page.evaluate(()=>mathLevel(THEMES[themeIndex])),2,'adaptive math should lower the effective difficulty by one level');
+        assert.equal(await page.evaluate(()=>['addition','subtraction','multiplication','word'].includes(current.skill)),true,'gentler math must use skills allowed at level two');
+       }
       const readingId=await page.evaluate(()=>current.kind==='read'?current.readingId:null);
       if(readingId){assert.equal(readingSeen.has(readingId),false,'reading entries should vary across this trail');readingSeen.add(readingId);}
       const format=await page.evaluate(()=>current.format||null);
@@ -148,8 +154,9 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
         assert.equal(await page.evaluate(k=>adaptive[k].offset,subject),-1);
         await page.locator('#screen-map button[aria-label="Settings"]').tap();
         await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();
-        await page.locator('#adaptive-status').scrollIntoViewIfNeeded();await layout();await capture(`adaptive-gentler-region-${region+1}`);
-        assert.match(await page.locator('#adaptive-status').textContent(),/Math: gentler practice. Reading: gentler practice/);
+        assert.equal(await page.locator('#settings-modal').isVisible(),true,'settings must be open before checking adaptive status');
+        assert.equal((await page.locator('#adaptive-status').textContent()).trim(),'On: math is gentler; reading is gentler.');
+        await page.locator('#adaptive-status').evaluate(el=>el.scrollIntoView({block:'nearest'}));await layout();await capture(`adaptive-gentler-region-${region+1}`);
         await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
        }
        if(stop===10||stop===11)assert.equal(await page.evaluate(k=>adaptive[k].offset,subject),0);
@@ -172,10 +179,12 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
     assert.equal(await page.evaluate(()=>current),null);
     await page.locator('#screen-map button[aria-label="Settings"]').tap();
     await page.locator('#gate-choices').getByRole('button',{name:String(await page.evaluate(()=>gateAnswer)),exact:true}).tap();
+    await page.locator('#settings-tab-progress').tap();
+    assert.equal(await page.locator('#learning-summary').isVisible(),true,'learning summary must be visible on the Progress tab');
     await page.locator('#learning-summary').scrollIntoViewIfNeeded();await layout();await capture('learning-summary');
     await page.locator('#learning-summary summary').tap();await layout();
     assert.match(await page.locator('#learning-summary').textContent(),/Math42/);
-    if(adaptiveMode){await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'false');assert.deepEqual(await page.evaluate(()=>[adaptive.math.offset,adaptive.read.offset]),[0,0]);}
+    if(adaptiveMode){await page.locator('#settings-tab-settings').tap();assert.equal(await page.locator('#sw-adaptive').isVisible(),true,'adaptive toggle must be visible on Settings tab');await page.locator('#sw-adaptive').tap();assert.equal(await page.locator('#sw-adaptive').getAttribute('aria-pressed'),'false');assert.deepEqual(await page.evaluate(()=>[adaptive.math.offset,adaptive.read.offset]),[0,0]);}
     await page.locator('#settings-modal').getByRole('button',{name:'Done',exact:true}).tap();
     assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
     await browser.close();
@@ -233,7 +242,7 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
    for(const format of ['order','match']){
     await page.evaluate(f=>{
      restart();SETTINGS.sound=false;SETTINGS.readAloud=false;SETTINGS.motion=false;SETTINGS.explanations=true;SETTINGS.reveal=true;SETTINGS.math='g3';saveSettings();
-     themeIndex=0;stopIndex=f==='order'?4:5;
+     themeIndex=0;stopIndex=f==='order'?2:5;
      if(f==='order'){SETTINGS.ops={add:true,sub:false,mul:false,div:false,word:false};startNextStop();}
      else{const q=buildReading('rhyme',READING.rhyme[0]);q.readingId='rhyme:0';current=makeTrailActivity(q,THEMES[0],5);current.hostChar=ROSTER[1];current.helper=ROSTER[3];loadChallenge(current);saveProgress();go('screen-challenge');}
     },format);
@@ -277,3 +286,17 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})){
   }finally{await browser.close()}
  });
 }
+
+test('issue #60: adventure map visibly renders four distinct tree species',async()=>{
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await page.goto(fileUrl);
+  await page.evaluate(()=>renderAdventureMap());
+  const kinds=await page.locator('#camp-map-world svg .map-tree').evaluateAll(els=>els.map(el=>Array.from(el.classList).find(c=>c.startsWith('map-tree-'))));
+  assert.equal(kinds.length,14,'map must have 14 decorative trees');
+  assert.deepEqual([...new Set(kinds)].sort(),['map-tree-birch','map-tree-maple','map-tree-oak','map-tree-pine'],'map artwork must include pine, oak, maple and birch (not just vocabulary)');
+  const species=await page.locator('#camp-map-world svg .map-tree').evaluateAll(els=>Object.fromEntries(['pine','oak','maple','birch'].map(kind=>[kind,els.find(el=>el.classList.contains('map-tree-'+kind))?.innerHTML])));
+  assert.equal(new Set(Object.values(species)).size,4,'each species must use visibly distinct SVG artwork');
+ }finally{await browser.close()}
+});

@@ -1,0 +1,33 @@
+name: Sync existing discovery cards
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_numbers:
+        description: 'Comma-separated issue numbers to move to Awaiting Approval (e.g. 18,19,20)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update already-reviewed issues
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          NUMBERS: ${{ inputs.issue_numbers }}
+          PROJECT_OWNER: amthqng
+          PROJECT_NUMBER: "2"
+          PROJECT_STATUS: Awaiting Approval
+        run: |
+          test -n "$GH_TOKEN" || { echo "PROJECTS_TOKEN missing"; exit 1; }
+          [[ "$NUMBERS" =~ ^[0-9]+(,[0-9]+)*$ ]] || { echo "Use comma-separated issue numbers"; exit 1; }
+          IFS=',' read -ra ids <<< "$NUMBERS"
+          for id in "${ids[@]}"; do
+            echo "Syncing issue #$id"
+            bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$id"
+          done
