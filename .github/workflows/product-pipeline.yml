@@ -205,10 +205,12 @@ jobs:
           ISSUE_NUMBER: ${{ matrix.issue }}
         run: |
           set -euo pipefail
-          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state open --json number --jq '.[0].number // empty')"
+          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state all --json number,state --jq '.[0].number // empty')"
           if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no open implementation PR"; exit 0; fi
           # A separate authorized reviewer identity may approve the already AI-reviewed
           # candidate. Never let the repository's Actions identity approve itself.
+          state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')"
+          echo "pr_state=$state" >> "$GITHUB_OUTPUT"
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
           echo "found=true" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
@@ -222,7 +224,7 @@ jobs:
           npx playwright install --with-deps chromium webkit
           node --test tests/browser.test.cjs tests/offline.browser.test.cjs
       - name: Merge QA-passed PR into main
-        if: steps.gate.outputs.found == 'true'
+        if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.gate.outputs.pr }}
