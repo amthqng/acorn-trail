@@ -13,9 +13,10 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   actions: write
+  pull-requests: write
 
 concurrency:
   group: acorn-product-controller
