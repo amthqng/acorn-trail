@@ -1,4 +1,5 @@
 name: Implement approved feature
+run-name: Implement issue #${{ inputs.issue_number }}
 
 on:
   workflow_dispatch:
@@ -139,8 +140,12 @@ jobs:
           PROJECT_OWNER: amthqng
           PROJECT_NUMBER: '2'
         run: |
-          gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-stage-failure --> Implementation or QA failed. See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Not ready for UAT."
-          PROJECT_STATUS="In Development" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
+          stage="In Development"
+          if PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-project-status-issues.sh | grep -Fxq "$ISSUE_NUMBER"; then
+            stage="QA & Review"
+          fi
+          gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-stage-failure --> Workflow failed during $stage. See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Not ready for UAT."
+          PROJECT_STATUS="$stage" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
       - name: Upload UAT and reviewer output
         if: always()
         uses: actions/upload-artifact@v4
