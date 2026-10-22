@@ -162,30 +162,27 @@ jobs:
           set -euo pipefail
           for issue in $(jq -r '.[]' <<< "$DEVELOPMENT"); do
             [ "$(gh api "repos/$GITHUB_REPOSITORY/issues/$issue" --jq '.state')" = open ] || continue
-            if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then
-              # A failed PR handoff can leave finished and tested code marked In Development.
-              # Reconcile its state without re-running development or treating it as UAT-approved.
-              pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state open --json number --jq '.[0].number // empty')"
-              if [ -n "$pr" ]; then
-                echo "Issue #$issue has implementation PR #$pr; moving to QA & Review pending independent GitHub approval"
+            # A previous merged candidate may have been rejected at UAT.
+            # Re-entering In Development authorizes an issue-specific correction.
+            open_pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number,headRefName | jq -r --arg prefix "agents/issue-$issue" '[.[] | select(.headRefName==$prefix or (.headRefName | startswith($prefix + "-correction-")))] | sort_by(.number) | last | .number // empty')"
+            if [ -n "$open_pr" ]; then
+              echo "Issue #$issue has open implementation PR #$open_pr; returning to QA & Review"
+              PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+              continue
+            fi
+            original="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state all --json number,state --jq '.[0].state // empty')"
+            if [ "$original" = "MERGED" ]; then
+              echo "Issue #$issue has merged UAT candidate and was returned to development; dispatching corrective implementation"
+            elif gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then
+              # A partially pushed original branch without PR must be recovered
+              # before attempting more code changes.
+              if gh pr create --repo "$GITHUB_REPOSITORY" --base uat --head "agents/issue-$issue" --title "Implement issue #$issue" --body "Recovered pushed branch for issue #$issue; full QA and UAT still required."; then
                 PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
               else
-                # The code may have pushed successfully just before PR creation failed.
-                # Recover that handoff automatically, but never fabricate a PR for an empty branch.
-                existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$issue" --state all --json number --jq '.[0].number // empty')"
-                if [ -n "$existing" ]; then
-                  echo "Issue #$issue already has a closed/merged PR #$existing; leaving for reconciliation"
-                elif gh pr create --repo "$GITHUB_REPOSITORY" --base uat --head "agents/issue-$issue" --title "Implement issue #$issue" --body "Recovered implementation branch for issue #$issue. Requires normal independent QA and UAT approval."; then
-                  PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" PROJECT_OWNER=amthqng PROJECT_NUMBER=2 bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
-                else
-                  echo "::warning::Issue #$issue branch has no valid PR diff; staying In Development for technical recovery"
-                fi
+                echo "::warning::Issue #$issue pushed branch has no mergeable PR; preserving In Development"
               fi
               continue
             fi
-            # A rejected UAT item returns to In Development. Do not guess a
-            # corrective PR from its title; an issue-specific recovery branch
-            # must go through the same development and QA gates.
             active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
@@ -222,7 +219,9 @@ jobs:
           ISSUE_NUMBER: ${{ matrix.issue }}
         run: |
           set -euo pipefail
-          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "agents/issue-$ISSUE_NUMBER" --state all --json number,state --jq '.[0].number // empty')"
+          pr_entry="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --limit 200 --json number,state,headRefName | jq -c --arg prefix "agents/issue-$ISSUE_NUMBER" '[.[] | select(.headRefName==$prefix or (.headRefName | startswith($prefix + "-correction-")))] | sort_by(.number) | last // empty')"
+          pr="$(jq -r '.number // empty' <<< "$pr_entry")"
+          head="$(jq -r '.headRefName // empty' <<< "$pr_entry")"
           if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no implementation PR"; exit 0; fi
           # A separate authorized reviewer identity may approve the already AI-reviewed
           # candidate. Never let the repository's Actions identity approve itself.
@@ -236,13 +235,14 @@ jobs:
               exit 0
             fi
           fi
+          echo "head=$head" >> "$GITHUB_OUTPUT"
           echo "pr_state=$state" >> "$GITHUB_OUTPUT"
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
           echo "found=true" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.gate.outputs.found == 'true'
         with:
-          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'uat' || format('agents/issue-{0}', matrix.issue) }}
+          ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'uat' || steps.gate.outputs.head }}
       - name: Re-run tested browser and offline QA on PR candidate
         if: steps.gate.outputs.found == 'true'
         run: |
