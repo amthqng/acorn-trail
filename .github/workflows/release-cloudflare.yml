@@ -77,15 +77,31 @@ jobs:
             git checkout -B production-candidate origin/main
             uat_sha="$(git rev-parse origin/uat)"
             main_sha="$(git rev-parse origin/main)"
-            if [ "$merged_sha" != "$uat_sha" ] || [ "$(git rev-parse "$merged_sha^1")" != "$main_sha" ]; then
-              echo "::warning::UAT contains additional changes or diverges from main; cannot safely release issue #$issue alone"
+            if [ "$merged_sha" != "$uat_sha" ]; then
+              echo "::warning::UAT moved since the accepted issue candidate; refusing release"
               continue
             fi
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git merge --no-ff origin/uat -m "release: UAT accepted issue #$issue"
-            # Publish only the exact production merge commit we are deploying.
-            git push origin HEAD:main
+            if [ "$main_sha" != "$uat_sha" ]; then
+              if ! git merge-base --is-ancestor "$main_sha" "$uat_sha"; then
+                echo "::warning::main is not an ancestor of uat; reconcile branch history without overwriting changes"
+                continue
+              fi
+              # Compare the accepted PR's public-file delta with the entire
+              # pending UAT public-file delta. Reject any extra unaccepted game change.
+              assets=(index.html sw.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png)
+              approved_delta="$(git diff --binary "$merged_sha^1" "$merged_sha" -- "${assets[@]}" | sha256sum | cut -d' ' -f1)"
+              pending_delta="$(git diff --binary "$main_sha" "$uat_sha" -- "${assets[@]}" | sha256sum | cut -d' ' -f1)"
+              if [ "$approved_delta" != "$pending_delta" ]; then
+                echo "::warning::UAT public assets contain additional unaccepted changes"
+                continue
+              fi
+              # Use fast-forward so main matches the exact candidate tested in UAT.
+              # Non-fast-forward promotion made the next UAT release diverge.
+              git merge --ff-only origin/uat
+              git push origin HEAD:main
+            else
+              echo "Accepted candidate already on main; retrying Cloudflare deploy safely"
+            fi
             # Never deploy the repository root: it contains automation and developer files.
             mkdir -p .cloudflare-release/public
             for file in index.html sw.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png; do
