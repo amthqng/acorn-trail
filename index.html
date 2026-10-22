@@ -2121,8 +2121,18 @@ function renderAdventureMap(){
   const traveler=animateCampTravel&&SETTINGS.motion&&!reduceMotion&&themeIndex>0
     ?'<g aria-hidden="true"><circle r="13" fill="#fff8dc" stroke="#c77d35" stroke-width="2"/><text y="6" text-anchor="middle" font-size="16">🌰</text><animateMotion dur="1.6s" calcMode="spline" keyTimes="0;1" keySplines=".35 0 .65 1" path="M'+pts[themeIndex-1].x+' '+pts[themeIndex-1].y+' L'+pts[themeIndex].x+' '+pts[themeIndex].y+'"/></g>'
     :'';
-  const tree=(x,y)=>'<g transform="translate('+x+' '+y+')"><ellipse cy="16" rx="17" ry="5" fill="#487850" opacity=".2"/><path d="M-5 14L0 -18L5 14Z" fill="#548e62"/><path d="M-17 6L0 -26L17 6Z" fill="url(#map-pine)"/><path d="M-11 2L0 -20" stroke="#add3a0" stroke-width="2" opacity=".45"/><rect x="-3" y="8" width="6" height="12" fill="#91643c"/></g>';
-  const trees=[[25,55],[85,40],[142,67],[276,55],[456,44],[295,293],[412,289],[466,228],[20,266],[258,330],[144,323],[325,110],[46,116],[402,172]];
+  // Different local SVG tree silhouettes: no images, network, or extra assets required.
+  const tree=(x,y,kind)=>{
+    const canopy={
+      pine:'<path d="M0-29L-12-7H-8L-18 8H18L8-7H12Z" fill="url(#map-pine)"/><path d="M0-25L-9-7M-2-4L-11 6" stroke="#bfe0b2" stroke-width="2" opacity=".65" fill="none"/>',
+      oak:'<path d="M-14-4Q-25-18-9-24Q-3-35 9-25Q25-26 22-10Q29 2 12 8H-13Q-27 4-14-4Z" fill="#4d8651"/><circle cx="-8" cy="-12" r="9" fill="#75a75f"/><circle cx="9" cy="-14" r="10" fill="#679e57"/><circle cx="1" cy="-22" r="8" fill="#8ab56a"/>',
+      maple:'<path d="M0-31L6-20L16-26L13-13L25-8L13-2L17 10L4 6L0 14L-4 6L-17 10L-13-2L-25-8L-13-13L-16-26L-6-20Z" fill="#d77c3f"/><path d="M0-27V9M0-4L-13-11M0-4L13-11" stroke="#f8b65b" stroke-width="2" fill="none"/>',
+      birch:'<path d="M-11-11Q-20-21-9-29Q0-34 7-27Q19-28 19-15Q28-7 16 2Q3 11-12 3Q-24-3-11-11Z" fill="#8bae68"/><path d="M-8-15Q0-29 13-15" stroke="#bed590" stroke-width="4" fill="none"/><path d="M-4 7V20H4V7" fill="#f1e8d2"/><path d="M-4 12l4 2M0 17l4-2" stroke="#706b61" stroke-width="2"/>'
+    };
+    const trunk=kind==='birch'?'':'<rect x="-4" y="7" width="8" height="13" rx="1" fill="#94633c"/>';
+    return '<g class="map-tree map-tree-'+kind+'" aria-hidden="true" transform="translate('+x+' '+y+')"><ellipse cy="18" rx="18" ry="5" fill="#487850" opacity=".22"/>'+trunk+canopy[kind]+'</g>';
+  };
+  const trees=[[25,55,'pine'],[85,40,'oak'],[142,67,'birch'],[276,55,'maple'],[456,44,'pine'],[295,293,'oak'],[412,289,'maple'],[466,228,'birch'],[20,266,'oak'],[258,330,'pine'],[144,323,'maple'],[325,110,'birch'],[46,116,'pine'],[402,172,'oak']];
   const nodes=pts.map((p,i)=>{
     const state=i<themeIndex?'done':i===themeIndex?'current':'locked';
     const status=i<themeIndex?'completed':i===themeIndex?'current destination':'upcoming';
@@ -2146,7 +2156,7 @@ function renderAdventureMap(){
     '<path d="M-20 215Q120 170 190 200T520 230" fill="none" stroke="#bde7eb" stroke-width="12"/>'+
     '<g stroke="#e6f7eb" stroke-width="2" opacity=".7" fill="none"><path d="M32 200l24-5M224 212l23 4M401 229l26-1"/></g>'+
     '<g fill="#fbf4d0"><circle cx="116" cy="131" r="2"/><circle cx="127" cy="142" r="2"/><circle cx="290" cy="246" r="2"/><circle cx="299" cy="250" r="2"/><circle cx="215" cy="341" r="2"/></g>'+
-    trees.map(t=>tree(t[0],t[1])).join('')+
+    trees.map(t=>tree(t[0],t[1],t[2])).join('')+
     '<path d="'+path+'" fill="none" stroke="#668747" stroke-opacity=".2" stroke-width="22" stroke-linecap="round" transform="translate(0 2)"/>'+
     '<path class="trail-path" d="'+path+'"/><path class="trail-dashes" d="'+path+'"/>'+
     (progressPath?'<path class="trail-progress" d="'+progressPath+'"/><path class="trail-progress-glint" d="'+progressPath+'"/>':'')+
