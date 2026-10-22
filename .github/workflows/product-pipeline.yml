@@ -1,9 +1,6 @@
 name: Acorn Trail product pipeline
 
 on:
-  schedule:
-    # Offset polling away from busy quarter-hour boundaries; GitHub schedules are best-effort.
-    - cron: '9,24,39,54 * * * *'
   workflow_dispatch:
     inputs:
       deploy_cloudflare_trigger:
@@ -198,7 +195,7 @@ jobs:
               gh issue comment "$issue" --body "<!-- acorn-uat-correction-processed --> Corrective PR #$corrected accepted for a fresh QA cycle; requires renewed UAT."
               continue
             fi
-            active="$(gh run list --workflow implement-approved.yml --json status --limit 50 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
+            active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
             attempts="$(grep -Fc '<!-- acorn-development-recovery-v3 -->' <<< "$comments" || true)"
@@ -355,7 +352,7 @@ jobs:
               continue
             fi
             # Prevent duplicate starts when earlier workflow is still active.
-            active="$(gh run list --workflow implement-approved.yml --json status --limit 30 --jq '[.[]|select(.status=="queued" or .status=="in_progress")]|length')"
+            active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || continue
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
             gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched-v2 --> Implementation attempt $((attempts+1))/2 queued for #$issue."
