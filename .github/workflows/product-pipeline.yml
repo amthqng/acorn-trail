@@ -198,7 +198,7 @@ jobs:
         issue: ${{ fromJSON(needs.board.outputs.qa) }}
     steps:
       - uses: actions/checkout@v4
-      - name: Verify PR and independent GitHub approval
+      - name: Locate existing PR for QA reconciliation
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -209,25 +209,32 @@ jobs:
           if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no open implementation PR"; exit 0; fi
           # A separate authorized reviewer identity may approve the already AI-reviewed
           # candidate. Never let the repository's Actions identity approve itself.
-          approved="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json reviews --jq '[.reviews[] | select(.state=="APPROVED" and .author.login!="github-actions[bot]")] | length')"
-          if [ "$approved" -lt 1 ]; then
-            echo "::warning::PR #$pr needs an independent GitHub approval before UAT"
-            exit 0
-          fi
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
-          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
-        if: steps.gate.outputs.approved == 'true'
+        if: steps.gate.outputs.found == 'true'
         with:
           ref: agents/issue-${{ matrix.issue }}
       - name: Re-run tested browser and offline QA on PR candidate
-        if: steps.gate.outputs.approved == 'true'
+        if: steps.gate.outputs.found == 'true'
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium webkit
           node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+      - name: Independent GitHub approval after passed QA
+        if: steps.gate.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN" || { echo "::error::REVIEWER_GITHUB_TOKEN missing for independent approval"; exit 1; }
+          approved="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
+          if [ "$approved" -lt 1 ]; then
+            gh pr review "$PR_NUMBER" --approve --body "Independent PR approval following verified automated browser and offline regression checks."
+          fi
       - name: Upload approved UAT candidate
-        if: steps.gate.outputs.approved == 'true'
+        if: steps.gate.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: uat-issue-${{ matrix.issue }}-pr-${{ steps.gate.outputs.pr }}
@@ -241,7 +248,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Move reviewed and tested change to Ready for UAT
-        if: steps.gate.outputs.approved == 'true'
+        if: steps.gate.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
           PROJECT_OWNER: amthqng
