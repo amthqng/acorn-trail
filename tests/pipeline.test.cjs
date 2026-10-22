@@ -30,8 +30,9 @@ test('Production requires owner acceptance of precise candidate and isolated ass
   assert.match(release,/UAT-ACCEPTED:/);
   assert.match(release,/UAT-CANDIDATE:/);
   assert.match(release,/\$merged_sha/);
-  assert.match(release,/approved_delta/);
-  assert.match(release,/pending_delta/);
+  assert.match(release,/git rev-list --first-parent/);
+  assert.match(release,/baseRefName=="uat"/);
+  assert.match(release,/UAT game asset change/);
   assert.match(release,/git merge --ff-only origin\/uat/);
 });
 test('Only the release workflow may deploy the production worker',()=>{
