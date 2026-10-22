@@ -4,7 +4,6 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const http=require('node:http');
 const path=require('node:path');
-const os=require('node:os');
 const {chromium,webkit}=require('playwright');
 const original=fs.readFileSync('index.html','utf8');
 const files=new Set(['index.html','sw.js','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable-512.png']);
@@ -23,15 +22,8 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const url=`http://127.0.0.1:${server.address().port}/acorn-trail/`;
   const browser=await engine.launch();
-  const profile=name==='webkit'?fs.mkdtempSync(path.join(os.tmpdir(),'acorn-trail-webkit-')):null;
-  let context;
   try{
-   const settings={viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'allow'};
-   // Persist WebKit's CacheStorage when the final app page closes, as an
-   // installed home-screen web app would; keep Chromium's existing context.
-   context=name==='webkit'
-    ?await engine.launchPersistentContext(profile,settings)
-    :await browser.newContext(settings);
+   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'allow'});
    // Playwright WebKit rejects setOffline navigation before worker interception.
    // Drop real server connections instead: no document bytes can be supplied.
    const setOffline=async value=>{if(name==='webkit')connectionUnavailable=value;else await context.setOffline(value)};
@@ -104,11 +96,6 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
    await retry.waitForFunction(()=>offlineMessage.includes('unavailable'),null,{timeout:30000});assert.equal(await retry.evaluate(()=>offlineReady),false);
    failManifest=false;await retry.evaluate(()=>initOffline());await retry.waitForFunction(()=>offlineReady,null,{timeout:30000});
    await clean.close();
-  }finally{
-   if(context)await context.close().catch(()=>{});
-   await browser.close();
-   if(profile)fs.rmSync(profile,{recursive:true,force:true});
-   server.closeAllConnections();await new Promise(r=>server.close(r));
-  }
+  }finally{await browser.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
  });
 }
