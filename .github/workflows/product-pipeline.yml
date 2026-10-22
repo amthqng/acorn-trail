@@ -222,7 +222,20 @@ jobs:
           pr_entry="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --limit 200 --json number,state,headRefName | jq -c --arg prefix "agents/issue-$ISSUE_NUMBER" '[.[] | select(.headRefName==$prefix or (.headRefName | startswith($prefix + "-correction-")))] | sort_by(.number) | last // empty')"
           pr="$(jq -r '.number // empty' <<< "$pr_entry")"
           head="$(jq -r '.headRefName // empty' <<< "$pr_entry")"
-          if [ -z "$pr" ]; then echo "::warning::Issue #$ISSUE_NUMBER is in QA but has no implementation PR"; exit 0; fi
+          if [ -z "$pr" ]; then
+            # The Developer can have pushed its change before PR creation
+            # failed. Recover the PR here because the card has already
+            # entered QA & Review, not In Development.
+            candidate="$(gh api --paginate "repos/$GITHUB_REPOSITORY/branches?per_page=100" --jq '.[].name' | grep -E "^agents/issue-$ISSUE_NUMBER(-correction-[0-9]+)?$" | sort -V | tail -n 1 || true)"
+            if [ -z "$candidate" ]; then
+              echo "::warning::Issue #$ISSUE_NUMBER has no pushed implementation branch"; exit 0
+            fi
+            gh pr create --repo "$GITHUB_REPOSITORY" --base uat --head "$candidate" --title "Implement issue #$ISSUE_NUMBER" --body "Recovered pushed candidate for issue #$ISSUE_NUMBER; independent QA and UAT approval still required."
+            pr_entry="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$candidate" --state open --json number,state,headRefName --jq '.[0] // empty')"
+            pr="$(jq -r '.number // empty' <<< "$pr_entry")"
+            head="$candidate"
+            [ -n "$pr" ] || { echo "::error::PR recovery failed for issue #$ISSUE_NUMBER"; exit 1; }
+          fi
           # A separate authorized reviewer identity may approve the already AI-reviewed
           # candidate. Never let the repository's Actions identity approve itself.
           state="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')"
