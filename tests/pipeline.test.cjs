@@ -31,7 +31,7 @@ test('Manual releases bundle only Done, unreleased and UAT-attributed game chang
   assert.match(batch,/PROJECT_STATUS=Done/);
   assert.match(batch,/acorn-cloudflare-published/);
   assert.match(batch,/UAT-CANDIDATE:/);
-  assert.match(batch,/git diff "\$sha\^1" "\$sha"/);
+  assert.match(batch,/git diff --binary "\$sha\^1" "\$sha"/);
   assert.match(batch,/git apply --3way/);
   assert.match(batch,/gh release create/);
 });
