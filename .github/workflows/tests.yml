@@ -33,10 +33,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Reject PR titles and descriptions that automatically close unfinished issues
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/check-pr-autoclose.cjs
       - name: Syntax and gameplay regression tests
         run: |
           node --check sw.js
-          node --test tests/game.test.cjs tests/pipeline.test.cjs tests/correction-pipeline.test.cjs tests/uat-rejection.test.cjs
+          node --test tests/game.test.cjs tests/pipeline.test.cjs tests/correction-pipeline.test.cjs tests/uat-rejection.test.cjs tests/autoclose.test.cjs
 
   orchestrator-compile:
     runs-on: ubuntu-latest
