@@ -86,6 +86,11 @@ jobs:
       done: ${{ steps.snapshot.outputs.done }}
     steps:
       - uses: actions/checkout@v4
+      - name: Reconcile released cards and historical #60
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+        run: bash scripts/reconcile-released-issues.sh
       - name: Repair prematurely completed project cards
         env:
           GH_TOKEN: ${{ github.token }}
