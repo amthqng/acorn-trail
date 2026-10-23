@@ -24,6 +24,8 @@ while read -r issue; do
   if ! jq -e --arg issue "$issue" --arg sha "$sha" --arg pr "$prnum" '[.[]|select(.body|contains("UAT-CANDIDATE: #"+$issue+" "+$sha+" PR #"+$pr))]|length>0' <<< "$comments" >/dev/null; then
     echo "::notice::Issue #$issue missing exact candidate receipt"; continue
   fi
+  accepted="$(jq -r --arg issue "$issue" --arg sha "$sha" '[.[]|select(.user.login=="amthqng" and (.body|contains("UAT-ACCEPTED: #"+$issue+" "+$sha))) ]|length' <<< "$comments")"
+  if [ "$accepted" -eq 0 ]; then echo "::notice::Issue #$issue lacks owner UAT acceptance"; continue; fi
   # Done is the product owner's explicit UAT acceptance on the project board.
   # The exact candidate receipt binds that acceptance to a reviewed UAT change.
   git merge-base --is-ancestor "$sha" origin/uat || { echo "::error::Issue #$issue UAT SHA not on uat"; exit 1; }
