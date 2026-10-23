@@ -11,7 +11,16 @@ test -n "$project" && test -n "$field" && test -n "$qa"
 jq -c --arg repo "$GITHUB_REPOSITORY" '.data.user.projectV2.items.nodes[]|select(.content.repository.nameWithOwner==$repo and .fieldValueByName.name=="Done")|{item:.id,number:.content.number}' <<< "$data" | while read -r row; do
   number="$(jq -r '.number' <<< "$row")"
   item="$(jq -r '.item' <<< "$row")"
-  comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$number/comments?per_page=100")"
+  comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$number/comments?per_page=100" | jq -s add)"
+  # A rejected UAT candidate belongs in corrective development, not generic QA.
+  # Leave it for enforce-rejected-uat.sh, which knows the owner verdict and
+  # whether a NEW correction PR exists. Otherwise the two repair scripts fight.
+  rejected_index="$(jq -r '[to_entries[] | select(.value.user.login=="amthqng" and ((.value.body // "")|test("UAT[[:space:]]*REJECTED";"i"))) | .key] | last // -1' <<< "$comments")"
+  candidate_index="$(jq -r --arg number "$number" '[to_entries[] | select((.value.body // "")|contains("UAT-CANDIDATE: #"+$number+" ")) | .key] | last // -1' <<< "$comments")"
+  if [ "$rejected_index" -gt "$candidate_index" ]; then
+    echo "::notice::Issue #$number has a newer UAT rejection. Dedicated rejection controller will restore In Development; skipping generic QA."
+    continue
+  fi
   accepted="$(jq -r --arg number "$number" '[.[]|select(.user.login=="amthqng" and (.body|test("UAT-ACCEPTED: #"+$number+"([[:space:]]|$)"))) ]|length' <<< "$comments")"
   [ "$accepted" -eq 0 ] || continue
   echo "::warning::Issue #$number Done without owner UAT acceptance. Restoring QA & Review without reopening issue."
