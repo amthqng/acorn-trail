@@ -51,8 +51,8 @@ test('Controller synchronizes main to UAT without force pushes before reading th
 test('Routine QA is focused; full browser/offline suite runs before production promotion',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
   assert.match(qa,/--test-name-pattern=/);
-  assert.doesNotMatch(qa,/node --test tests\\/browser\\.test\\.cjs tests\\/offline\\.browser\\.test\\.cjs/);
-  assert.match(release,/node --test tests\\/browser\\.test\\.cjs tests\\/offline\\.browser\\.test\\.cjs/);
+  assert.doesNotMatch(qa,/node --test tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
+  assert.match(release,/node --test tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
   assert.ok(release.indexOf('node --test tests/browser.test.cjs tests/offline.browser.test.cjs')<release.indexOf('git push origin HEAD:main'));
 });
 test('Only the release workflow may deploy the production worker',()=>{
