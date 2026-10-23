@@ -15,7 +15,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     environment: production
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +24,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Cache full-regression browser binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-linux-1.56.1
       - name: Publish UAT-accepted implementation
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,6 +113,11 @@ jobs:
               # Use fast-forward so main matches the exact candidate tested in UAT.
               # Non-fast-forward promotion made the next UAT release diverge.
               git merge --ff-only origin/uat
+              # Complete, expensive regression runs once for the owner-accepted
+              # candidate immediately before production promotion, not at QA.
+              npm install --no-save --package-lock=false playwright@1.56.1
+              npx playwright install --with-deps chromium webkit
+              node --test tests/browser.test.cjs tests/offline.browser.test.cjs
               git push origin HEAD:main
             else
               echo "Accepted candidate already on main; retrying Cloudflare deploy safely"
