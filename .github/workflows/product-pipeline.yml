@@ -285,7 +285,7 @@ jobs:
             # owner rejected it. Only a newly created correction PR can resume.
             rejection_at="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" | jq -s --arg owner amthqng '[add[] | select(.user.login==$owner and ((.body // "")|test("UAT[[:space:]]*REJECTED";"i")))] | last | .created_at // ""' -r)"
             pr_created="$(jq -r '.createdAt // ""' <<< "$pr_entry")"
-            if [ -n "$rejection_at" ] && [ "$pr_created" \< "$rejection_at" ]; then
+            if [ -n "$rejection_at" ] && [[ "$pr_created" < "$rejection_at" ]]; then
               echo "::warning::Issue #$ISSUE_NUMBER candidate PR #$pr predates owner UAT rejection. Refusing stale UAT handoff."
               exit 0
             fi
