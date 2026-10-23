@@ -43,7 +43,7 @@ test('Routine QA uses native runner with focused Chromium checks',()=>{
 });
 test('Controller syncs UAT developer tools without restricted workflow updates',()=>{
   assert.match(controller,/  sync-uat:/);
-  assert.match(controller,/git restore --source origin\/main -- AGENTS\.md agents orchestration scripts tests/);
+  assert.match(controller,/git restore --source origin\/main -- \.gitignore AGENTS\.md agents orchestration scripts tests/);
   assert.match(controller,/git push origin HEAD:uat/);
   assert.match(controller,/  board:\n    needs: sync-uat/);
   assert.match(controller,/if: always\(\) &&/);
