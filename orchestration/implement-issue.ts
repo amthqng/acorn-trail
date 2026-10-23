@@ -23,6 +23,8 @@ async function main(){
  const approved=comments.filter(c=>(c.body??'').includes('<!-- acorn-tech-lead-gate -->')).at(-1)?.body??'';
  const acceptance=approved.split('### Acceptance criteria')[1]?.split('### Regression checks')[0]?.slice(0,4500)??'';
  const correction=rejection?('MOST RECENT OWNER UAT REJECTION (mandatory scope, not optional):\n'+rejection.slice(0,4500)):'';
+ const technical=comments.filter(c=>(c.body??'').includes('<!-- acorn-review-rejected -->')).at(-1)?.body??'';
+ const technicalContext=technical?('LATEST INDEPENDENT REVIEWER FEEDBACK (correct these defects):\n'+technical.slice(0,4500)):'';
 
  // Extract small, source-grounded candidates instead of asking to regenerate the game.
  const lines=source.split('\n');
@@ -41,7 +43,7 @@ async function main(){
   +'Each before/after must be at most 5000 characters and match source exactly once. Up to 8 nonoverlapping replacements, total replacement text <= 20000 characters. Only change index.html; keep the game offline, responsive, and accessible.\n'
   +'Issue #'+no+': '+issue.title+'\n'+(issue.body??'').slice(0,6000)
   +'\nTECH LEAD ACCEPTANCE CRITERIA:\n'+acceptance
-  +'\n'+correction+'\nSOURCE:\n'+context;
+  +'\n'+correction+'\n'+technicalContext+'\nSOURCE:\n'+context;
  const dir=join(root,'artifacts','implementation');await mkdir(dir,{recursive:true});
  let plan:z.infer<typeof Decision>|undefined;
  const failures:string[]=[];
