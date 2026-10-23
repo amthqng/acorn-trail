@@ -65,3 +65,19 @@ test('obsolete setup-only workflows were removed',()=>{
     assert.equal(fs.existsSync(path.join(__dirname,'..','.github','workflows',name)),false);
   }
 });
+
+test('Legacy owner UAT acceptance is recognized regardless of trailing newline',()=>{
+  const restore=fs.readFileSync(path.join(__dirname,'..','scripts','restore-premature-done.sh'),'utf8');
+  assert.match(restore,/test\("UAT-ACCEPTED: #"/);
+  assert.match(restore,/\[\[:space:\]\]\|\$/);
+  assert.doesNotMatch(restore,/gh issue reopen/);
+});
+test('Closed Discovery cards with merged UAT PR are recovered without reopening issues',()=>{
+  const recovery=fs.readFileSync(path.join(__dirname,'..','scripts','recover-closed-discovery.sh'),'utf8');
+  assert.match(recovery,/\.content\.state=="CLOSED"/);
+  assert.match(recovery,/\.fieldValueByName\.name=="Discovery"/);
+  assert.match(recovery,/\.baseRefName=="uat"/);
+  assert.match(recovery,/PROJECT_STATUS="QA & Review"/);
+  assert.doesNotMatch(recovery,/gh issue reopen/);
+  assert.match(controller,/bash scripts\/recover-closed-discovery\.sh/);
+});
