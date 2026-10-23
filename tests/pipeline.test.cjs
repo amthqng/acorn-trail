@@ -41,11 +41,13 @@ test('Routine QA uses native runner with focused Chromium checks',()=>{
   assert.match(qa,/npx playwright install chromium/);
   assert.match(qa,/actions\/cache@v4/);
 });
-test('Controller synchronizes main to UAT without force pushes before reading the board',()=>{
+test('Controller syncs UAT developer tools without restricted workflow updates',()=>{
   assert.match(controller,/  sync-uat:/);
-  assert.match(controller,/git merge --no-edit origin\/main/);
+  assert.match(controller,/git restore --source origin\/main -- AGENTS\.md agents orchestration scripts tests/);
   assert.match(controller,/git push origin HEAD:uat/);
   assert.match(controller,/  board:\n    needs: sync-uat/);
+  assert.match(controller,/if: always\(\) &&/);
+  assert.doesNotMatch(controller,/git merge --no-edit origin\/main/);
   assert.doesNotMatch(controller,/git push --force/);
 });
 test('Routine QA is focused; full browser/offline suite runs before production promotion',()=>{
