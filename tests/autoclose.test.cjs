@@ -31,7 +31,7 @@ test('board controller recovers on main push, without waiting only for external 
   assert.match(controller,/  workflow_dispatch:/);
   assert.match(controller,/bash scripts\/enforce-rejected-uat\.sh/);
   assert.match(controller,/if: always\(\) &&/);
-  assert.match(controller,/git restore --source origin\/main -- AGENTS\.md agents orchestration scripts tests/);
+  assert.match(controller,/git restore --source origin\/main -- \.gitignore AGENTS\.md agents orchestration scripts tests/);
 });
 test('generic Done recovery defers to rejected UAT authority instead of moving rejected story to QA',()=>{
   assert.match(restore,/rejected_index=/);
