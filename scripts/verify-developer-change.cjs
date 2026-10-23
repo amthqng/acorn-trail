@@ -7,7 +7,7 @@ const root=path.resolve(__dirname,'..');
 function git(args){return cp.execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024})}
 function files(z){return z.split('\0').filter(Boolean)}
 function isAllowed(file,issue,isNew){
-  return file==='index.html'||(isNew&&new RegExp('^tests/feature-'+issue+'-[a-z0-9-]+(?:\\.browser)?\\.test\\.cjs).test(file));
+  return file==='index.html'||(isNew&&new RegExp('^tests/feature-'+issue+'-[a-z0-9-]+(?:\\.browser)?\\.test\\.cjs$').test(file));
 }
 function checkChangeSet({tracked,untracked,diff,issue}){
   const errors=[];
