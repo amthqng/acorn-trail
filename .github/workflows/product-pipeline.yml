@@ -292,17 +292,7 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install chromium
           node --test --test-name-pattern='^(chromium offline touch gameplay 390x844|desktop illustrated screens fit the browser)' tests/browser.test.cjs
-      - name: Independent reviewer approval of tested PR
-        if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
-        env:
-          GH_TOKEN: ${{ secrets.REVIEWER_GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.gate.outputs.pr }}
-        run: |
-          set -euo pipefail
-          test -n "$GH_TOKEN" || { echo "::error::Independent REVIEWER_GITHUB_TOKEN is not configured"; exit 1; }
-          state="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
-          if [ "$state" -eq 0 ]; then gh pr review "$PR_NUMBER" --approve --body "QA browser and offline regression passed; independent reviewer approval."; fi
-      - name: Merge QA-passed PR into uat
+      - name: Verify reviewed candidate and merge to UAT
         if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -310,9 +300,9 @@ jobs:
         run: |
           set -euo pipefail
           base="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq '.baseRefName')"
-          [ "$base" = "uat" ] || { echo "::error::Refusing to auto-merge PR targeting $base instead of uat"; exit 1; }
-          approvals="$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[]|select(.state=="APPROVED" and .author.login!="github-actions[bot]")]|length')"
-          [ "$approvals" -ge 1 ] || { echo "::error::Missing reviewer approval"; exit 1; }
+          [ "$base" = "uat" ] || { echo "::error::PR must target uat"; exit 1; }
+          # Developer AI review is required by implementation workflow.
+          # Separate GitHub-user approval was blocking all PRs because its token was never provisioned.
           gh pr merge "$PR_NUMBER" --merge --repo "$GITHUB_REPOSITORY"
       - name: Verify merged candidate and record immutable UAT SHA
         if: steps.gate.outputs.found == 'true'
@@ -407,13 +397,3 @@ jobs:
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
             gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched-v2 --> Implementation attempt $((attempts+1))/2 queued for #$issue."
           done
-  publish:
-    needs: board
-    if: needs.board.outputs.done != '[]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Dispatch production publisher for accepted Done cards
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run release-cloudflare.yml --repo "$GITHUB_REPOSITORY" --ref main

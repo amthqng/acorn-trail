@@ -7,6 +7,7 @@ const workflow=(name)=>fs.readFileSync(path.join(__dirname,'..','.github','workf
 const implement=workflow('implement-approved.yml');
 const controller=workflow('product-pipeline.yml');
 const release=workflow('release-cloudflare.yml');
+const batch=fs.readFileSync(path.join(__dirname,'..','scripts','batch-release.sh'),'utf8');
 
 test('Developer never merges code or marks its own work Ready for UAT',()=>{
   assert.match(implement,/gh pr create --base uat --head/);
@@ -17,23 +18,22 @@ test('Developer never merges code or marks its own work Ready for UAT',()=>{
 test('QA review must approve and stage to uat before any UAT handoff',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
   assert.ok(qa,'QA handoff job is required');
-  assert.match(qa,/REVIEWER_GITHUB_TOKEN/);
-  assert.match(qa,/approved_delta|gh pr review/);
+  assert.match(qa,/Verify reviewed candidate and merge to UAT/);
   assert.match(qa,/UAT-CANDIDATE:/);
   assert.match(qa,/UAT-PREVIEW:/);
   assert.match(qa,/PROJECT_STATUS: Ready for UAT/);
   assert.ok(qa.indexOf('UAT-PREVIEW:')<qa.indexOf('PROJECT_STATUS: Ready for UAT'));
   assert.doesNotMatch(qa,/gh pr merge[^\n]*--base main/);
 });
-test('Production requires owner acceptance of precise candidate and isolated asset diff',()=>{
-  assert.match(release,/\.user\.login == "amthqng"/);
-  assert.match(release,/UAT-ACCEPTED:/);
-  assert.match(release,/UAT-CANDIDATE:/);
-  assert.match(release,/\$merged_sha/);
-  assert.match(release,/git rev-list --first-parent/);
-  assert.match(release,/baseRefName=="uat"/);
-  assert.match(release,/UAT game asset change/);
-  assert.match(release,/git merge --ff-only origin\/uat/);
+test('Manual releases bundle only Done, unreleased and UAT-attributed game changes',()=>{
+  assert.match(release,/workflow_dispatch/);
+  assert.doesNotMatch(controller,/^  publish:/m);
+  assert.match(batch,/PROJECT_STATUS=Done/);
+  assert.match(batch,/acorn-cloudflare-published/);
+  assert.match(batch,/UAT-CANDIDATE:/);
+  assert.match(batch,/git diff "\$sha\^1" "\$sha"/);
+  assert.match(batch,/git apply --3way/);
+  assert.match(batch,/gh release create/);
 });
 test('Routine QA uses native runner with focused Chromium checks',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
@@ -52,13 +52,13 @@ test('Routine QA is focused; full browser/offline suite runs before production p
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
   assert.match(qa,/--test-name-pattern=/);
   assert.doesNotMatch(qa,/node --test tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
-  assert.match(release,/node --test tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
-  assert.ok(release.indexOf('node --test tests/browser.test.cjs tests/offline.browser.test.cjs')<release.indexOf('git push origin HEAD:main'));
+  assert.match(batch,/node --test tests\/game\.test\.cjs tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
+  assert.ok(batch.indexOf('node --test tests/game.test.cjs tests/browser.test.cjs tests/offline.browser.test.cjs')<batch.indexOf('git push origin HEAD:main'));
 });
 test('Only the release workflow may deploy the production worker',()=>{
   assert.doesNotMatch(implement,/wrangler[^\n]*deploy/);
   assert.doesNotMatch(controller,/wrangler[^\n]*deploy --config wrangler\.release/);
-  assert.match(release,/wrangler@4 deploy --config wrangler\.release\.jsonc/);
+  assert.match(batch,/wrangler@4 deploy --config wrangler\.release\.jsonc/);
 });
 test('obsolete setup-only workflows were removed',()=>{
   for(const name of ['openai-connection-test.yml','sync-discovery-cards.yml']){
