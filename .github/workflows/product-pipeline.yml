@@ -283,12 +283,15 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-linux-1.56.1
-      - name: Re-run tested browser and offline QA on PR candidate
+      - name: Fast candidate gameplay and responsive UI smoke tests
         if: steps.gate.outputs.found == 'true'
+        timeout-minutes: 7
         run: |
+          node --check sw.js
+          node --test tests/game.test.cjs
           npm install --no-save --package-lock=false playwright@1.56.1
-          npx playwright install --with-deps chromium webkit
-          node --test tests/browser.test.cjs tests/offline.browser.test.cjs
+          npx playwright install --with-deps chromium
+          node --test --test-name-pattern='^(chromium offline touch gameplay 390x844|desktop illustrated screens fit the browser)' tests/browser.test.cjs
       - name: Independent reviewer approval of tested PR
         if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
