@@ -50,7 +50,8 @@ test('Controller synchronizes main to UAT without force pushes before reading th
 });
 test('Routine QA is focused; full browser/offline suite runs before production promotion',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
-  assert.match(qa,/--test-name-pattern=/);
+  assert.match(qa,/node --test tests\/qa-smoke\.test\.cjs/);
+  assert.doesNotMatch(qa,/--test-name-pattern=/);
   assert.doesNotMatch(qa,/node --test tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
   assert.match(batch,/node --test tests\/game\.test\.cjs tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
   assert.ok(batch.indexOf('node --test tests/game.test.cjs tests/browser.test.cjs tests/offline.browser.test.cjs')<batch.indexOf('git push origin HEAD:main'));
@@ -103,4 +104,26 @@ test('UAT reconciliation keeps unaccepted merged issues OPEN until release',()=>
   assert.match(script,/UAT-CANDIDATE:/);
   assert.doesNotMatch(script,/PROJECT_STATUS="Done"/);
   assert.doesNotMatch(script,/gh issue close/);
+});
+
+test('QA handoff can resume a merged UAT candidate after main/uat sync',()=>{
+  const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
+  assert.ok(qa);
+  assert.match(qa,/if \[ "\$state" = "MERGED" \]/);
+  assert.match(qa,/grep -Fq "UAT-CANDIDATE:/);
+  assert.match(qa,/echo "completed=true"/);
+  assert.match(qa,/fetch-depth: 0/);
+  assert.match(qa,/git merge-base --is-ancestor "\$sha" origin\/uat/);
+  assert.match(qa,/fetch --no-tags origin \+refs\/heads\/uat:refs\/remotes\/origin\/uat/);
+  assert.match(qa,/PROJECT_STATUS: Ready for UAT/);
+});
+test('QA smoke is bounded and full gameplay regression stays release-only',()=>{
+  const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
+  const smoke=fs.readFileSync(path.join(__dirname,'qa-smoke.test.cjs'),'utf8');
+  assert.match(qa,/node --test tests\/qa-smoke\.test\.cjs/);
+  assert.doesNotMatch(qa,/node --test --test-name-pattern/);
+  assert.match(smoke,/offline mobile: team setup, map, and first challenge work/);
+  assert.match(smoke,/desktop: opening screen fits/);
+  assert.doesNotMatch(smoke,/region<7|stop<12|for\(let region/);
+  assert.match(batch,/node --test tests\/game\.test\.cjs tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
 });
