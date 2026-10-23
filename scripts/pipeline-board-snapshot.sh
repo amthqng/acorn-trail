@@ -17,7 +17,7 @@ while :; do
   if [ "$(jq -r '.data.user.projectV2 == null' <<< "$page")" = true ]; then
     echo "::error::GitHub Project #$number could not be read by PROJECTS_TOKEN"; exit 1
   fi
-  batch="$(jq -c --arg r "$GITHUB_REPOSITORY" '[.data.user.projectV2.items.nodes[]? | select(.content.repository.nameWithOwner==$r and (.content.state=="OPEN" or (.content.state=="CLOSED" and .fieldValueByName.name=="Done"))) | {number:.content.number,status:.fieldValueByName.name}]' <<< "$page")"
+  batch="$(jq -c --arg r "$GITHUB_REPOSITORY" '[.data.user.projectV2.items.nodes[]? | select(.content.repository.nameWithOwner==$r and (.content.state=="OPEN" or (.fieldValueByName.name=="QA & Review") or (.fieldValueByName.name=="Ready for UAT") or (.fieldValueByName.name=="Done"))) | {number:.content.number,status:.fieldValueByName.name}]' <<< "$page")"
   records="$(jq -cn --argjson a "$records" --argjson b "$batch" '$a+$b')"
   [ "$(jq -r '.data.user.projectV2.items.pageInfo.hasNextPage // false' <<< "$page")" = true ] || break
   cursor="$(jq -r '.data.user.projectV2.items.pageInfo.endCursor' <<< "$page")"
