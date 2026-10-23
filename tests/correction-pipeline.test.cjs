@@ -46,3 +46,13 @@ test('correction still uses PR into UAT, with no direct release or automatic own
   assert.doesNotMatch(worker,/PROJECT_STATUS: Ready for UAT/);
   assert.match(pipeline,/PROJECT_STATUS: Ready for UAT/);
 });
+
+test('independent reviewer REVISE sends ticket back to development and teaches next attempt',()=>{
+  assert.match(worker,/acorn-review-rejected/);
+  assert.match(worker,/grep -Fxq REVISE/);
+  assert.match(worker,/sed -n '\/\^## Reviewer verdict:/);
+  assert.match(worker,/stage="In Development"/);
+  assert.match(developer,/LATEST INDEPENDENT REVIEWER FEEDBACK/);
+  assert.match(developer,/acorn-review-rejected/);
+  assert.match(developer,/technicalContext/);
+});
