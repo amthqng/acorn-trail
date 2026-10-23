@@ -83,7 +83,7 @@ jobs:
           bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"
       - name: Install test dependencies before sandboxing
         run: |
-          npm install --prefix orchestration --no-audit --no-fund
+          npm install --prefix orchestration --no-audit --no-fund --package-lock=false
           npm run --prefix orchestration check
           npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install chromium
