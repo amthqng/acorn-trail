@@ -24,6 +24,17 @@ while :; do
     pr="$(jq -c --arg prefix "$prefix" '[.[] | select(.baseRefName=="uat") | select(.headRefName==$prefix or (.headRefName|startswith($prefix+"-correction-")))] | sort_by(.number) | last // empty' <<< "$prs")"
     [ -n "$pr" ] || continue
 
+    # A merged, *rejected* candidate is never an authority to restore UAT.
+    # The dedicated owner-rejection controller handles this card later in the
+    # same board job, without bouncing Discovery -> UAT -> In Development.
+    issue_comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" | jq -s add)"
+    rejected_index="$(jq -r --arg owner "$owner" '[to_entries[] | select(.value.user.login==$owner and ((.value.body // "")|test("UAT[[:space:]]*REJECTED";"i"))) | .key] | last // -1' <<< "$issue_comments")"
+    candidate_index="$(jq -r --arg issue "$issue" '[to_entries[] | select((.value.body // "")|contains("UAT-CANDIDATE: #"+$issue+" ")) | .key] | last // -1' <<< "$issue_comments")"
+    if [ "$rejected_index" -gt "$candidate_index" ]; then
+      echo "::notice::Issue #$issue has a rejected UAT candidate. Leaving its recovery to enforce-rejected-uat.sh; skipping stale UAT promotion."
+      continue
+    fi
+
     desired="$status"
     if [ "$status" = "Discovery" ]; then
       desired="QA & Review"
