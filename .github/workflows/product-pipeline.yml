@@ -292,6 +292,9 @@ jobs:
         if: steps.gate.outputs.found == 'true'
         with:
           ref: ${{ steps.gate.outputs.pr_state == 'MERGED' && 'uat' || steps.gate.outputs.head }}
+          # The UAT merge SHA may be an ancestor of HEAD after routine syncs.
+          # A shallow clone makes merge-base fail and strands valid QA cards.
+          fetch-depth: 0
       - name: Cache tested browser binaries
         if: steps.gate.outputs.found == 'true'
         uses: actions/cache@v4
@@ -306,7 +309,8 @@ jobs:
           node --test tests/game.test.cjs
           npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install chromium
-          node --test --test-name-pattern='^(chromium offline touch gameplay 390x844|desktop illustrated screens fit the browser)' tests/browser.test.cjs
+          # QA is a bounded smoke check. All 84 stops are tested before release.
+          node --test tests/qa-smoke.test.cjs
       - name: Verify reviewed candidate and merge to UAT
         if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
@@ -333,7 +337,7 @@ jobs:
           echo "PR review count: $approvals (automated developer review already completed)"
           sha="$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')"
           [ -n "$sha" ] && [ "$sha" != null ]
-          git fetch origin uat
+          git fetch --no-tags origin +refs/heads/uat:refs/remotes/origin/uat
           git merge-base --is-ancestor "$sha" origin/uat || { echo "::error::Merged candidate is no longer in UAT history"; exit 1; }
           echo "<!-- acorn-uat-candidate --> UAT-CANDIDATE: #$ISSUE_NUMBER $sha PR #$PR_NUMBER" | gh issue comment "$ISSUE_NUMBER" --body-file -
       - name: Upload tested UAT candidate
