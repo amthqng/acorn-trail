@@ -48,6 +48,13 @@ test('Controller synchronizes main to UAT without force pushes before reading th
   assert.match(controller,/  board:\n    needs: sync-uat/);
   assert.doesNotMatch(controller,/git push --force/);
 });
+test('Routine QA is focused; full browser/offline suite runs before production promotion',()=>{
+  const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
+  assert.match(qa,/--test-name-pattern=/);
+  assert.doesNotMatch(qa,/node --test tests\\/browser\\.test\\.cjs tests\\/offline\\.browser\\.test\\.cjs/);
+  assert.match(release,/node --test tests\\/browser\\.test\\.cjs tests\\/offline\\.browser\\.test\\.cjs/);
+  assert.ok(release.indexOf('node --test tests/browser.test.cjs tests/offline.browser.test.cjs')<release.indexOf('git push origin HEAD:main'));
+});
 test('Only the release workflow may deploy the production worker',()=>{
   assert.doesNotMatch(implement,/wrangler[^\n]*deploy/);
   assert.doesNotMatch(controller,/wrangler[^\n]*deploy --config wrangler\.release/);
