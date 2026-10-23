@@ -32,7 +32,7 @@ test('Reviewer gets truthful CI results only after all automated checks succeede
 });
 test('Reviewer evaluates readiness for future manual UAT, not owner acceptance itself',()=>{
   assert.match(role,/technical QA gate/);
-  assert.match(role,/not\\*\\* the product owner's final UAT acceptance/);
+  assert.ok(role.includes("**not** the product owner's final UAT acceptance"));
   assert.match(role,/Never reject the candidate \*solely because the user has not yet performed/);
   assert.match(reviewer,/Decision is READINESS FOR MANUAL UAT/);
   assert.match(reviewer,/Do NOT demand proof of the owner/);
