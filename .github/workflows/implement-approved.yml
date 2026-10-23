@@ -151,7 +151,14 @@ jobs:
           PROJECT_NUMBER: '2'
         run: |
           stage="In Development"
-          if PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-project-status-issues.sh | grep -Fxq "$ISSUE_NUMBER"; then
+          if [ -f artifacts/implementation/review-verdict.txt ] && grep -Fxq REVISE artifacts/implementation/review-verdict.txt; then
+            # Reviewer rejection is technical development feedback, not another
+            # QA attempt on the old merged UAT candidate.
+            summary="$(sed -n '/^## Reviewer verdict:/,$p' artifacts/implementation/uat.md | head -c 4500)"
+            gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-review-rejected -->
+Reviewer requested a correction for #$ISSUE_NUMBER:
+$summary"
+          elif PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-project-status-issues.sh | grep -Fxq "$ISSUE_NUMBER"; then
             stage="QA & Review"
           fi
           gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-stage-failure --> Workflow failed during $stage. See $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID. Not ready for UAT."
