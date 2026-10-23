@@ -155,9 +155,7 @@ jobs:
             # Reviewer rejection is technical development feedback, not another
             # QA attempt on the old merged UAT candidate.
             summary="$(sed -n '/^## Reviewer verdict:/,$p' artifacts/implementation/uat.md | head -c 4500)"
-            gh issue comment "$ISSUE_NUMBER" --body "<!-- acorn-review-rejected -->
-Reviewer requested a correction for #$ISSUE_NUMBER:
-$summary"
+            gh issue comment "$ISSUE_NUMBER" --body "$(printf '<!-- acorn-review-rejected -->\nReviewer requested a correction for #%s:\n%s\n' "$ISSUE_NUMBER" "$summary")"
           elif PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" bash scripts/list-project-status-issues.sh | grep -Fxq "$ISSUE_NUMBER"; then
             stage="QA & Review"
           fi
