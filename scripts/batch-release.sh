@@ -29,7 +29,7 @@ while read -r issue; do
   git merge-base --is-ancestor "$sha" origin/uat || { echo "::error::Issue #$issue UAT SHA not on uat"; exit 1; }
   # Apply only deployable game assets from accepted PR; never include unreleased UAT changes.
   patch="$(mktemp)"
-  git diff "$sha^1" "$sha" -- "${assets[@]}" > "$patch"
+  git diff --binary "$sha^1" "$sha" -- "${assets[@]}" > "$patch"
   if [ -s "$patch" ]; then
     git apply --3way "$patch" || { echo "::error::Accepted issue #$issue conflicts with release candidate"; exit 1; }
     git add -- "${assets[@]}"
