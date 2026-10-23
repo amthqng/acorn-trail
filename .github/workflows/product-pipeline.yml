@@ -59,25 +59,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Bring UAT branch up to production code baseline
+      - name: Keep UAT development and QA tooling current without altering workflows or game candidate
         run: |
           set -euo pipefail
           git fetch origin main uat
-          if git merge-base --is-ancestor origin/main origin/uat; then
-            echo "UAT contains the current main baseline"
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B uat-sync origin/uat
-          if ! git merge --no-edit origin/main; then
-            echo "::error::UAT/main conflict: refuse to overwrite or force-push the UAT branch"
-            exit 1
+          # GitHub's Actions token lacks 'workflows' scope and cannot push
+          # merged changes to .github/workflows/*.yml. Preserve the UAT game
+          # candidate and sync only non-workflow development/test tooling.
+          git restore --source origin/main -- AGENTS.md agents orchestration scripts tests
+          git add AGENTS.md agents orchestration scripts tests
+          if git diff --cached --quiet; then
+            echo "UAT developer/test tooling is already current"
+            exit 0
           fi
+          git commit -m "chore: sync UAT QA and developer tools from main"
           git push origin HEAD:uat
   board:
     needs: sync-uat
-    if: github.event_name != 'workflow_dispatch' || inputs.deploy_cloudflare_trigger != true
+    # A transient/permission failure in branch syncing must NEVER prevent
+    # board recovery, including rejected-UAT and premature-Done guards.
+    if: always() && (github.event_name != 'workflow_dispatch' || inputs.deploy_cloudflare_trigger != true)
     runs-on: ubuntu-latest
     outputs:
       discovery: ${{ steps.snapshot.outputs.discovery }}
