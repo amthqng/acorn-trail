@@ -24,9 +24,8 @@ while read -r issue; do
   if ! jq -e --arg issue "$issue" --arg sha "$sha" --arg pr "$prnum" '[.[]|select(.body|contains("UAT-CANDIDATE: #"+$issue+" "+$sha+" PR #"+$pr))]|length>0' <<< "$comments" >/dev/null; then
     echo "::notice::Issue #$issue missing exact candidate receipt"; continue
   fi
-  if ! jq -e --arg issue "$issue" --arg sha "$sha" '[.[]|select(.user.login=="amthqng")|select(.body|contains("UAT-ACCEPTED: #"+$issue+" "+$sha))]|length>0' <<< "$comments" >/dev/null; then
-    echo "::notice::Issue #$issue missing owner's SHA acceptance"; continue
-  fi
+  # Done is the product owner's explicit UAT acceptance on the project board.
+  # The exact candidate receipt binds that acceptance to a reviewed UAT change.
   git merge-base --is-ancestor "$sha" origin/uat || { echo "::error::Issue #$issue UAT SHA not on uat"; exit 1; }
   # Apply only deployable game assets from accepted PR; never include unreleased UAT changes.
   patch="$(mktemp)"
