@@ -42,7 +42,7 @@ test('full owner rejection, tech-lead acceptance and reviewer corrections reach 
 });
 
 test('independent QA reviews the entire real diff, not first substring',()=>{
-  assert.match(reviewer,/git',['diff','--unified=3'/);
+  assert.ok(reviewer.includes("execFileSync('git',['diff','--unified=3'"));
   assert.match(reviewer,/REAL UNIFIED CODE DIFF/);
   assert.match(reviewer,/PRODUCT OWNER UAT REJECTION/);
   assert.match(reviewer,/model:process\.env\.ACORN_AGENT_MODEL\|\|'gpt-4\.1'/);
