@@ -22,7 +22,7 @@ function buildBrief({issue,comments,repository}){
     '## Trusted execution rules',
     '- Edit the actual checked-out index.html directly using normal repository-aware code-editing tools. Read any relevant source; do NOT generate JSON patches or guess exact strings from excerpts.',
     '- The complete feature and every required correction must work in normal gameplay without developer-tools intervention or a disabled CSS class.',
-    '- Allowed edits: index.html and optional NEW files named tests/feature-'+issue.number+'-*.test.cjs. Do not modify existing tests, AGENTS.md, .github/, orchestration/, scripts/, package files, assets, git history, or configuration.',
+    '- Allowed edits: index.html and optional NEW issue-specific tests named tests/feature-'+issue.number+'-<slug>.test.cjs or tests/feature-'+issue.number+'-<slug>.browser.test.cjs (slug contains letters, digits, hyphens). Do not modify existing tests, AGENTS.md, .github/, orchestration/, scripts/, package files, assets, git history, or configuration.',
     '- No runtime dependencies, CDNs, remote requests, data exfiltration, or saving-player-data changes. Game must work via file://, offline, on mobile and desktop.',
     '- Work through the issue carefully: read the relevant existing code, plan how each criterion will be met, implement, run the existing node tests, and verify no unintended changes.',
     '- Independent QA will fail incomplete features, unsafe files, or regressions. Do NOT claim completion if anything required is unfinished; explain remaining issues in the final report.',
