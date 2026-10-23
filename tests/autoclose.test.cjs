@@ -12,6 +12,7 @@ const restore=fs.readFileSync(path.join(root,'scripts/restore-premature-done.sh'
 test('Github auto-closing PR title is rejected even when feature was not implemented',()=>{
   assert.deepEqual(checkPr({title:'Fix #83 developer workflow',base:'main'}),[83]);
   assert.deepEqual(checkPr({title:'Resolve #83 status issue',base:'main'}),[83]);
+  assert.deepEqual(checkPr({title:'Pipeline repair',body:'GitHub closed #83',base:'main'}),[83]);
   assert.deepEqual(checkPr({title:'Closes amthqng/acorn-trail#83',base:'main'}),[83]);
   assert.deepEqual(checkPr({title:'Implements issue #83',body:'fixes #83',base:'main'}),[83]);
   assert.deepEqual(checkPr({title:'Fix #83 developer workflow',base:'uat'}),[]);
