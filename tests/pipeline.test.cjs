@@ -38,7 +38,7 @@ test('Production requires owner acceptance of precise candidate and isolated ass
 test('Routine QA uses native runner with focused Chromium checks',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
   assert.doesNotMatch(qa,/container:/);
-  assert.match(qa,/npx playwright install --with-deps chromium/);
+  assert.match(qa,/npx playwright install chromium/);
   assert.match(qa,/actions\/cache@v4/);
 });
 test('Controller synchronizes main to UAT without force pushes before reading the board',()=>{
