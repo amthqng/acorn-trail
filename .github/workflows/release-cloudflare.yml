@@ -116,7 +116,7 @@ jobs:
               # Complete, expensive regression runs once for the owner-accepted
               # candidate immediately before production promotion, not at QA.
               npm install --no-save --package-lock=false playwright@1.56.1
-              npx playwright install --with-deps chromium webkit
+              npx playwright install chromium webkit
               node --test tests/browser.test.cjs tests/offline.browser.test.cjs
               git push origin HEAD:main
             else
