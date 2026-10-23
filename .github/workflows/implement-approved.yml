@@ -50,7 +50,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
-          mkdir -p inputs
+          mkdir -p inputs artifacts/implementation
+          gh auth setup-git
           gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > inputs/dev-issue.json
           # Owner UAT rejection and approved acceptance criteria must reach both
           # Developer and Reviewer, not only the issue's original one-line body.
