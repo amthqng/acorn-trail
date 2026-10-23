@@ -31,6 +31,10 @@ test('gate accepts game and new issue-specific tests, but never a documentation-
  assert.ok(checkChangeSet({...good,tracked:[]}).some(e=>/No changes to index.html/.test(e)));
  assert.equal(isAllowed('tests/feature-83-autumn.test.cjs','83',true),true);
  assert.equal(isAllowed('tests/feature-83-autumn.test.cjs','83',false),false);
+ assert.equal(isAllowed('tests/feature-83-accessibility.browser.test.cjs','83',true),true);
+ assert.equal(isAllowed('tests/feature-83-accessibility.browser.test.cjs','84',true),false);
+ assert.equal(isAllowed('tests/feature-83-accessibility.browser.test.cjs','83',false),false);
+ assert.equal(isAllowed('tests/feature-83-accessibility.evil.test.cjs','83',true),false);
 });
 test('gate rejects modified existing tests, unrelated files, and network code',()=>{
  assert.ok(checkChangeSet({...good,tracked:['index.html','tests/game.test.cjs']}).some(e=>/Forbidden change/.test(e)));
@@ -40,4 +44,10 @@ test('gate rejects modified existing tests, unrelated files, and network code',(
 });
 test('gate permits the standard SVG namespace without introducing external resources',()=>{
  assert.deepEqual(checkChangeSet({...good,diff:'+++ b/index.html\n+<svg xmlns="http://www.w3.org/2000/svg"></svg>'}),[]);
+});
+
+test('gate accepts useful new issue browser tests without expanding edit authority',()=>{
+ const browser='tests/feature-83-accessibility.browser.test.cjs';
+ assert.deepEqual(checkChangeSet({...good,untracked:[browser]}),[]);
+ assert.ok(checkChangeSet({...good,tracked:['index.html',browser],untracked:[]}).some(x=>/Forbidden change to tracked file/.test(x)));
 });
