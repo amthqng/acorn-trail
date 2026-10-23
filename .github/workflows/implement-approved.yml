@@ -51,6 +51,9 @@ jobs:
         run: |
           mkdir -p inputs
           gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > inputs/dev-issue.json
+          # Owner UAT rejection and approved acceptance criteria must reach both
+          # Developer and Reviewer, not only the issue's original one-line body.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" | jq -s 'add' > inputs/issue-comments.json
           jq -e '.state=="open" and (has("pull_request")|not)' inputs/dev-issue.json > /dev/null
           cp index.html inputs/original-index.html
           branch="agents/issue-$ISSUE_NUMBER"

@@ -36,7 +36,19 @@ jobs:
       - name: Syntax and gameplay regression tests
         run: |
           node --check sw.js
-          node --test tests/game.test.cjs tests/pipeline.test.cjs
+          node --test tests/game.test.cjs tests/pipeline.test.cjs tests/correction-pipeline.test.cjs
+
+  orchestrator-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Typecheck agents and correction workflow
+        run: |
+          npm install --prefix orchestration --no-audit --no-fund
+          npm run --prefix orchestration check
 
   browser-tests:
     needs: offline-tests

@@ -10,4 +10,4 @@ You implement **only** explicitly authorized, tightly scoped issues. A card ente
 - Human UAT approval is required before production release.
 
 ## Current automation
-The `implement-approved.yml` pilot allows one bounded exact-string replacement to `index.html` and generates a **draft** pull request only after tests and independent review pass. It does not merge code, deploy, or move the issue to Ready for UAT automatically. Larger tasks remain blocked until a safer implementation path is developed.
+The `implement-approved.yml` agent can propose up to eight bounded, nonoverlapping exact-string replacements in `index.html`. It must use the latest product-owner UAT rejection and the approved acceptance criteria when preparing corrections. A cosmetic-only fix is insufficient when the approved scope is a whole-game theme. Invalid model responses are validated locally and retried a bounded number of times. The agent creates an implementation pull request only after tests and independent acceptance-focused review pass; it cannot merge, deploy, or approve UAT. Larger or unverifiable changes must be BLOCKED rather than partially claimed complete.
