@@ -324,7 +324,7 @@ jobs:
           sha="$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')"
           [ -n "$sha" ] && [ "$sha" != null ]
           git fetch origin uat
-          [ "$(git rev-parse origin/uat)" = "$sha" ] || { echo "::error::UAT moved; refusing stale acceptance"; exit 1; }
+          git merge-base --is-ancestor "$sha" origin/uat || { echo "::error::Merged candidate is no longer in UAT history"; exit 1; }
           echo "<!-- acorn-uat-candidate --> UAT-CANDIDATE: #$ISSUE_NUMBER $sha PR #$PR_NUMBER" | gh issue comment "$ISSUE_NUMBER" --body-file -
       - name: Upload tested UAT candidate
         if: steps.gate.outputs.found == 'true'
