@@ -14,8 +14,7 @@ jq -c --arg repo "$GITHUB_REPOSITORY" '.data.user.projectV2.items.nodes[]|select
   comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$number/comments?per_page=100")"
   accepted="$(jq -r --arg number "$number" '[.[]|select(.user.login=="amthqng" and (.body|contains("UAT-ACCEPTED: #"+$number+" "))) ]|length' <<< "$comments")"
   [ "$accepted" -eq 0 ] || continue
-  gh issue reopen "$number" --repo "$GITHUB_REPOSITORY" || true
-  echo "::warning::Issue #$number Done without owner UAT acceptance. Restoring QA & Review."
+  echo "::warning::Issue #$number Done without owner UAT acceptance. Restoring QA & Review without reopening issue."
   mutation='mutation($project:ID!,$item:ID!,$field:ID!,$option:String!){updateProjectV2ItemFieldValue(input:{projectId:$project,itemId:$item,fieldId:$field,value:{singleSelectOptionId:$option}}){projectV2Item{id}}}'
   GH_TOKEN="$PROJECT_TOKEN" gh api graphql -f query="$mutation" -f project="$project" -f item="$item" -f field="$field" -f option="$qa" >/dev/null
 done
