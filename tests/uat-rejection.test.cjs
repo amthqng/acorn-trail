@@ -46,3 +46,12 @@ test('new correction PR is recognized without claiming the original is approved'
   assert.equal(Number(result.stdout),1);
   assert.match(script,/target="QA & Review"/);
 });
+
+test('legacy QA/Discovery recovery defers to newer owner UAT rejection',()=>{
+  const recovery=fs.readFileSync(path.join(root,'scripts/recover-closed-discovery.sh'),'utf8');
+  const parsed=spawnSync('bash',['-n','scripts/recover-closed-discovery.sh'],{cwd:root});
+  assert.equal(parsed.status,0,parsed.stderr.toString());
+  assert.match(recovery,/skipping stale UAT promotion/);
+  assert.match(recovery,/rejected_index/);
+  assert.match(recovery,/candidate_index/);
+});
