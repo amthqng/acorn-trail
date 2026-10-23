@@ -7,10 +7,7 @@ set -euo pipefail
 owner="${PROJECT_OWNER:-amthqng}"
 number="${PROJECT_NUMBER:-2}"
 query='query($login:String!,$number:Int!,$cursor:String){user(login:$login){projectV2(number:$number){items(first:100,after:$cursor){pageInfo{hasNextPage endCursor} nodes{content{... on Issue{number state repository{nameWithOwner}}} fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{name}}}}}}}'
-# A merged implementation can close its issue before UAT. GitHub may
-# automatically move the card to Done, and an older controller could reopen
-# it into Discovery. Recover the card without changing the issue's state.
-prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 500 --json number,headRefName,baseRefName)"
+prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 500 --json number,headRefName,baseRefName,mergeCommit)"
 cursor=""
 while :; do
   args=(-f query="$query" -f login="$owner" -F number="$number")
@@ -18,15 +15,42 @@ while :; do
   page="$(GH_TOKEN="$PROJECT_TOKEN" gh api graphql "${args[@]}")"
   jq -e '.data.user.projectV2 != null' <<< "$page" >/dev/null || { echo "::error::Cannot read project board"; exit 1; }
 
-  while IFS= read -r issue; do
-    [ -n "$issue" ] || continue
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    issue="$(jq -r '.number' <<< "$row")"
+    state="$(jq -r '.state' <<< "$row")"
+    status="$(jq -r '.status // empty' <<< "$row")"
     prefix="agents/issue-$issue"
-    if ! jq -e --arg prefix "$prefix" '[.[] | select(.baseRefName=="uat") | select(.headRefName==$prefix or (.headRefName|startswith($prefix+"-correction-")))] | length>0' <<< "$prs" >/dev/null; then
-      continue
+    pr="$(jq -c --arg prefix "$prefix" '[.[] | select(.baseRefName=="uat") | select(.headRefName==$prefix or (.headRefName|startswith($prefix+"-correction-")))] | sort_by(.number) | last // empty' <<< "$prs")"
+    [ -n "$pr" ] || continue
+
+    desired="$status"
+    if [ "$status" = "Discovery" ]; then
+      desired="QA & Review"
+      # A post-reopen Project automation may reset an issue from UAT to
+      # Discovery. Restore Ready for UAT only with the exact QA receipt.
+      sha="$(jq -r '.mergeCommit.oid // empty' <<< "$pr")"
+      prnum="$(jq -r '.number' <<< "$pr")"
+      if [ -n "$sha" ]; then
+        comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
+        if grep -Fq "UAT-CANDIDATE: #$issue $sha PR #$prnum" <<< "$comments" && grep -Fq "acorn-trail-uat-$issue-${sha:0:12}" <<< "$comments"; then
+          desired="Ready for UAT"
+        fi
+      fi
     fi
-    echo "::warning::Issue #$issue closed and stuck in Discovery after merged UAT PR. Restoring QA without reopening issue."
-    PROJECT_OWNER="$owner" PROJECT_NUMBER="$number" PROJECT_STATUS="QA & Review" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
-  done < <(jq -r --arg repo "$GITHUB_REPOSITORY" '.data.user.projectV2.items.nodes[]? | select(.content.repository.nameWithOwner==$repo and .content.state=="CLOSED" and .fieldValueByName.name=="Discovery") | .content.number' <<< "$page")
+
+    # An issue merged into UAT is not complete. Keep it OPEN during QA/UAT.
+    # GitHub's automatic 'Item reopened -> Discovery' project rule can fire
+    # asynchronously, so Discovery is also repaired on subsequent passes.
+    if [ "$state" = "CLOSED" ]; then
+      echo "::notice::Reopening unreleased issue #$issue with merged UAT candidate (card $status)."
+      gh issue reopen "$issue" --repo "$GITHUB_REPOSITORY"
+    fi
+    if [ "$desired" != "$status" ] || [ "$state" = "CLOSED" ]; then
+      echo "::notice::Restoring #$issue to $desired; not Done or Released."
+      PROJECT_OWNER="$owner" PROJECT_NUMBER="$number" PROJECT_STATUS="$desired" GH_TOKEN="$PROJECT_TOKEN" bash scripts/add-issue-to-project.sh "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
+    fi
+  done < <(jq -c --arg repo "$GITHUB_REPOSITORY" '.data.user.projectV2.items.nodes[]? | select(.content.repository.nameWithOwner==$repo) | select((.content.state=="CLOSED" and (.fieldValueByName.name=="Discovery" or .fieldValueByName.name=="QA & Review" or .fieldValueByName.name=="Ready for UAT")) or (.content.state=="OPEN" and .fieldValueByName.name=="Discovery")) | {number:.content.number,state:.content.state,status:.fieldValueByName.name}' <<< "$page")
 
   [ "$(jq -r '.data.user.projectV2.items.pageInfo.hasNextPage // false' <<< "$page")" = "true" ] || break
   cursor="$(jq -r '.data.user.projectV2.items.pageInfo.endCursor // empty' <<< "$page")"
