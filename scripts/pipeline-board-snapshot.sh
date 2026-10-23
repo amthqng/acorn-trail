@@ -23,7 +23,8 @@ while :; do
   cursor="$(jq -r '.data.user.projectV2.items.pageInfo.endCursor' <<< "$page")"
   test -n "$cursor"
 done
-echo "Board status: $records"\n  echo "::notice::Board contains $(jq length <<< "$records") open repository issues"
+echo "Board status: $records"
+  echo "::notice::Board contains $(jq length <<< "$records") open repository issues"
 for stage in 'Discovery' 'Ready for Development' 'In Development' 'QA & Review' 'Ready for UAT' 'Done'; do
   ids="$(jq -cr --arg s "$stage" '[.[]|select(.status==$s)|.number]|unique' <<< "$records")"
   case "$stage" in
