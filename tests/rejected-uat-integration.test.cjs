@@ -39,7 +39,7 @@ const fakeGH=[
 "}else {console.error('Unexpected GitHub mock request',argv);process.exitCode=1;}"
 ].join('\n')+'\n';
 
-function runFixture(options={}){
+function runFixture(options={},scriptName='scripts/enforce-rejected-uat.sh'){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'acorn-rejected-uat-'));
  try{
   const executable=path.join(dir,'gh');
@@ -50,7 +50,7 @@ function runFixture(options={}){
     PROJECT_OWNER:'amthqng',PROJECT_NUMBER:'2',
     GH_TRACE:trace,PATH:dir+path.delimiter+process.env.PATH,
     ...options};
-  const result=spawnSync('bash',['scripts/enforce-rejected-uat.sh'],{cwd:root,env,encoding:'utf8',timeout:15000});
+  const result=spawnSync('bash',[scriptName],{cwd:root,env,encoding:'utf8',timeout:15000});
   const calls=fs.existsSync(trace)?fs.readFileSync(trace,'utf8'):'';
   return {result,calls};
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
@@ -79,4 +79,17 @@ test('new UAT candidate after rejection disables older rejection recovery',()=>{
  const {result,calls}=runFixture({TEST_NEW_CANDIDATE:'1'});
  assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
  assert.doesNotMatch(calls,/option=OPT_DEV|option=OPT_QA|issue reopen/);
+});
+
+test('generic Discovery recovery skips a previously rejected UAT candidate',()=>{
+ const {result,calls}=runFixture({TEST_BOARD_STATUS:'Discovery'},'scripts/recover-closed-discovery.sh');
+ assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
+ assert.match(result.stdout,/skipping stale UAT promotion/);
+ assert.doesNotMatch(calls,/issue reopen|option=OPT_DEV|option=OPT_QA/);
+});
+test('generic closed-QA recovery leaves rejected work to the owner verdict controller',()=>{
+ const {result,calls}=runFixture({TEST_BOARD_STATUS:'QA & Review',TEST_ISSUE_STATE:'CLOSED'},'scripts/recover-closed-discovery.sh');
+ assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
+ assert.match(result.stdout,/skipping stale UAT promotion/);
+ assert.doesNotMatch(calls,/issue reopen|option=OPT_DEV|option=OPT_QA/);
 });
