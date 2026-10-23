@@ -72,13 +72,14 @@ test('Legacy owner UAT acceptance is recognized regardless of trailing newline',
   assert.match(restore,/\[\[:space:\]\]\|\$/);
   assert.doesNotMatch(restore,/gh issue reopen/);
 });
-test('Closed Discovery cards with merged UAT PR are recovered without reopening issues',()=>{
+test('Merged UAT work in Discovery is restored to QA/UAT with an open issue',()=>{
   const recovery=fs.readFileSync(path.join(__dirname,'..','scripts','recover-closed-discovery.sh'),'utf8');
   assert.match(recovery,/\.content\.state=="CLOSED"/);
   assert.match(recovery,/\.fieldValueByName\.name=="Discovery"/);
   assert.match(recovery,/\.baseRefName=="uat"/);
-  assert.match(recovery,/PROJECT_STATUS="QA & Review"/);
-  assert.doesNotMatch(recovery,/gh issue reopen/);
+  assert.match(recovery,/desired="QA & Review"/);
+  assert.match(recovery,/gh issue reopen/);
+  assert.match(recovery,/PROJECT_STATUS="\$desired"/);
   assert.match(controller,/bash scripts\/recover-closed-discovery\.sh/);
 });
 
