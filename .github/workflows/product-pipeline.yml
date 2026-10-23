@@ -409,7 +409,8 @@ jobs:
     if: needs.board.outputs.done != '[]'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Dispatch production publisher for accepted Done cards
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run release-cloudflare.yml --ref main
+        run: gh workflow run release-cloudflare.yml --repo "$GITHUB_REPOSITORY" --ref main
