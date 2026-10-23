@@ -35,10 +35,10 @@ test('Production requires owner acceptance of precise candidate and isolated ass
   assert.match(release,/UAT game asset change/);
   assert.match(release,/git merge --ff-only origin\/uat/);
 });
-test('QA uses native runner for reliable WebKit offline behavior',()=>{
+test('Routine QA uses native runner with focused Chromium checks',()=>{
   const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
   assert.doesNotMatch(qa,/container:/);
-  assert.match(qa,/npx playwright install --with-deps chromium webkit/);
+  assert.match(qa,/npx playwright install --with-deps chromium/);
   assert.match(qa,/actions\/cache@v4/);
 });
 test('Controller synchronizes main to UAT without force pushes before reading the board',()=>{
@@ -47,6 +47,13 @@ test('Controller synchronizes main to UAT without force pushes before reading th
   assert.match(controller,/git push origin HEAD:uat/);
   assert.match(controller,/  board:\n    needs: sync-uat/);
   assert.doesNotMatch(controller,/git push --force/);
+});
+test('Routine QA is focused; full browser/offline suite runs before production promotion',()=>{
+  const qa=controller.split('  qa-handoff:')[1]?.split('  dispatch:')[0];
+  assert.match(qa,/--test-name-pattern=/);
+  assert.doesNotMatch(qa,/node --test tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
+  assert.match(release,/node --test tests\/browser\.test\.cjs tests\/offline\.browser\.test\.cjs/);
+  assert.ok(release.indexOf('node --test tests/browser.test.cjs tests/offline.browser.test.cjs')<release.indexOf('git push origin HEAD:main'));
 });
 test('Only the release workflow may deploy the production worker',()=>{
   assert.doesNotMatch(implement,/wrangler[^\n]*deploy/);
