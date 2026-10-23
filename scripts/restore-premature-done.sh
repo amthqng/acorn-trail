@@ -8,12 +8,14 @@ project="$(jq -r '.data.user.projectV2.id' <<< "$data")"
 field="$(jq -r '.data.user.projectV2.field.id' <<< "$data")"
 qa="$(jq -r '.data.user.projectV2.field.options[]|select(.name=="QA & Review")|.id' <<< "$data")"
 test -n "$project" && test -n "$field" && test -n "$qa"
-jq -c --arg repo "$GITHUB_REPOSITORY" '.data.user.projectV2.items.nodes[]|select(.content.repository.nameWithOwner==$repo and .content.state=="OPEN" and .fieldValueByName.name=="Done")|{item:.id,number:.content.number}' <<< "$data" | while read -r row; do
+jq -c --arg repo "$GITHUB_REPOSITORY" '.data.user.projectV2.items.nodes[]|select(.content.repository.nameWithOwner==$repo and .fieldValueByName.name=="Done")|{item:.id,number:.content.number}' <<< "$data" | while read -r row; do
   number="$(jq -r '.number' <<< "$row")"
   item="$(jq -r '.item' <<< "$row")"
-  open_pr="$(gh pr list --state open --repo "$GITHUB_REPOSITORY" --limit 200 --json headRefName | jq -r --arg prefix "agents/issue-$number" '[.[]|select(.headRefName==$prefix or (.headRefName|startswith($prefix+"-correction-")))]|length')"
-  [ "$open_pr" -gt 0 ] || continue
-  echo "::warning::Issue #$number marked Done while its implementation PR remains open. Restoring QA & Review."
+  comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$number/comments?per_page=100")"
+  accepted="$(jq -r --arg number "$number" '[.[]|select(.user.login=="amthqng" and (.body|contains("UAT-ACCEPTED: #"+$number+" "))) ]|length' <<< "$comments")"
+  [ "$accepted" -eq 0 ] || continue
+  gh issue reopen "$number" --repo "$GITHUB_REPOSITORY" || true
+  echo "::warning::Issue #$number Done without owner UAT acceptance. Restoring QA & Review."
   mutation='mutation($project:ID!,$item:ID!,$field:ID!,$option:String!){updateProjectV2ItemFieldValue(input:{projectId:$project,itemId:$item,fieldId:$field,value:{singleSelectOptionId:$option}}){projectV2Item{id}}}'
   GH_TOKEN="$PROJECT_TOKEN" gh api graphql -f query="$mutation" -f project="$project" -f item="$item" -f field="$field" -f option="$qa" >/dev/null
 done
