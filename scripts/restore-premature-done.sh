@@ -17,7 +17,8 @@ jq -c --arg repo "$GITHUB_REPOSITORY" '.data.user.projectV2.items.nodes[]|select
   # whether a NEW correction PR exists. Otherwise the two repair scripts fight.
   rejected_index="$(jq -r '[to_entries[] | select(.value.user.login=="amthqng" and ((.value.body // "")|test("UAT[[:space:]]*REJECTED";"i"))) | .key] | last // -1' <<< "$comments")"
   candidate_index="$(jq -r --arg number "$number" '[to_entries[] | select((.value.body // "")|contains("UAT-CANDIDATE: #"+$number+" ")) | .key] | last // -1' <<< "$comments")"
-  if [ "$rejected_index" -gt "$candidate_index" ]; then
+  feedback_at="$(printf '%s\n' "$comments" | bash scripts/latest-uat-feedback.sh "$number" "amthqng")"
+  if [ -n "$feedback_at" ] || [ "$rejected_index" -gt "$candidate_index" ]; then
     echo "::notice::Issue #$number has a newer UAT rejection. Dedicated rejection controller will restore In Development; skipping generic QA."
     continue
   fi

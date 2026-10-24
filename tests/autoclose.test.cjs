@@ -36,6 +36,6 @@ test('board controller recovers on main push, without waiting only for external 
 test('generic Done recovery defers to rejected UAT authority instead of moving rejected story to QA',()=>{
   assert.match(restore,/rejected_index=/);
   assert.match(restore,/candidate_index=/);
-  assert.match(restore,/if \[ "\$rejected_index" -gt "\$candidate_index" \]/);
+  assert.match(restore,/\[ -n "\$feedback_at" \] \|\| \[ "\$rejected_index" -gt "\$candidate_index" \]/);
   assert.match(restore,/skipping generic QA/);
 });

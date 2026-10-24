@@ -20,9 +20,15 @@ while :; do
     status="$(jq -r '.status // empty' <<< "$row")"
     comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" | jq -s add)"
     rejected="$(jq -c --arg owner "$owner" '[to_entries[] | select(.value.user.login==$owner and ((.value.body // "")|test("UAT[[:space:]]*REJECTED";"i")))] | last // empty' <<< "$comments")"
-    [ -n "$rejected" ] || continue
-    rejected_at="$(jq -r '.value.created_at' <<< "$rejected")"
-    reject_index="$(jq -r '.key' <<< "$rejected")"
+    # A product owner may reject UAT with normal feedback, not a keyword.
+    feedback_at="$(printf '%s\n' "$comments" | bash scripts/latest-uat-feedback.sh "$issue" "$owner")"
+    if [ -z "$rejected" ] && [ -z "$feedback_at" ]; then continue; fi
+    rejected_at="$(jq -r '.value.created_at // ""' <<< "$rejected")"
+    reject_index="$(jq -r '.key // -1' <<< "$rejected")"
+    if [ -n "$feedback_at" ] && { [ -z "$rejected_at" ] || [[ "$feedback_at" > "$rejected_at" ]]; }; then
+      rejected_at="$feedback_at"
+      reject_index="$(jq -r --arg when "$feedback_at" '[to_entries[] | select(.value.created_at==$when) | .key] | last // -1' <<< "$comments")"
+    fi
     # A fresh UAT receipt after the latest rejection is a new candidate, not
     # the old rejected build. Leave its stage to the normal QA/UAT workflow.
     latest_candidate="$(jq -r --arg issue "$issue" '[to_entries[] | select((.value.body // "")|contains("UAT-CANDIDATE: #"+$issue+" ")) | .key] | last // -1' <<< "$comments")"
