@@ -1,7 +1,7 @@
 name: Developer regression tests
 on:
   push:
-    branches: [main, qa/offline-gameplay]
+    branches: [main, uat, qa/offline-gameplay]
   pull_request:
   workflow_dispatch:
 
