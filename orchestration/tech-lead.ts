@@ -97,7 +97,8 @@ async function main() {
   const cosmeticCleanup=/\\b(remove|reduce|clean up|simplify)\\b/.test(request)
     && /\\b(boxes|borders|backgrounds|panels|visual clutter|text boxes)\\b/.test(request)
     && !/\\b(save data|saved progress|privacy|child safety|curriculum change|new gameplay|purchases)\\b/.test(request);
-  const ownerQuestions=(decorativeMapRequest||cosmeticCleanup)?[]:unresolvedOwnerQuestions;
+  const focusTechnical=/keyboard|focus|outline|fallback|indicator|contrast|touch target|aria|screen.reader/i;
+  const ownerQuestions=(decorativeMapRequest||cosmeticCleanup)?[]:unresolvedOwnerQuestions.filter(q=>!focusTechnical.test(q));
   const technicalConcerns=[...decision.technicalConcerns,...decision.ownerQuestions.filter(q=>nonOwnerPattern.test(q))];
   const finalVerdict=ownerQuestions.length===0?'READY':'NEEDS_CLARIFICATION';
   const escalationSummary=decorativeMapRequest
@@ -105,7 +106,7 @@ async function main() {
     : ownerQuestions.length===0
       ? 'No material product-owner decision remains; implementation checks belong to Developer/QA.'
       : decision.rationale;
-  const body=`<!-- acorn-tech-lead-gate -->\n<!-- acorn-intake-policy-v2 -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${escalationSummary}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
+  const body=`<!-- acorn-tech-lead-gate -->\n<!-- acorn-intake-policy-v3 -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${escalationSummary}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
   const dir=join(root,'artifacts','development-intake');
   await mkdir(dir,{recursive:true});
   await writeFile(join(dir,'comment.md'),body);
