@@ -30,7 +30,8 @@ while :; do
     issue_comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" | jq -s add)"
     rejected_index="$(jq -r --arg owner "$owner" '[to_entries[] | select(.value.user.login==$owner and ((.value.body // "")|test("UAT[[:space:]]*REJECTED";"i"))) | .key] | last // -1' <<< "$issue_comments")"
     candidate_index="$(jq -r --arg issue "$issue" '[to_entries[] | select((.value.body // "")|contains("UAT-CANDIDATE: #"+$issue+" ")) | .key] | last // -1' <<< "$issue_comments")"
-    if [ "$rejected_index" -gt "$candidate_index" ]; then
+    feedback_at="$(printf '%s\n' "$issue_comments" | bash scripts/latest-uat-feedback.sh "$issue" "$owner")"
+    if [ -n "$feedback_at" ] || [ "$rejected_index" -gt "$candidate_index" ]; then
       echo "::notice::Issue #$issue has a rejected UAT candidate. Leaving its recovery to enforce-rejected-uat.sh; skipping stale UAT promotion."
       continue
     fi
