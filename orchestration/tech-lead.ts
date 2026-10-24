@@ -92,7 +92,12 @@ async function main() {
     && !/\b(interact|interactive|tap|click|gameplay|progression|reward|save|account|purchase|track|collect|score|new region|new level|curriculum|reading|math)\b/.test(request);
   const nonOwnerPattern=/codebase|source code|markup|render|function|asset|sprite|svg|css|file.size|complexity|performance|setting|reduced.motion|colorblind|accessibility|dependency|technical|where.*(code|draw)|location|placement|position|area|theme|season|style|color|palette|shape|species|variet|silhouette|animation|decorat|appearance|visual|design|layout|size|image|illustration|tree count|number of.*tree|algorithm/i;
   const unresolvedOwnerQuestions=decision.ownerQuestions.filter(q=>!nonOwnerPattern.test(q));
-  const ownerQuestions=decorativeMapRequest?[]:unresolvedOwnerQuestions;
+  // Presentation-only cleanup is UX-owned. Questions about which decorative
+  // text panels to remove, visual scope, or evidence are not owner blockers.
+  const cosmeticCleanup=/\\b(remove|reduce|clean up|simplify)\\b/.test(request)
+    && /\\b(boxes|borders|backgrounds|panels|visual clutter|text boxes)\\b/.test(request)
+    && !/\\b(save data|saved progress|privacy|child safety|curriculum change|new gameplay|purchases)\\b/.test(request);
+  const ownerQuestions=(decorativeMapRequest||cosmeticCleanup)?[]:unresolvedOwnerQuestions;
   const technicalConcerns=[...decision.technicalConcerns,...decision.ownerQuestions.filter(q=>nonOwnerPattern.test(q))];
   const finalVerdict=ownerQuestions.length===0?'READY':'NEEDS_CLARIFICATION';
   const escalationSummary=decorativeMapRequest
