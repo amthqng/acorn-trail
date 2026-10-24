@@ -17,7 +17,7 @@ function buildBrief({issue,comments,repository}){
   // magic "UAT REJECTED" phrase or silently lose the latest feedback.
   // Owner acceptance, not a new candidate receipt, resolves previous feedback.
   // Keep every substantive owner correction visible until UAT acceptance.
-  const lastAccepted=comments.reduce((n,c,i)=>c.user?.login===owner&&new RegExp('UAT-ACCEPTED:\\\\s*#'+issue.number+'(?:\\\\s|$)','i').test(c.body??'')?i:n,-1);
+  const lastAccepted=comments.reduce((n,c,i)=>c.user?.login===owner&&(c.body??'').includes('UAT-ACCEPTED: #'+issue.number+' ')?i:n,-1);
   const ownerRequirements=comments.slice(lastAccepted+1).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??''));
   const rejection=ownerRequirements.map(c=>c.body??'').filter(Boolean).slice(-12).map(x=>x.slice(0,1200)).join('\\n\\n---\\n\\n');
   const reviewer=last(comments,c=>(c.body??'').includes('<!-- acorn-review-rejected -->'));
