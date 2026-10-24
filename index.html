@@ -24,9 +24,9 @@
   :root{
     color-scheme:light;
     /* Autumn is the default in every scene, including resumed trails. */
-    --cream:#FFF2DC; --peach:#EFBD87; --rust:#9E3F22; --rust-dark:#74301D;
+    --cream:#FBE7C4; --peach:#EBAA6E; --rust:#9E3F22; --rust-dark:#74301D;
     --sage:#76603E; --sage-dark:#58452F; --honey:#E8AF3F; --bark:#402B23;
-    --lavender:#D3B096; --cream-card:#FFF9ED; --sand:#E4BA87; --sand-dark:#8C653F;
+    --lavender:#D3B096; --cream-card:#FFF0D2; --sand:#E6B67D; --sand-dark:#8C653F;
     --blush:#F0B8A6; --cat-mauve:#A996C4; --cat-mauve-dark:#8471A6;
     --mouse-grey:#DAD3C3; --pig-pink:#F2C3B0; --pig-pink-dark:#E39C86;
     --good:#596B39; --good-dark:#41502B;
@@ -347,8 +347,8 @@
   /* tap-to-hear chip on each answer */
   .answer{ position:relative; }
   .ans-txt{ pointer-events:none; }
-  .ans-speak{ position:absolute; top:5px; right:7px; font-size:15px; line-height:1; opacity:0.65;
-    padding:3px 5px; border-radius:10px; background:rgba(169,150,196,0.18); }
+  .ans-speak{ position:absolute; top:5px; right:7px; font-size:15px; line-height:1;
+    padding:3px 5px; border-radius:10px; background:#E8C393; color:var(--rust-dark); }
   .ans-speak:active{ transform:scale(0.9); }
 
   /* in-theme progress */
@@ -470,7 +470,7 @@
 .camp-map .camp-node.done circle{fill:#f9d88e}
 .camp-map .camp-node.current circle{fill:#f9b74e}
 .camp-map .camp-node.locked circle{fill:#e6d9a6}
-.camp-map .map-marker{font:700 12px system-ui,sans-serif;fill:#5e4228}
+.camp-map .map-marker{font:700 12px system-ui,sans-serif;fill:#5e4228;paint-order:stroke;stroke:var(--cream-card);stroke-width:4;stroke-linejoin:round}
 @media(max-width:420px){.camp-map{width:96%;padding:8px}.camp-map-heading small{font-size:11px}.camp-map-caption{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.camp-map *{animation:none!important;transition:none!important}}
 
@@ -557,13 +557,13 @@ button, [role="button"]{touch-action:manipulation}
 
 /* Autumn materials: parchment, harvest gold, russet and burgundy dusk. */
 #app::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(#6f583817 .7px,transparent .9px);background-size:5px 5px;opacity:.36}
-#app.sky-meadow{background:radial-gradient(ellipse at 28% 12%,#FFF0C5 0%,#ECC081 35%,#D4A06B 78%)}
-#app.sky-orchard{background:radial-gradient(ellipse at 75% 12%,#FFE5B8 0%,#E7A571 40%,#C88D61 100%)}
-#app.sky-river{background:radial-gradient(ellipse at 55% 8%,#F4E5D2 0%,#D8C7AC 42%,#B4997A 100%)}
-#app.sky-pumpkin{background:radial-gradient(ellipse at 50% 17%,#FFE4AE 0%,#EAA56C 38%,#B77C59 100%)}
-#app.sky-woods{background:radial-gradient(ellipse at 40% 10%,#FFE8AF 0%,#E4BC7A 42%,#AD8555 100%)}
-#app.sky-bridge{background:radial-gradient(ellipse at 22% 8%,#79505D 0%,#513A4A 42%,#302835 100%)}
-#app.sky-oak{background:radial-gradient(ellipse at 76% 10%,#825549 0%,#573C3B 40%,#33292D 100%)}
+#app.sky-meadow{background:radial-gradient(ellipse at 28% 12%,#FFE8B0 0%,#E9B56B 35%,#C99054 78%)}
+#app.sky-orchard{background:radial-gradient(ellipse at 75% 12%,#FFDEAA 0%,#DF995F 40%,#BC784A 100%)}
+#app.sky-river{background:radial-gradient(ellipse at 55% 8%,#F8DFB5 0%,#D7B58C 42%,#AA805D 100%)}
+#app.sky-pumpkin{background:radial-gradient(ellipse at 50% 17%,#FFE0A0 0%,#E49A58 38%,#A96445 100%)}
+#app.sky-woods{background:radial-gradient(ellipse at 40% 10%,#FFE3A1 0%,#DCAA60 42%,#946637 100%)}
+#app.sky-bridge{background:radial-gradient(ellipse at 22% 8%,#82515B 0%,#593947 42%,#382630 100%)}
+#app.sky-oak{background:radial-gradient(ellipse at 76% 10%,#925A40 0%,#633C31 40%,#3B2928 100%)}
 .title-lockup h1{color:#68402b;text-shadow:0 1px 0 #fff5d2,0 3px 0 #d7af77,0 7px 12px #744d2826}
 .title-icon{filter:drop-shadow(0 3px 2px #78512435)}
 .title-lockup p{color:#69523c}
@@ -576,7 +576,7 @@ button, [role="button"]{touch-action:manipulation}
 .btn.green{background:linear-gradient(var(--good),var(--good-dark));box-shadow:inset 0 2px 0 #ffffff60,0 5px 0 #496c3d,0 9px 15px #344a2930}
 #screen-start .start-wrap .btn,#screen-map .map-cta .btn{background:linear-gradient(#ffdb88,#efad46);border-color:#80502F;box-shadow:inset 0 2px 0 #fff4c1,0 5px 0 #855c34,0 10px 17px #6a452d35}
 #screen-start .start-wrap .btn:active,#screen-map .map-cta .btn:active{box-shadow:inset 0 1px 0 #fff4c1,0 1px 0 #855c34,0 4px 7px #6a452d25}
-.story-card,.card,.modal-card,.editor,.continue-card,#screen-challenge .challenge,#screen-transition.camp-transition .card{background:radial-gradient(ellipse at 14% 0%,#fffdf4 0%,#fff3d7 60%,#f4e0bc 100%);box-shadow:inset 0 2px 0 #fffef9,inset 0 -3px 0 #dcc29885,0 7px 0 #8a664140,0 16px 30px #47342430}
+.story-card,.card,.modal-card,.editor,.continue-card,#screen-challenge .challenge,#screen-transition.camp-transition .card{background:radial-gradient(ellipse at 14% 0%,#FFF5DE 0%,var(--cream-card) 60%,#EFD5A6 100%);box-shadow:inset 0 2px 0 #fffef9,inset 0 -3px 0 #dcc29885,0 7px 0 #8a664140,0 16px 30px #47342430}
 #screen-challenge .challenge,#screen-transition.camp-transition .card{border-color:#b78d59}
 #screen-challenge .challenge:before{color:#68452E;text-shadow:0 1px 0 #fff}
 #screen-challenge .answer{background:linear-gradient(145deg,#fffef8,#f8edd4);border-color:var(--sand-dark);box-shadow:inset 0 2px 0 #fff,0 4px 0 #ad9066,0 7px 10px #68503220}
@@ -645,7 +645,7 @@ button, [role="button"]{touch-action:manipulation}
   padding:9px 12px;
   box-sizing:border-box;
 }
-#scenery .scene-depth,#scenery .autumn-decor,.map-tree,.autumn-leaf{pointer-events:none}
+#scenery .scene-depth,#scenery .autumn-decor,.map-tree,.autumn-leaf,.autumn-acorn{pointer-events:none}
 :focus-visible{outline:3px solid var(--rust-dark);outline-offset:3px;box-shadow:0 0 0 3px var(--cream-card)}
 @media(prefers-reduced-motion:reduce){.btn.pulse,.lantern.current .glass{animation:none}}
 
@@ -1352,12 +1352,16 @@ function autumnTree(x,y,kind,scale=1){
 function autumnLeaf(x,y,angle=0,scale=1,color='#B45D2E'){
   return `<g class="autumn-leaf" aria-hidden="true" transform="translate(${x} ${y}) rotate(${angle}) scale(${scale})"><path d="M0-12L3-6L8-9L7-3L12-1L6 3L8 8L2 6L0 10L-2 6L-8 8L-6 3L-12-1L-7-3L-8-9L-3-6Z" fill="${color}"/><path d="M0 14V-7M0 3L-5-1M0 3L5-1" stroke="#795035" stroke-width="1.2" fill="none"/></g>`;
 }
+function autumnAcorn(x,y,angle=0,scale=1){
+  return `<g class="autumn-acorn" aria-hidden="true" transform="translate(${x} ${y}) rotate(${angle}) scale(${scale})"><path d="M-7 0Q-8 10 0 14Q8 10 7 0Z" fill="#C88A3E" stroke="#805133" stroke-width="1.5"/><path d="M0-5Q-2-10 2-12" fill="none" stroke="#65432D" stroke-width="2"/><path d="M-9 1Q-10-8 0-8Q10-8 9 1Z" fill="#805133"/><path d="M-5-3L-2-1M1-4L4-2" stroke="#BB8650" stroke-width="1.5"/></g>`;
+}
 function autumnDecor(scene){
   const night=scene==='bridge'||scene==='oak';
   const trees=[[65,512,'oak',4],[315,541,'maple',2.8],[695,548,'birch',3.3],[936,515,'pine',4.4]];
   const leaves=Array.from({length:16},(_,i)=>autumnLeaf(25+i*63,571+(i*17)%42,i*37,.65+i%3*.15,['#BA532D','#E2A343','#943C2F'][i%3])).join('');
   // Fit the whole decorative layer so edge trees remain visible on narrow phones.
-  return '<svg class="autumn-decor" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><g opacity="'+(night?'.65':'.88')+'">'+trees.map(t=>autumnTree(...t)).join('')+leaves+'</g></svg>';
+  const acorns=[[95,584,-30],[293,600,25],[710,587,40],[908,598,-15]].map(t=>autumnAcorn(...t)).join('');
+  return '<svg class="autumn-decor" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><g opacity="'+(night?'.65':'.88')+'">'+trees.map(t=>autumnTree(...t)).join('')+leaves+acorns+'</g></svg>';
 }
 /* A lightweight campsite layer for each of the seven existing scene palettes. */
 function campSceneDecor(scene){
@@ -2192,10 +2196,10 @@ function renderAdventureMap(){
       (i<themeIndex?'<g class="camp-check" transform="translate(19 -19)"><circle r="10"/><path d="M-4 0l3 3 5-6"/></g>':'')+'</g>';
   }).join('');
   host.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 375" role="img" aria-label="Seven woodland destinations on a winding trail; current destination is '+THEMES[themeIndex].name+'">'+
-    '<defs><linearGradient id="map-ground" x2=".2" y2="1"><stop stop-color="#F4D59B"/><stop offset="1" stop-color="#CE995C"/></linearGradient><linearGradient id="map-pine" x2="1" y2="1"><stop stop-color="#679e6e"/><stop offset="1" stop-color="#2f674b"/></linearGradient><radialGradient id="map-node" cx=".3" cy=".2"><stop stop-color="#fff6d8"/><stop offset="1" stop-color="#dfbf82"/></radialGradient><radialGradient id="map-current" cx=".3" cy=".2"><stop stop-color="#fff5b9"/><stop offset="1" stop-color="#efa934"/></radialGradient><radialGradient id="map-done" cx=".3" cy=".2"><stop stop-color="#fff9d8"/><stop offset="1" stop-color="#CED09A"/></radialGradient></defs>'+
+    '<defs><linearGradient id="map-ground" x2=".2" y2="1"><stop stop-color="#F2CE88"/><stop offset="1" stop-color="#C28A4D"/></linearGradient><linearGradient id="map-pine" x2="1" y2="1"><stop stop-color="#679e6e"/><stop offset="1" stop-color="#2f674b"/></linearGradient><radialGradient id="map-node" cx=".3" cy=".2"><stop stop-color="#fff6d8"/><stop offset="1" stop-color="#dfbf82"/></radialGradient><radialGradient id="map-current" cx=".3" cy=".2"><stop stop-color="#fff5b9"/><stop offset="1" stop-color="#efa934"/></radialGradient><radialGradient id="map-done" cx=".3" cy=".2"><stop stop-color="#fff9d8"/><stop offset="1" stop-color="#CED09A"/></radialGradient></defs>'+
     '<rect width="500" height="375" fill="url(#map-ground)"/>'+
-    '<path d="M0 100 Q130 50 220 115 T500 105 L500 0H0Z" fill="#F5DFA8"/>'+
-    '<path d="M0 290Q120 250 215 310T500 260V375H0Z" fill="#D2A468"/>'+
+    '<path d="M0 100 Q130 50 220 115 T500 105 L500 0H0Z" fill="#F5DA9B"/>'+
+    '<path d="M0 290Q120 250 215 310T500 260V375H0Z" fill="#CFA060"/>'+
     '<path d="M-20 220Q120 175 190 205T520 235" fill="none" stroke="#628c68" stroke-opacity=".3" stroke-width="33"/>'+
     '<path d="M-20 215Q120 170 190 200T520 230" fill="none" stroke="#86cbd9" stroke-width="28"/>'+
     '<path d="M-20 215Q120 170 190 200T520 230" fill="none" stroke="#bde7eb" stroke-width="12"/>'+
@@ -2203,6 +2207,7 @@ function renderAdventureMap(){
     '<g fill="#fbf4d0"><circle cx="116" cy="131" r="2"/><circle cx="127" cy="142" r="2"/><circle cx="290" cy="246" r="2"/><circle cx="299" cy="250" r="2"/><circle cx="215" cy="341" r="2"/></g>'+
     trees.map((t,i)=>autumnTree(...t,.9+i%3*.12)).join('')+
     [[40,340],[113,83],[248,81],[360,314],[470,327],[303,168]].map(([x,y],i)=>autumnLeaf(x,y,i*61,.5)).join('')+
+    [[28,304,-30],[278,92,35],[446,302,15]].map(t=>autumnAcorn(...t,.5)).join('')+
     '<path d="'+path+'" fill="none" stroke="#8E623D" stroke-opacity=".2" stroke-width="22" stroke-linecap="round" transform="translate(0 2)"/>'+
     '<path class="trail-path" d="'+path+'"/><path class="trail-dashes" d="'+path+'"/>'+
     (progressPath?'<path class="trail-progress" d="'+progressPath+'"/><path class="trail-progress-glint" d="'+progressPath+'"/>':'')+
