@@ -614,6 +614,37 @@ button, [role="button"]{touch-action:manipulation}
 /* Opaque parchment keeps small text readable over every tree and night sky.
    Backgrounds and inset outlines do not change control or layout dimensions. */
 .title-lockup,.offline-strip,.lead-tag,.theme-head,.theme-progress,.lantern .lbl,.basket-head,.cc-head,.foot-note,.team-status,.team-note,.team-options,.story-skip{background:var(--cream-card);border-radius:8px}
+/* UAT #83: home-screen panels should look like harvest parchment, not white cards.
+   Limit these overrides to the intro screen; retain text contrast and button size. */
+#screen-start{
+  --home-panel:#E8C393;
+  --home-ink:#523720;
+  --home-panel-edge:#B57A47;
+}
+#screen-start .title-lockup,
+#screen-start .offline-strip,
+#screen-start .companion .name,
+#screen-start .companion .lead-tag,
+#screen-start .foot-note{
+  background:var(--home-panel);
+  color:var(--home-ink);
+  border:1px solid var(--home-panel-edge);
+  box-shadow:0 2px 8px rgba(62,43,31,.12);
+}
+#screen-start .title-lockup h1,
+#screen-start .title-lockup p,
+#screen-start .offline-strip .offline-link{
+  color:var(--home-ink);
+}
+#screen-start .companion .lead-tag{
+  padding:3px 8px;
+  border-radius:10px;
+  text-align:center;
+}
+#screen-start .foot-note{
+  padding:9px 12px;
+  box-sizing:border-box;
+}
 #scenery .scene-depth,#scenery .autumn-decor,.map-tree,.autumn-leaf{pointer-events:none}
 :focus-visible{outline:3px solid var(--rust-dark);outline-offset:3px;box-shadow:0 0 0 3px var(--cream-card)}
 @media(prefers-reduced-motion:reduce){.btn.pulse,.lantern.current .glass{animation:none}}
