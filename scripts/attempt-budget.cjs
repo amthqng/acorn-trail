@@ -18,7 +18,13 @@ function policy(issue,comments,owner){
  const tier=minor?'small':complex?'complex':'normal';
  return {revision,attempts,maxAttempts:2,allow:attempts<2,tier,model:tier==='complex'?'gpt-6.1-sol':'gpt-6-luna',effort:tier==='complex'?'high':tier==='normal'?'medium':'low',requirements:ownerComments.map(c=>c.body||'').filter(Boolean)};
 }
-function api(endpoint){return JSON.parse(cp.execFileSync('gh',['api','--paginate',endpoint],{encoding:'utf8',maxBuffer:12*1024*1024}));}
+function api(endpoint){
+ if(endpoint.includes('/comments?')){
+  const lines=cp.execFileSync('gh',['api','--paginate',endpoint,'--jq','.[] | @json'],{encoding:'utf8',maxBuffer:12*1024*1024});
+  return lines.trim()?lines.trim().split('\\n').map(line=>JSON.parse(line)):[];
+ }
+ return JSON.parse(cp.execFileSync('gh',['api',endpoint],{encoding:'utf8',maxBuffer:12*1024*1024}));
+}
 if(require.main===module){
  const issueNo=process.argv[2];
  if(!/^[1-9]\d*$/.test(issueNo||''))throw Error('Usage: node scripts/attempt-budget.cjs ISSUE');
