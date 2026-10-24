@@ -126,6 +126,9 @@ jobs:
       - name: Check owner-rejected fall theme in actual offline browser
         if: inputs.issue_number == '83'
         run: node --test tests/fall-theme-acceptance.browser.test.cjs
+      - name: Independent owner-feedback visual acceptance on iPhone and desktop
+        if: inputs.issue_number == '83'
+        run: node --test tests/uat-visual-83.browser.test.cjs
       - name: General mobile and desktop QA smoke
         run: node --test tests/qa-smoke.test.cjs
       # This step runs ONLY after the preceding unit, feature, offline-browser
@@ -149,6 +152,7 @@ jobs:
             echo '- offline mobile and desktop Playwright smoke: PASSED'
             if [ "$ISSUE_NUMBER" = 83 ]; then
               echo '- independently authored autumn-theme browser comparison against the previous UAT build: PASSED'
+              echo '- owner-rejected home panel borders checked against computed browser styles at mobile and desktop sizes: PASSED'
               echo '- runtime palette, multiple scenes and visible map changed: VERIFIED'
             fi
             echo 'MANUAL_PRODUCT_OWNER_UAT: NOT YET PERFORMED (occurs after QA and UAT deployment)'

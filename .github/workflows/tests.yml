@@ -43,7 +43,7 @@ jobs:
       - name: Syntax and gameplay regression tests
         run: |
           node --check sw.js
-          node --test tests/game.test.cjs tests/pipeline.test.cjs tests/correction-pipeline.test.cjs tests/uat-rejection.test.cjs tests/autoclose.test.cjs tests/rejected-uat-integration.test.cjs tests/developer-agent.test.cjs tests/reviewer-uat-handoff.test.cjs tests/uat-owner-feedback.test.cjs
+          node --test tests/game.test.cjs tests/pipeline.test.cjs tests/correction-pipeline.test.cjs tests/uat-rejection.test.cjs tests/autoclose.test.cjs tests/rejected-uat-integration.test.cjs tests/developer-agent.test.cjs tests/reviewer-uat-handoff.test.cjs tests/uat-owner-feedback.test.cjs tests/uat-agent-feedback.test.cjs
 
   orchestrator-compile:
     runs-on: ubuntu-latest
