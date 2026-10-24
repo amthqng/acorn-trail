@@ -25,7 +25,7 @@ test('UX reviewer gets real before/after mobile and desktop screenshots',()=>{
  assert.match(capture,/page\.screenshot/);
  assert.match(ux,/input_image/);
  assert.match(ux,/visual-verdict\.txt/);
- assert.match(ux,/UAT-CANDIDATE: #/);
+ assert.match(ux,/UAT-ACCEPTED: #/);
  assert.match(ux,/REVISE/);
 });
 test('screenshot and UX verdict artifacts are available on failure',()=>{

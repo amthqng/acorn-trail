@@ -22,8 +22,8 @@ async function main(){
  const manifest=JSON.parse(manifestRaw) as {issue:number;screen:string;files:string[]};
  if(manifest.issue!==issue.number||manifest.files.length!==4)throw Error('Missing complete before/after mobile/desktop screenshots');
  const owner=process.env.GITHUB_REPOSITORY?.split('/')[0]??'amthqng';
- const latest=comments.reduce((index,c,i)=>(c.body??'').includes('UAT-CANDIDATE: #'+n+' ')?i:index,-1);
- const feedback=comments.slice(Math.max(0,latest+1)).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??'')).map(c=>c.body??'').slice(-5).join('\n---\n');
+ const lastAccepted=comments.reduce((index,c,i)=>c.user?.login===owner&&(c.body??'').includes('UAT-ACCEPTED: #'+n+' ')?i:index,-1);
+ const feedback=comments.slice(lastAccepted+1).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??'')).map(c=>c.body??'').slice(-12).join('\n---\n');
  const textPrompt='Independently review screenshots of this educational game, treating the latest owner feedback as binding design acceptance criteria. This is readiness for owner UAT, not production approval. Compare before vs after at both device sizes. Do not accept visual clutter, borders, white cards, or distractions that the owner explicitly requested to remove. The actual before/after PNG screenshots follow in order. If a requirement concerns a screen not visible in evidence, return REVISE instead of guessing. Issue #'+n+': '+issue.title+'\nOriginal issue:\n'+(issue.body??'').slice(0,5000)+'\nLatest owner corrections:\n'+(feedback||'None')+'\nScreen captured: '+manifest.screen+'. Return PASS only if the requested visual result is truly visible.';
  const content:any[]=[{type:'input_text',text:textPrompt}];
  for(const file of manifest.files){

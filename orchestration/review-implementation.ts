@@ -24,8 +24,8 @@ async function main(){
  const snippet=diff.slice(0,90000);
  const comments=JSON.parse(commentsRaw) as Array<{body?:string;user?:{login?:string}}>;
  const owner=process.env.GITHUB_REPOSITORY?.split('/')[0]??'amthqng';
- const latestCandidate=comments.reduce((index,c,i)=>(c.body??'').includes('UAT-CANDIDATE: #'+no+' ')?i:index,-1);
- const rejection=comments.slice(Math.max(0,latestCandidate+1)).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??'')).map(c=>c.body??'').filter(Boolean).slice(-5).join('\\n\\n---\\n\\n');
+ const lastAccepted=comments.reduce((index,c,i)=>c.user?.login===owner&&(c.body??'').includes('UAT-ACCEPTED: #'+no+' ')?i:index,-1);
+ const rejection=comments.slice(lastAccepted+1).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??'')).map(c=>c.body??'').filter(Boolean).slice(-12).join('\\n\\n---\\n\\n');
  const approved=comments.filter(c=>(c.body??'').includes('<!-- acorn-tech-lead-gate -->')).at(-1)?.body??'';
  const criteria=approved.split('### Acceptance criteria')[1]?.split('### Regression checks')[0]?.slice(0,4000)??'';
  const agent=new Agent({name:'Independent Acorn Trail Code Reviewer',model:process.env.ACORN_AGENT_MODEL||'gpt-4.1',

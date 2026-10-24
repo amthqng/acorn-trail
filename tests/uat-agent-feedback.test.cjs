@@ -23,3 +23,14 @@ test('already-accepted UAT is not presented as an owner rejection',()=>{
  {user:{login:'amthqng'},body:'UAT-ACCEPTED: #83 newsha'}];
  assert.match(buildBrief({issue,comments,repository:'amthqng/acorn-trail'}),/None: first implementation/);
 });
+
+test('new UAT receipt does not erase unresolved earlier owner feedback',()=>{
+ const issue={number:83,title:'Fall',body:'Colors',state:'open'};
+ const bot={login:'github-actions[bot]'},owner={login:'amthqng'};
+ const comments=[
+  {user:bot,body:'<!-- acorn-tech-lead-gate --> Tech Lead intake: READY'},
+  {user:owner,body:'Remove tan background rectangles, not just their borders'},
+  {user:bot,body:'UAT-CANDIDATE: #83 abc PR #114'}
+ ];
+ assert.match(buildBrief({issue,comments,repository:'amthqng/acorn-trail'}),/Remove tan background rectangles/);
+});
