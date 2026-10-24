@@ -131,9 +131,24 @@ jobs:
         run: node --test tests/uat-visual-83.browser.test.cjs
       - name: General mobile and desktop QA smoke
         run: node --test tests/qa-smoke.test.cjs
+      - name: Determine whether owner requirements include a visual change
+        id: visual_scope
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const issue=JSON.parse(fs.readFileSync('inputs/dev-issue.json','utf8'));
+          const comments=JSON.parse(fs.readFileSync('inputs/issue-comments.json','utf8'));
+          const owner=process.env.GITHUB_REPOSITORY.split('/')[0];
+          const requirements=[issue.title,issue.body,...comments.filter(c=>c.user?.login===owner).map(c=>c.body)].join(' ');
+          const visual=issue.number===83 || /\\b(visual|design|layout|theme|colors?|background|borders?|panels?|screen|scenery|trees?|characters?|friends?|team setup|typography|font|icons?|interface|ui|ux|appearance)\\b/i.test(requirements);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'required='+visual+'\\n');
+          console.log('UX screenshot review required: '+visual);
+          NODE
       - name: Capture actual before-and-after mobile and desktop UX evidence
+        if: steps.visual_scope.outputs.required == 'true'
         run: node scripts/capture-visual-qa.cjs
       - name: Independent UX agent reviews the rendered design against owner feedback
+        if: steps.visual_scope.outputs.required == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ACORN_AGENT_MODEL: gpt-4.1
@@ -160,7 +175,9 @@ jobs:
             echo '- node --test tests/game.test.cjs: PASSED'
             echo '- issue-specific feature unit tests when present: PASSED'
             echo '- offline mobile and desktop Playwright smoke: PASSED'
-            echo '- independent UX visual reviewer inspected before/after screenshots at phone and desktop sizes: PASSED'
+            if [ -f artifacts/implementation/visual-verdict.txt ]; then
+              echo '- independent UX visual reviewer inspected before/after screenshots at phone and desktop sizes: PASSED'
+            fi
             if [ "$ISSUE_NUMBER" = 83 ]; then
               echo '- independently authored autumn-theme browser comparison against the previous UAT build: PASSED'
               echo '- owner-rejected home panel borders checked against computed browser styles at mobile and desktop sizes: PASSED'
