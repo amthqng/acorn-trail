@@ -12,6 +12,8 @@ const designSchema = z.object({
   accessibility: z.array(z.string()),
   assumptions: z.array(z.string()),
   genuinelyBlockingQuestions: z.array(z.string()),
+  inventory: z.array(z.object({screen:z.string(),element:z.string(),locator:z.string(),change:z.string(),verify:z.string()})),
+  preserve: z.array(z.string()),
 });
 const blockerGate = z.object({
   verdict: z.enum(['READY','NEEDS_CLARIFICATION']),
@@ -60,7 +62,7 @@ async function main() {
     modelSettings:{maxTokens:2200},
   });
   const uxResult=await run(designer,
-    `Issue #${number}: ${issue.title}\\n${(issue.body??'').slice(0,10000)}\\nOwner comments:\\n${feedback}\\nSource excerpts:\\n${context}\\nDecide reasonable design details, recording assumptions and any truly blocking questions.`,
+    `Issue #${number}: ${issue.title}\\n${(issue.body??'').slice(0,10000)}\\nOwner comments:\\n${feedback}\\nSource excerpts:\\n${context}\\nDecide reasonable design details, recording assumptions and any truly blocking questions. For UI changes inspect the supplied actual source and provide an element-level inventory (screen, element, accurate selector or locator, before/after change, independent verification step) plus a preserve list. Do not invent selectors. The inventory is Developer/QA material, not an owner-facing report.`,
     {maxTurns:1});
   if(!uxResult.finalOutput)throw Error('UX designer returned no design brief');
   const design=uxResult.finalOutput;
@@ -100,13 +102,38 @@ async function main() {
   const focusTechnical=/keyboard|focus|outline|fallback|indicator|contrast|touch target|aria|screen.reader/i;
   const ownerQuestions=(decorativeMapRequest||cosmeticCleanup)?[]:unresolvedOwnerQuestions.filter(q=>!focusTechnical.test(q));
   const technicalConcerns=[...decision.technicalConcerns,...decision.ownerQuestions.filter(q=>nonOwnerPattern.test(q))];
-  const finalVerdict=ownerQuestions.length===0?'READY':'NEEDS_CLARIFICATION';
+  const requiresInventory=/\b(visual|design|style|layout|color|background|border|box|panel|text)\b/i.test(request);
+  const finalVerdict=ownerQuestions.length===0&&(!requiresInventory||design.inventory.length>0)?'READY':'NEEDS_CLARIFICATION';
   const escalationSummary=decorativeMapRequest
     ? 'This is a decorative-only map change. UX owns visual choices; Developer/QA own implementation and verification. No product-owner decision required.'
     : ownerQuestions.length===0
       ? 'No material product-owner decision remains; implementation checks belong to Developer/QA.'
       : decision.rationale;
-  const body=`<!-- acorn-tech-lead-gate -->\n<!-- acorn-intake-policy-v4 -->\n## Tech Lead intake: ${finalVerdict}\n\n${v.reason}\n\n**Escalation decision:** ${escalationSummary}\n\n### UX/UI design brief\n**Visual direction:** ${design.visualDirection}\n\n**Placement:** ${design.layoutAndPlacement}\n\n**Interaction:** ${design.interaction}\n\n**Accessibility:**\n${design.accessibility.map(x=>'- '+x).join('\n')}\n\n**Design assumptions:**\n${design.assumptions.map(x=>'- '+x).join('\n')}\n\n### Proposed scope\n${v.scope.map(x=>'- '+x).join('\n')||'- Not defined'}\n\n### Acceptance criteria\n${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')||'- Needs clarification'}\n\n### Regression checks\n${v.regressionChecks.map(x=>'- '+x).join('\n')||'- To be determined'}\n\n### Questions requiring owner decision\n${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}\n\n### Technical follow-ups (developer/QA owned)\n${decision.technicalConcerns.map(x=>'- '+x).join('\n')||'- None identified'}\n\n*Technical intake only. No code has been changed or tested by this assessment.*\n`;
+  const checklist=design.inventory.map((item,i)=>'- [ ] '+(i+1)+'. '+item.screen+' / '+item.element+' ('+item.locator+'): '+item.change+'; QA: '+item.verify).join('\n');
+  const body=`<!-- acorn-tech-lead-gate -->
+<!-- acorn-acceptance-inventory-v1 -->
+## Tech Lead intake: ${finalVerdict}
+
+### Owner summary
+${issue.title}. ${finalVerdict==='READY'?'UX and technical decisions resolved; proceed with implementation.':'A material product decision is required.'}
+
+### Required change inventory (Developer and independent QA)
+${checklist||'- [ ] No concrete inventory provided. For a visual issue, Tech Lead must inspect source and supply it before development.'}
+
+### Preserve unchanged
+${design.preserve.map(x=>'- '+x).join('\n')}
+
+### Acceptance criteria
+${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')}
+
+### Regression checks
+${v.regressionChecks.map(x=>'- '+x).join('\n')}
+
+### Questions requiring owner decision
+${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}
+
+*No code changed or tests performed in intake.*
+`;
   const dir=join(root,'artifacts','development-intake');
   await mkdir(dir,{recursive:true});
   await writeFile(join(dir,'comment.md'),body);

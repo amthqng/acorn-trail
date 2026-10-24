@@ -12,11 +12,15 @@ const feedback=comments.slice(Math.max(0,lastCandidate+1)).filter(c=>c.user?.log
 const scope=[issue.title||'',issue.body||'',feedback].join(' ').toLowerCase();
 const screen=issue.number===83?'screen-start':/\b(map|tree|scenery|region|trail)\b/.test(scope)&&!/\b(home|start screen|title card|offline status|bottom instruction|border)\b/.test(feedback)?'screen-map'
  :/\b(team|friend|character|roster|setup)\b/.test(scope)&&!/\b(home|start screen|title card|offline status|bottom instruction|border)\b/.test(feedback)?'screen-characters':'screen-start';
+const gate=comments.filter(c=>(c.body||'').includes('<!-- acorn-tech-lead-gate -->')).at(-1)?.body||'';
+const inventory=gate.split('### Required change inventory (Developer and independent QA)')[1]?.split('### Preserve unchanged')[0]||'';
+const mentioned=[...new Set([...inventory.matchAll(/#(screen-[\\w-]+)/g)].map(m=>m[1]))];
+const screens=mentioned.length?mentioned:[screen];
 const directory=path.join(root,'artifacts/implementation/visual-qa');
 async function run(){
  fs.mkdirSync(directory,{recursive:true});
  const browser=await chromium.launch();
- const manifest={issue:issue.number,screen,files:[]};
+ const manifest={issue:issue.number,screen:screens.join(','),screens,inventory,files:[]};
  try{
   for(const [stage,html] of [['before','inputs/original-index.html'],['after','index.html']]){
    for(const width of [390,1280]){
