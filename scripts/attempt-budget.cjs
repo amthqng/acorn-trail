@@ -21,7 +21,7 @@ function policy(issue,comments,owner){
 function api(endpoint){
  if(endpoint.includes('/comments?')){
   const lines=cp.execFileSync('gh',['api','--paginate',endpoint,'--jq','.[] | @json'],{encoding:'utf8',maxBuffer:12*1024*1024});
-  return lines.trim()?lines.trim().split('\\n').map(line=>JSON.parse(line)):[];
+  return lines.trim()?lines.trim().split('\n').map(line=>JSON.parse(line)):[];
  }
  return JSON.parse(cp.execFileSync('gh',['api',endpoint],{encoding:'utf8',maxBuffer:12*1024*1024}));
 }
