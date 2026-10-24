@@ -19,8 +19,8 @@ async function main(){
  const issue=JSON.parse(raw) as {number:number;title:string;body:string};
  if(issue.number!==Number(n))throw Error('Wrong issue');
  const comments=JSON.parse(commentsRaw) as Array<{body?:string;user?:{login?:string}}>;
- const manifest=JSON.parse(manifestRaw) as {issue:number;screen:string;files:string[]};
- if(manifest.issue!==issue.number||manifest.files.length!==4)throw Error('Missing complete before/after mobile/desktop screenshots');
+ const manifest=JSON.parse(manifestRaw) as {issue:number;screen:string;screens?:string[];inventory?:string;files:string[]};
+ if(manifest.issue!==issue.number||manifest.files.length<4 || manifest.files.length%4!==0)throw Error('Missing complete before/after mobile/desktop screenshots');
  const owner=process.env.GITHUB_REPOSITORY?.split('/')[0]??'amthqng';
  const lastAccepted=comments.reduce((index,c,i)=>c.user?.login===owner&&(c.body??'').includes('UAT-ACCEPTED: #'+n+' ')?i:index,-1);
  const feedback=comments.slice(lastAccepted+1).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??'')).map(c=>c.body??'').slice(-12).join('\n---\n');
