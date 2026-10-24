@@ -112,6 +112,15 @@ jobs:
         env:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: node scripts/verify-developer-change.cjs
+      - name: Verify budget and prevent unsupported test claims
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node -e 'const fs=require("fs");const p=fs.readFileSync("artifacts/implementation/status.txt","utf8").trim();if(p!=="IMPLEMENTED")process.exit(1)'
+          # A generated feature test is never a substitute for the separately
+          # owned browser acceptance and user-visible UAT check.
       - name: Mark QA & Review
         env:
           GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
@@ -166,6 +175,14 @@ jobs:
       # acceptance and mobile/desktop smoke jobs all exit successfully.
       # It gives the independent reviewer verifiable CI evidence, not developer
       # prose or a claim that manual UAT has already happened.
+      - name: Assert required visual evidence was actually recorded
+        if: steps.visual_scope.outputs.required == 'true'
+        run: |
+          set -euo pipefail
+          test -s artifacts/implementation/visual-verdict.txt
+          grep -Fxq PASS artifacts/implementation/visual-verdict.txt
+          test -d artifacts/implementation/visual-qa
+          find artifacts/implementation/visual-qa -type f -name '*.png' -size +0c | grep -q .
       - name: Record successful automated QA for independent reviewer
         env:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
