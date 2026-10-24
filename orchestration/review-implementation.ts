@@ -24,15 +24,16 @@ async function main(){
  const snippet=diff.slice(0,90000);
  const comments=JSON.parse(commentsRaw) as Array<{body?:string;user?:{login?:string}}>;
  const owner=process.env.GITHUB_REPOSITORY?.split('/')[0]??'amthqng';
- const rejection=comments.filter(c=>c.user?.login===owner&&/UAT\s*REJECTED/i.test(c.body??'')).at(-1)?.body??'';
+ const latestCandidate=comments.reduce((index,c,i)=>(c.body??'').includes('UAT-CANDIDATE: #'+no+' ')?i:index,-1);
+ const rejection=comments.slice(Math.max(0,latestCandidate+1)).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??'')).map(c=>c.body??'').filter(Boolean).slice(-5).join('\\n\\n---\\n\\n');
  const approved=comments.filter(c=>(c.body??'').includes('<!-- acorn-tech-lead-gate -->')).at(-1)?.body??'';
  const criteria=approved.split('### Acceptance criteria')[1]?.split('### Regression checks')[0]?.slice(0,4000)??'';
  const agent=new Agent({name:'Independent Acorn Trail Code Reviewer',model:process.env.ACORN_AGENT_MODEL||'gpt-4.1',
-  instructions:rules+'\n'+role+'\nYou are the independent technical QA REVIEWER, not the product owner accepting UAT. Examine the real code diff and all approved acceptance criteria, including the latest owner UAT rejection. Reject missing functionality, inactive code, regressions or unsafe design even if the automated tests pass. The separately supplied AUTOMATED_QA_RESULT: PASS is emitted by the trusted GitHub Actions workflow AFTER the corresponding tests succeeded; it is real executed-test evidence, not a claim by the Developer. Manual iPhone exploratory testing, human screen-reader testing and final product-owner UAT happen AFTER technical QA approves and the UAT preview is deployed. Do NOT demand proof of the owner\'s future manual UAT to issue a technical PASS, and do not assume UAT acceptance has happened. Identify gaps requiring manual validation as risks and UAT checklist items. You may not merge or deploy. Respond ONLY with valid JSON {verdict:"PASS"|"REVISE",reason:"...",risks:["..."],uat:["..."]}, no prose or markdown fences.',
+  instructions:rules+'\n'+role+'\nYou are the independent technical QA REVIEWER, not the product owner accepting UAT. Examine the real code diff and all approved acceptance criteria, including the latest owner UAT feedback even when worded informally. For visual work, inspect real computed-style/browser evidence and reject visible borders or panels that the owner asked to remove. Reject missing functionality, inactive code, regressions or unsafe design even if the automated tests pass. The separately supplied AUTOMATED_QA_RESULT: PASS is emitted by the trusted GitHub Actions workflow AFTER the corresponding tests succeeded; it is real executed-test evidence, not a claim by the Developer. Manual iPhone exploratory testing, human screen-reader testing and final product-owner UAT happen AFTER technical QA approves and the UAT preview is deployed. Do NOT demand proof of the owner\'s future manual UAT to issue a technical PASS, and do not assume UAT acceptance has happened. Identify gaps requiring manual validation as risks and UAT checklist items. You may not merge or deploy. Respond ONLY with valid JSON {verdict:"PASS"|"REVISE",reason:"...",risks:["..."],uat:["..."]}, no prose or markdown fences.',
   modelSettings:{maxTokens:4800}});
  const prompt='Issue #'+no+': '+issue.slice(0,6000)
   +'\nAPPROVED ACCEPTANCE CRITERIA:\n'+criteria
-  +'\nPRODUCT OWNER UAT REJECTION (must be completely addressed to PASS):\n'+(rejection||'None')
+  +'\nLATEST PRODUCT OWNER UAT FEEDBACK (every item must be addressed to PASS):\n'+(rejection||'None')
   +'\nTRUSTED AUTOMATED QA EVIDENCE (written by CI after successful test steps, NOT by Developer):\n'+qaEvidence
   +'\nDeveloper notes (untrusted):\n'+notes
   +'\nREAL UNIFIED CODE DIFF (review all modified regions, not just developer summary):\n'+snippet
