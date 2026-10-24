@@ -781,6 +781,24 @@ button, [role="button"]{touch-action:manipulation}
 #screen-characters .pc{background:transparent;border:0;box-shadow:none}
 #screen-friend .editor{background:transparent;box-shadow:none}
 
+/* Issue #117: informational copy is part of the scene, not a card.
+   Keep character selection cards, job badges and action buttons distinct. */
+#screen-characters .cc-head,
+#screen-characters .team-status,
+#screen-characters .team-note{
+  background:transparent;
+  background-image:none;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  outline:none;
+}
+#screen-characters .cc-head{
+  padding:0;
+}
+#screen-characters .team-status{
+  padding:0;
+}
 </style>
 </head>
 <body>
