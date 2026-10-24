@@ -735,6 +735,52 @@ button, [role="button"]{touch-action:manipulation}
 .settings-footer .btn{width:100%;justify-content:center}
 @media(max-width:480px){#settings-modal{padding:10px}.settings-card{padding:12px}.settings-section{margin-bottom:14px}}
 
+/* Let story and guidance copy sit directly in the scene, without raised cards. */
+.story-card,.card,.modal-card,.continue-card,.editor,#screen-challenge .challenge,
+#screen-transition.camp-transition .card{
+  background:transparent;
+  background-image:none;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+.modal-card{padding:22px;}
+.modal{background:rgba(38,27,22,.76)}
+.modal-card{color:#fff4d9;text-shadow:0 2px 3px #241710}
+.modal-card .hintline,.modal-card .set-note{color:#f2dfbc}
+.settings-card{background:transparent;border:0;border-radius:0;padding:10px 0;}
+.math-operations{border-color:#8e765b}
+.practice-setting+.practice-setting{border-color:#8e765b}
+.story-card,.card,#screen-challenge .challenge{color:#3f3023;text-shadow:0 1px 1px #fff4d8}
+.ch-sub,.ch-host .host-greeting,.modal-card .hintline{color:#513d2c}
+.hint-bubble,.answer-review{box-shadow:none}
+
+/* Start actions remain large controls, with emphasis carried by type and color. */
+#screen-start #start-actions .btn{
+  min-height:52px;
+  background:transparent;
+  background-image:none;
+  color:#523720;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  text-shadow:0 1px 1px #fff2ce;
+  padding:12px 20px;
+}
+#screen-start #start-actions .btn:active{transform:translateY(2px);box-shadow:none}
+#screen-start #start-actions .btn:focus-visible{outline:3px solid #244f82;outline-offset:3px}
+#screen-start .companion .cbadge{
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+#screen-start .companion .cbadge svg{filter:none}
+#screen-start .companion .name{background:transparent;box-shadow:none;padding-inline:4px}
+
+/* Give text-only team entries and team editor copy the same unboxed treatment. */
+#screen-characters .pc{background:transparent;border:0;box-shadow:none}
+#screen-friend .editor{background:transparent;box-shadow:none}
+
 </style>
 </head>
 <body>
