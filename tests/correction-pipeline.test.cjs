@@ -16,7 +16,7 @@ test('development uses a sandboxed repo-aware coding agent, not brittle JSON pat
   assert.match(worker,/permission-profile: ':workspace'/);
   assert.match(worker,/allow-bot-users: 'github-actions\[bot\]'/);
   assert.match(worker,/prompt-file: inputs\/developer-brief\.md/);
-  assert.match(worker,/effort: high/);
+  assert.match(worker,/effort: \$\{\{ steps\.policy\.outputs\.effort \}\}/);
   assert.doesNotMatch(worker,/implement-issue\.ts/);
   assert.doesNotMatch(worker,/gpt-4\.1-mini/);
   assert.doesNotMatch(worker,/output-schema:/);
@@ -34,7 +34,7 @@ test('repository write token is unavailable during autonomous code editing',()=>
 test('full owner rejection, tech-lead acceptance and reviewer corrections reach Codex',()=>{
   assert.match(worker,/inputs\/issue-comments\.json/);
   assert.match(worker,/node scripts\/build-developer-brief\.cjs/);
-  assert.match(brief,/recentOwner/);
+  assert.match(brief,/ownerRequirements/);
   assert.match(brief,/acorn-review-rejected/);
   assert.match(brief,/acorn-tech-lead-gate/);
   assert.match(brief,/Approved Tech Lead intake and acceptance criteria/);

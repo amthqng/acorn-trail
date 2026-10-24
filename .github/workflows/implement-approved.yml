@@ -91,6 +91,11 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/build-developer-brief.cjs
+      - name: Choose bounded model and reasoning level
+        id: policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/attempt-budget.cjs "${{ inputs.issue_number }}" --github-output
       - name: Run workspace coding agent against real source files
         id: codex
         uses: openai/codex-action@v1
@@ -101,7 +106,8 @@ jobs:
           allow-bot-users: 'github-actions[bot]'
           prompt-file: inputs/developer-brief.md
           output-file: artifacts/implementation/notes.md
-          effort: high
+          model: ${{ steps.policy.outputs.model }}
+          effort: ${{ steps.policy.outputs.effort }}
       - name: Independently enforce authorized source changes
         env:
           ISSUE_NUMBER: ${{ inputs.issue_number }}

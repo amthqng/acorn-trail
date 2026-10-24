@@ -15,9 +15,11 @@ function buildBrief({issue,comments,repository}){
   if(!approval)throw new Error('Missing approved Tech Lead READY intake');
   // Plain-language owner corrections are requirements too. Never require a
   // magic "UAT REJECTED" phrase or silently lose the latest feedback.
-  const lastCandidate=comments.map((c,i)=>(c.body??'').includes('UAT-CANDIDATE: #'+issue.number+' ')?i:-1).reduce((a,b)=>Math.max(a,b),-1);
-  const recentOwner=comments.slice(Math.max(0,lastCandidate+1)).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??''));
-  const rejection=recentOwner.map(c=>c.body??'').filter(Boolean).slice(-5).join('\n\n---\n\n');
+  // Owner acceptance, not a new candidate receipt, resolves previous feedback.
+  // Keep every substantive owner correction visible until UAT acceptance.
+  const lastAccepted=comments.reduce((n,c,i)=>c.user?.login===owner&&(c.body??'').includes('UAT-ACCEPTED: #'+issue.number+' ')?i:n,-1);
+  const ownerRequirements=comments.slice(lastAccepted+1).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??''));
+  const rejection=ownerRequirements.map(c=>c.body??'').filter(Boolean).slice(-12).map(x=>x.slice(0,1200)).join('\\n\\n---\\n\\n');
   const reviewer=last(comments,c=>(c.body??'').includes('<!-- acorn-review-rejected -->'));
   return [
     '# Authorized Acorn Trail implementation',
@@ -29,6 +31,7 @@ function buildBrief({issue,comments,repository}){
     '- For visual fixes, remove the unwanted appearance itself. Do not replace a rejected white background with an equally intrusive outline, border, shadow, or container. Confirm computed styles in a browser and provide desktop/iPhone screenshots.',
     '- Allowed edits: index.html and optional NEW issue-specific tests named tests/feature-'+issue.number+'-<slug>.test.cjs or tests/feature-'+issue.number+'-<slug>.browser.test.cjs (slug contains letters, digits, hyphens). Do not modify existing tests, AGENTS.md, .github/, orchestration/, scripts/, package files, assets, git history, or configuration.',
     '- No runtime dependencies, CDNs, remote requests, data exfiltration, or saving-player-data changes. Game must work via file://, offline, on mobile and desktop.',
+    '- Before editing, list the specific rendered components to change and the appearance that must disappear. Do not replace one unwanted box with another surface, border, or shadow.',
     '- Work through the issue carefully: read the relevant existing code, plan how each criterion will be met, implement, run the existing node tests, and verify no unintended changes.',
     '- Independent QA will fail incomplete features, unsafe files, or regressions. Do NOT claim completion if anything required is unfinished; explain remaining issues in the final report.',
     '- Do not merge, deploy, close GitHub issues, or change board statuses. You have no permission to perform those actions.',
@@ -41,7 +44,7 @@ function buildBrief({issue,comments,repository}){
     '## Approved Tech Lead intake and acceptance criteria',
     approval.slice(0,18000),
     '',
-    '## Latest owner UAT feedback (every correction must be addressed, regardless of wording)',
+    '## Outstanding owner requirements (persist across every UAT candidate until explicit acceptance)',
     rejection||'None: first implementation',
     '',
     '## Latest independent review rejection (address these defects)',

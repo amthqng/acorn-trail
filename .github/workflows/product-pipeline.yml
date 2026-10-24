@@ -236,14 +236,18 @@ jobs:
             active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || { echo "Implementation worker active; will check #$issue next cycle"; continue; }
             comments="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$issue/comments?per_page=100" --jq '.[].body')"
-            attempts="$(gh run list --workflow implement-approved.yml --json displayTitle,headSha,conclusion --limit 200 | jq --arg title "Implement issue #$issue" --arg sha "$(git rev-parse HEAD)" '[.[] | select(.displayTitle==$title and .headSha==$sha and .conclusion=="failure")] | length')"
-            if [ "$attempts" -ge 2 ]; then
-              echo "::warning::Issue #$issue has two failed attempts on the current implementation revision; left In Development for technical repair"
+            # Durable budget uses the owner requirement revision, NOT main's SHA.
+            # Updating CI/workflow code must never reset the attempt allowance.
+            budget="$(node scripts/attempt-budget.cjs "$issue")"
+            attempts="$(jq -r '.attempts' <<< "$budget")"
+            revision="$(jq -r '.revision' <<< "$budget")"
+            if [ "$(jq -r '.allow' <<< "$budget")" != true ]; then
+              echo "::warning::Issue #$issue reached its 2-attempt budget for requirements $revision; waiting for new owner feedback"
               continue
             fi
             # Preserve failure state on the board; only the worker's QA gate may advance it.
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
-            gh issue comment "$issue" --body "<!-- acorn-development-recovery-v3 --> Development recovery attempt $((attempts+1))/2 dispatched while card remains In Development."
+            gh issue comment "$issue" --body "<!-- acorn-attempt-budget:$revision --> <!-- acorn-development-recovery-v3 --> Development recovery attempt $((attempts+1))/2, requirements revision $revision. Card remains In Development."
           done
   qa-handoff:
     needs: board
@@ -432,14 +436,16 @@ jobs:
             latest="$(printf '%s\n' "$comments" | grep '## Tech Lead intake:' | tail -n 1 || true)"
             [ "$latest" = "## Tech Lead intake: READY" ] || continue
             if gh api "repos/$GITHUB_REPOSITORY/branches/agents/issue-$issue" >/dev/null 2>&1; then continue; fi
-            attempts="$(gh run list --workflow implement-approved.yml --json displayTitle,headSha,conclusion --limit 200 | jq --arg title "Implement issue #$issue" --arg sha "$(git rev-parse HEAD)" '[.[] | select(.displayTitle==$title and .headSha==$sha and .conclusion=="failure")] | length')"
-            if [ "$attempts" -ge 2 ]; then
-              echo "::warning::Issue #$issue has two failed attempts on this implementation revision; requires technical repair"
+            budget="$(node scripts/attempt-budget.cjs "$issue")"
+            attempts="$(jq -r '.attempts' <<< "$budget")"
+            revision="$(jq -r '.revision' <<< "$budget")"
+            if [ "$(jq -r '.allow' <<< "$budget")" != true ]; then
+              echo "::warning::Issue #$issue reached its 2-attempt budget for requirements $revision; awaits a new requirement revision"
               continue
             fi
             # Prevent duplicate starts when earlier workflow is still active.
             active="$(gh run list --workflow implement-approved.yml --json status,displayTitle --limit 80 | jq --arg title "Implement issue #$issue" '[.[]|select(.displayTitle==$title and (.status=="queued" or .status=="in_progress"))]|length')"
             [ "$active" = 0 ] || continue
             gh workflow run implement-approved.yml --ref main -f issue_number="$issue"
-            gh issue comment "$issue" --body "<!-- acorn-implementation-dispatched-v2 --> Implementation attempt $((attempts+1))/2 queued for #$issue."
+            gh issue comment "$issue" --body "<!-- acorn-attempt-budget:$revision --> <!-- acorn-implementation-dispatched-v2 --> Implementation attempt $((attempts+1))/2, requirements revision $revision queued for #$issue."
           done
