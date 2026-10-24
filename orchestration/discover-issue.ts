@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   const policy=`Project policy:\n${rules}\nThese are selected source excerpts, not a complete inspection. Child observation and educator validation are separate.\n`;
   const ux=await ask('Feature User Research',policy+research,
     `Assess this proposed feature, its value for children, usability, accessibility, safety, 2 viable alternatives, and how to validate it with children. Do not treat the requested solution as necessarily correct. Keep under 120 words.\nISSUE #${issueNo}: ${title}\n${body}\nSOURCE:\n${context}`);
-  const isSmall=/\\b(remove|reduce|clean|simplify|border|background|box|text|color|spacing|copy|font)\\b/i.test(title+' '+body) && !/\\b(save|privacy|curriculum|new game|new region|account|progression)\\b/i.test(title+' '+body);
+  const isSmall=/\b(remove|reduce|clean|simplify|border|background|box|text|color|spacing|copy|font)\b/i.test(title+' '+body) && !/\b(save|privacy|curriculum|new game|new region|account|progression)\b/i.test(title+' '+body);
   const edu=isSmall?'No curriculum change; preserve reading and math functionality, access and grade suitability.':await ask('Feature Education Review',policy+education,
     `Evaluate this feature idea by grades 1, 2, and 3, including whether it supports learning goals or needs an educator's validation. Consider the earlier UX report as hypotheses only. Suggest suitable grade adaptations and acceptance criteria. Keep under 120 words.\nISSUE #${issueNo}: ${title}\n${body}\nUX REVIEW:\n${ux}\nSOURCE:\n${context}`);
   const outDir=join(root,'artifacts','feature-discovery');await mkdir(outDir,{recursive:true});
