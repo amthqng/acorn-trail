@@ -2,6 +2,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {chromium}=require('playwright');
+const fs=require('node:fs');
 const path=require('node:path');
 const {pathToFileURL}=require('node:url');
 const selectors=[
@@ -27,7 +28,8 @@ for(const viewport of [{width:390,height:844},{width:1280,height:800}]){
     });
     for(const side of ['top','right','bottom','left'])assert.equal(parseFloat(style[side]),0,selector+' has a visible '+side+' border');
    }
-   await page.screenshot({path:require('node:os').tmpdir()+'/acorn-83-home-'+viewport.width+'.png'});
+   fs.mkdirSync('artifacts/implementation/visual-qa',{recursive:true});
+   await page.screenshot({path:'artifacts/implementation/visual-qa/home-'+viewport.width+'.png',fullPage:true});
   }finally{await browser.close();}
  });
 }
