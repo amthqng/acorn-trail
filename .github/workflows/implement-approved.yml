@@ -140,8 +140,8 @@ jobs:
           const comments=JSON.parse(fs.readFileSync('inputs/issue-comments.json','utf8'));
           const owner=process.env.GITHUB_REPOSITORY.split('/')[0];
           const requirements=[issue.title,issue.body,...comments.filter(c=>c.user?.login===owner).map(c=>c.body)].join(' ');
-          const visual=issue.number===83 || /\\b(visual|design|layout|theme|colors?|background|borders?|panels?|screen|scenery|trees?|characters?|friends?|team setup|typography|font|icons?|interface|ui|ux|appearance)\\b/i.test(requirements);
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,'required='+visual+'\\n');
+          const visual=issue.number===83 || /\b(visual|design|layout|theme|colors?|background|borders?|panels?|screen|scenery|trees?|characters?|friends?|team setup|typography|font|icons?|interface|ui|ux|appearance)\b/i.test(requirements);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'required='+visual+'\n');
           console.log('UX screenshot review required: '+visual);
           NODE
       - name: Capture actual before-and-after mobile and desktop UX evidence
