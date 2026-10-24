@@ -34,7 +34,7 @@ test('repository write token is unavailable during autonomous code editing',()=>
 test('full owner rejection, tech-lead acceptance and reviewer corrections reach Codex',()=>{
   assert.match(worker,/inputs\/issue-comments\.json/);
   assert.match(worker,/node scripts\/build-developer-brief\.cjs/);
-  assert.match(brief,/UAT\\s\*REJECTED/);
+  assert.match(brief,/recentOwner/);
   assert.match(brief,/acorn-review-rejected/);
   assert.match(brief,/acorn-tech-lead-gate/);
   assert.match(brief,/Approved Tech Lead intake and acceptance criteria/);
@@ -44,7 +44,7 @@ test('full owner rejection, tech-lead acceptance and reviewer corrections reach 
 test('independent QA reviews the entire real diff, not first substring',()=>{
   assert.ok(reviewer.includes("execFileSync('git',['diff','--unified=3'"));
   assert.match(reviewer,/REAL UNIFIED CODE DIFF/);
-  assert.match(reviewer,/PRODUCT OWNER UAT REJECTION/);
+  assert.match(reviewer,/LATEST PRODUCT OWNER UAT FEEDBACK/);
   assert.match(reviewer,/model:process\.env\.ACORN_AGENT_MODEL\|\|'gpt-4\.1'/);
   assert.match(worker,/node --test tests\/game\.test\.cjs/);
   assert.match(worker,/node --test tests\/qa-smoke\.test\.cjs/);
@@ -58,6 +58,7 @@ test('fall theme requires palette, scene and map differences in visible offline 
   assert.match(acceptance,/mapChanged/);
   assert.match(acceptance,/offline:true/);
   assert.match(acceptance,/pageerror/);
+  assert.match(worker,/node --test tests\/uat-visual-83\.browser\.test\.cjs/);
 });
 
 test('deterministic gate blocks unrelated or network-dependent changes',()=>{

@@ -13,7 +13,11 @@ function buildBrief({issue,comments,repository}){
   if(!Array.isArray(comments))throw new Error('Missing issue comments');
   const approval=last(comments,c=>(c.body??'').includes('<!-- acorn-tech-lead-gate -->')&&/Tech Lead intake: READY/i.test(c.body??''));
   if(!approval)throw new Error('Missing approved Tech Lead READY intake');
-  const rejection=last(comments,c=>c.user?.login===owner&&/UAT\s*REJECTED/i.test(c.body??''));
+  // Plain-language owner corrections are requirements too. Never require a
+  // magic "UAT REJECTED" phrase or silently lose the latest feedback.
+  const lastCandidate=comments.map((c,i)=>(c.body??'').includes('UAT-CANDIDATE: #'+issue.number+' ')?i:-1).reduce((a,b)=>Math.max(a,b),-1);
+  const recentOwner=comments.slice(Math.max(0,lastCandidate+1)).filter(c=>c.user?.login===owner&&!/UAT-ACCEPTED:/i.test(c.body??''));
+  const rejection=recentOwner.map(c=>c.body??'').filter(Boolean).slice(-5).join('\n\n---\n\n');
   const reviewer=last(comments,c=>(c.body??'').includes('<!-- acorn-review-rejected -->'));
   return [
     '# Authorized Acorn Trail implementation',
@@ -22,6 +26,7 @@ function buildBrief({issue,comments,repository}){
     '## Trusted execution rules',
     '- Edit the actual checked-out index.html directly using normal repository-aware code-editing tools. Read any relevant source; do NOT generate JSON patches or guess exact strings from excerpts.',
     '- The complete feature and every required correction must work in normal gameplay without developer-tools intervention or a disabled CSS class.',
+    '- For visual fixes, remove the unwanted appearance itself. Do not replace a rejected white background with an equally intrusive outline, border, shadow, or container. Confirm computed styles in a browser and provide desktop/iPhone screenshots.',
     '- Allowed edits: index.html and optional NEW issue-specific tests named tests/feature-'+issue.number+'-<slug>.test.cjs or tests/feature-'+issue.number+'-<slug>.browser.test.cjs (slug contains letters, digits, hyphens). Do not modify existing tests, AGENTS.md, .github/, orchestration/, scripts/, package files, assets, git history, or configuration.',
     '- No runtime dependencies, CDNs, remote requests, data exfiltration, or saving-player-data changes. Game must work via file://, offline, on mobile and desktop.',
     '- Work through the issue carefully: read the relevant existing code, plan how each criterion will be met, implement, run the existing node tests, and verify no unintended changes.',
@@ -36,7 +41,7 @@ function buildBrief({issue,comments,repository}){
     '## Approved Tech Lead intake and acceptance criteria',
     approval.slice(0,18000),
     '',
-    '## Latest owner UAT rejection (all items must be addressed)',
+    '## Latest owner UAT feedback (every correction must be addressed, regardless of wording)',
     rejection||'None: first implementation',
     '',
     '## Latest independent review rejection (address these defects)',
