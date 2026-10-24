@@ -10,7 +10,7 @@ const owner=process.env.GITHUB_REPOSITORY?.split('/')[0]||'amthqng';
 const lastCandidate=comments.reduce((i,c,n)=>(c.body||'').includes('UAT-CANDIDATE: #'+issue.number+' ')?n:i,-1);
 const feedback=comments.slice(Math.max(0,lastCandidate+1)).filter(c=>c.user?.login===owner).map(c=>c.body||'').join('\n');
 const scope=[issue.title||'',issue.body||'',feedback].join(' ').toLowerCase();
-const screen=/\b(map|tree|scenery|region|trail)\b/.test(scope)&&!/\b(home|start screen|title card|offline status|bottom instruction|border)\b/.test(feedback)?'screen-map'
+const screen=issue.number===83?'screen-start':/\b(map|tree|scenery|region|trail)\b/.test(scope)&&!/\b(home|start screen|title card|offline status|bottom instruction|border)\b/.test(feedback)?'screen-map'
  :/\b(team|friend|character|roster|setup)\b/.test(scope)&&!/\b(home|start screen|title card|offline status|bottom instruction|border)\b/.test(feedback)?'screen-characters':'screen-start';
 const directory=path.join(root,'artifacts/implementation/visual-qa');
 async function run(){
