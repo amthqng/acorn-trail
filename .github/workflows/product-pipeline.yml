@@ -191,7 +191,7 @@ jobs:
             # A blocked verdict from an older intake policy must be re-evaluated
             # once rather than permanently stranding an already approved issue.
             current="$(jq -r '[.[]|select(.body|contains("<!-- acorn-tech-lead-gate -->"))]|last|.body // ""' inputs/issue-comments.json)"
-            if [ "$changed" -eq 0 ] && { grep -Fq '<!-- acorn-intake-policy-v3 -->' <<< "$current" || grep -Fq '## Tech Lead intake: READY' <<< "$current"; }; then
+            if [ "$changed" -eq 0 ] && { grep -Fq '<!-- acorn-intake-policy-v4 -->' <<< "$current" || grep -Fq '## Tech Lead intake: READY' <<< "$current"; }; then
               echo "Existing Tech Lead assessment is current for #$ISSUE_NUMBER"; exit 0
             fi
           fi
