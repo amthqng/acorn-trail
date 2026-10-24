@@ -342,6 +342,16 @@ jobs:
           npx playwright install chromium
           # QA is a bounded smoke check. All 84 stops are tested before release.
           node --test tests/qa-smoke.test.cjs
+      - name: Enforce issue-specific owner visual acceptance before UAT
+        if: steps.gate.outputs.found == 'true' && matrix.issue == 83
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          # Generic smoke tests cannot prove that the rejected border/background
+          # is gone. Run the independently maintained acceptance test on the
+          # exact PR head (or merged UAT candidate), not the developer's report.
+          test -s tests/uat-visual-83.browser.test.cjs
+          node --test tests/uat-visual-83.browser.test.cjs
       - name: Verify reviewed candidate and merge to UAT
         if: steps.gate.outputs.found == 'true' && steps.gate.outputs.pr_state == 'OPEN'
         env:
