@@ -41,7 +41,7 @@ function buildBrief({issue,comments,repository}){
     'Title: '+String(issue.title??'').slice(0,250),
     String(issue.body??'').slice(0,12000),
     '',
-    '## Approved UX/Tech Lead change inventory and acceptance criteria',
+    '## Approved Tech Lead intake and acceptance criteria (UX change inventory included)',
     approval.slice(0,18000),
     '',
     'Treat each change-inventory row as a required acceptance item. Inspect every referenced selector in the full source and render each affected screen at iPhone and desktop widths. Report any uncovered elements as incomplete, never PASS.',
