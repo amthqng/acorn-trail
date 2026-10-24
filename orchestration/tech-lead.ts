@@ -102,14 +102,14 @@ async function main() {
   const focusTechnical=/keyboard|focus|outline|fallback|indicator|contrast|touch target|aria|screen.reader/i;
   const ownerQuestions=(decorativeMapRequest||cosmeticCleanup)?[]:unresolvedOwnerQuestions.filter(q=>!focusTechnical.test(q));
   const technicalConcerns=[...decision.technicalConcerns,...decision.ownerQuestions.filter(q=>nonOwnerPattern.test(q))];
-  const requiresInventory=/\\b(visual|design|style|layout|color|background|border|box|panel|text)\\b/i.test(request);
+  const requiresInventory=/\b(visual|design|style|layout|color|background|border|box|panel|text)\b/i.test(request);
   const finalVerdict=ownerQuestions.length===0&&(!requiresInventory||design.inventory.length>0)?'READY':'NEEDS_CLARIFICATION';
   const escalationSummary=decorativeMapRequest
     ? 'This is a decorative-only map change. UX owns visual choices; Developer/QA own implementation and verification. No product-owner decision required.'
     : ownerQuestions.length===0
       ? 'No material product-owner decision remains; implementation checks belong to Developer/QA.'
       : decision.rationale;
-  const checklist=design.inventory.map((item,i)=>'- [ ] '+(i+1)+'. '+item.screen+' / '+item.element+' ('+item.locator+'): '+item.change+'; QA: '+item.verify).join('\\n');
+  const checklist=design.inventory.map((item,i)=>'- [ ] '+(i+1)+'. '+item.screen+' / '+item.element+' ('+item.locator+'): '+item.change+'; QA: '+item.verify).join('\n');
   const body=`<!-- acorn-tech-lead-gate -->
 <!-- acorn-acceptance-inventory-v1 -->
 ## Tech Lead intake: ${finalVerdict}
@@ -121,16 +121,16 @@ ${issue.title}. ${finalVerdict==='READY'?'UX and technical decisions resolved; p
 ${checklist||'- [ ] No concrete inventory provided. For a visual issue, Tech Lead must inspect source and supply it before development.'}
 
 ### Preserve unchanged
-${design.preserve.map(x=>'- '+x).join('\\n')}
+${design.preserve.map(x=>'- '+x).join('\n')}
 
 ### Acceptance criteria
-${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\\n')}
+${v.acceptanceCriteria.map(x=>'- [ ] '+x).join('\n')}
 
 ### Regression checks
-${v.regressionChecks.map(x=>'- '+x).join('\\n')}
+${v.regressionChecks.map(x=>'- '+x).join('\n')}
 
 ### Questions requiring owner decision
-${ownerQuestions.map(x=>'- '+x).join('\\n')||'- None'}
+${ownerQuestions.map(x=>'- '+x).join('\n')||'- None'}
 
 *No code changed or tests performed in intake.*
 `;
