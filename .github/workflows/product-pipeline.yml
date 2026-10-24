@@ -464,7 +464,14 @@ jobs:
           echo "Deploying UAT git SHA: $sha"
           test -s index.html
           grep -q 'Autumn is the default' index.html
+      - name: Skip already published UAT revision
+        id: published
+        uses: actions/cache/restore@v4
+        with:
+          path: .pages-published
+          key: acorn-uat-pages-published-${{ steps.source.outputs.sha }}
       - name: Prepare offline game for GitHub Pages
+        if: steps.published.outputs.cache-hit != 'true'
         run: |
           mkdir -p _site
           for file in index.html sw.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png; do
@@ -474,19 +481,34 @@ jobs:
           echo "${{ steps.source.outputs.sha }}" > _site/uat-commit.txt
           touch _site/.nojekyll
       - name: Configure Pages
+        if: steps.published.outputs.cache-hit != 'true'
         uses: actions/configure-pages@v5
       - name: Upload UAT site
+        if: steps.published.outputs.cache-hit != 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
       - name: Deploy verified UAT source
+        if: steps.published.outputs.cache-hit != 'true'
         id: deployment
         uses: actions/deploy-pages@v4
       - name: Report published UAT SHA
+        if: steps.published.outputs.cache-hit != 'true'
         run: |
           echo "GitHub Pages deployment: ${{ steps.deployment.outputs.page_url }}"
           echo "Published UAT source: ${{ steps.source.outputs.sha }}"
           echo "Verify: https://amthqng.github.io/acorn-trail/uat-commit.txt"
+      - name: Remember successfully published UAT revision
+        if: steps.published.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .pages-published
+          echo "${{ steps.source.outputs.sha }}" > .pages-published/source-sha
+      - name: Cache successful publication
+        if: steps.published.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .pages-published
+          key: acorn-uat-pages-published-${{ steps.source.outputs.sha }}
   dispatch:
     needs: [board, intake]
     if: always() && needs.board.result == 'success' && needs.intake.result == 'success' && needs.board.outputs.ready != '[]'
